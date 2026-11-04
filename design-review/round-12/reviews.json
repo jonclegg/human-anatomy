@@ -1,0 +1,88 @@
+{
+  "round": "round-12",
+  "spentTotal": 5.122446792999995,
+  "results": [
+    {
+      "model": "google/gemini-4-argon",
+      "score": 7.6,
+      "looksLikeAISlop": false,
+      "slopTells": [
+        "Low-poly, plasticky procedural 3D meshes with flat Phong-like shading",
+        "Standard Tailwind/shadcn-style bordered white floating cards"
+      ],
+      "strengths": [
+        "Strong, cohesive 'owner's manual' editorial concept and typographic hierarchy",
+        "Crisp, ultra-legible numbered callout pins with clean leader lines and active yellow highlight states",
+        "Excellent plain-English copywriting and smart structured data tables",
+        "Thoughtful mobile adaptation with a clean bottom dock, sheet, and isolation banner",
+        "Helpful details like the 5 cm physical scale bar and figure captions"
+      ],
+      "topFixes": [
+        "Overhaul the 3D models and shaders: compared to BioDigital Human, the geometry is crude and jagged (especially the pixelated black outline on the isolated uterus and rough cross-section cuts) and the materials look like cheap plastic rather than subsurface-scattered tissue.",
+        "Fix the 'Outside' view framing: the radial blur vignette around the vulva looks like a muddy, low-res gaussian blur mask rather than an intentional anatomical crop or clean studio fade.",
+        "Eliminate the scroll trap on mobile: scrolling down into a long text article ('Same parts, different build') below a full-viewport 3D canvas breaks the app spatial model and leaves no persistent navigation to return to the 3D view.",
+        "Differentiate the left tool menu on desktop: 'Parts list' (a drawer trigger), 'Callouts' (a boolean toggle), and 'Reset view' (a one-shot action) all look like identical vertical tabs.",
+        "Consolidate the floating UI chrome on mobile when a part is selected: stacking the header, segmented view bar, 'Showing Uterus' banner, bottom sheet, and bottom tab bar leaves almost no room for the 3D canvas.",
+        "Refine the floating panel styling: replace the generic 1px gray borders and flat white fills with tighter internal padding, subtler elevation, and more technical 'manual-like' grid hairlines.",
+        "Improve the 5 cm scale bar legibility: currently it collides with the translucent pubic bone geometry in the default view; move it to a fixed HUD corner.",
+        "Add subtle interactive affordances to the right-hand summary list items (e.g., hover states or chevrons on '17 Uterus / size of a pear') so users know those rows are clickable."
+      ]
+    },
+    {
+      "model": "~openai/gpt-astra-latest",
+      "score": 6.5,
+      "looksLikeAISlop": false,
+      "slopTells": [
+        "Repeated white, gray-bordered panels feel like default component-library styling.",
+        "Stacked segmented controls and toolbars occasionally overpower the content."
+      ],
+      "strengths": [
+        "A coherent technical-manual identity: numbered parts, figure captions, leader lines and restrained yellow selection.",
+        "Strong black-on-light typography and clear heading hierarchy; avoids the predictable pink, glowing sexual-wellness aesthetic.",
+        "Actual task-oriented controls with text labels, not mysterious decorative icons.",
+        "Plainspoken explanations and misconception callouts make the subject approachable.",
+        "Mobile gets a deliberate toolbar and bottom-sheet treatment rather than a squeezed desktop sidebar.",
+        "Distinctive subject and editorial framing; this looks like a purposeful product, not a generic AI landing page."
+      ],
+      "topFixes": [
+        "Rebuild the 3D art direction first. The cutaway exposes faceted edges, paper-thin surfaces and abrupt intersections; the external view has a muddy, airbrushed halo. Improve mesh continuity, section caps, material differentiation and contact lighting. The central asset looks prototype-grade beside BioDigital, let alone Apple's rendering.",
+        "Reframe each view around its useful anatomy. Desktop first load spends too much canvas on a washed-out torso; mobile leaves a large empty abdomen above the pelvis. Fit the anatomy into the space between controls and make the body silhouette genuinely secondary.",
+        "Reduce mobile chrome when a part is selected. Header, view tabs, isolation banner, detail sheet and bottom toolbar compete with a small model. Collapse secondary tools, integrate 'Show all' into the selection UI and give the sheet compact, half-height and expanded positions.",
+        "Make selection preserve orientation. In the uterus screenshot every view tab appears inactive, while the organ becomes a flat red shape with a heavy jagged outline. Keep the current view visibly selected, retain enough neighboring anatomy for context and use a subtler selection treatment.",
+        "Replace the desktop's floating utility-box composition with a deliberate layout grid. Tighten the oversized left tool panel, align panel edges and spacing, and reserve a predictable model viewport that accommodates labels without pushing them against the inspector.",
+        "Redesign callout placement and density. The external view piles labels along the lower-right edge, while tiny numbered badges add noise. Prioritize relevant parts, distribute leaders without crowding and enlarge invisible tap targets rather than the visible labels.",
+        "Separate viewing modes from tool states. 'Slice across' versus 'Side cut' and 'Arousal & X-ray' versus mobile 'Arousal' leave relationships unclear. Use consistent names and explicit switches or sliders; the current black selection styling makes tool toggles resemble navigation.",
+        "Carry the manual concept into the reading experience. The mobile article becomes an undifferentiated gray table dump. Add sectional diagrams, clearer spacing rhythm and stacked comparison pairs on narrow screens. Resolve the mobile title's unexplained asterisk and surface supporting references for precise scientific claims."
+      ]
+    },
+    {
+      "model": "anthropic/claude-opus-5.5",
+      "score": 6.6,
+      "looksLikeAISlop": false,
+      "slopTells": [
+        "Three detached white floating card panels (left tool menu, right info card, bottom segmented bar) form a generic dashboard-over-canvas layout",
+        "Segmented view switcher plus a second segmented-style tab bar on mobile reads as stock component kit",
+        "Black number-badge pills repeated on every row, label and header, so the device stops meaning anything",
+        "Instruction copy ('Drag to turn. Scroll or pinch to zoom...') sits in the main reading panel like a template filler paragraph"
+      ],
+      "strengths": [
+        "Committed editorial 'owner's manual' concept: wide grotesk display type, figure captions ('Fig. 3 · Midline section'), numbered callouts with hairline leaders, and a scale bar feel like a real technical plate rather than a SaaS template",
+        "Copy is the best part: plain, specific and lightly funny ('Three tubes, three exits', 'poop', '*Technically the vulva'). The misconception box and 'Male equivalent' row are well judged for the audience",
+        "Restrained palette with black and white chrome and a single yellow selection state that is clear and functional; avoids pink-on-dark clichés despite the subject",
+        "Info panel hierarchy is solid: category, title, plain-English subtitle, body, callout box, then a spec table with right-aligned bold values",
+        "Mobile handles selection sensibly: an isolate banner with 'Show all', a bottom sheet with grabber and prev/next, and a 17 of 33 counter that makes the model feel browsable",
+        "Long-form scroll content (the homology table) is clean, readable and typographically consistent with the hero"
+      ],
+      "topFixes": [
+        "Upgrade the 3D. Next to BioDigital it reads as a toy: low-poly extrusions, flat shading, no subsurface or soft AO, and pasted-on outlines. The 'Outside' view is a blurry brown radial gradient behind a pink extruded slab, which undermines credibility. Commit fully to a stylised medical-illustration look (matcap, rim light, consistent outline weight) or invest in proper materials",
+        "Fix framing and scale. On desktop and mobile first load the pelvis is small and floats mid-screen, with about 40% dead space below it and a vague ghost mannequin around it. Auto-fit the camera to the active view's bounding box between the panels, and drop or sharpen the silhouette",
+        "Remove the cards from the canvas. Turn the left menu into a slim icon rail or a top-left text list with no box. Let the right panel be a flush column with a hairline divider rather than a floating card. Make the view switcher plain text tabs under the figure caption so it matches the manual aesthetic",
+        "Separate modes from actions in the left menu. 'Callouts' styled as a selected nav item is really a toggle; 'Slice', 'Colour code' and 'Arousal & X-ray' are view modes; 'Reset' is an action. Give each type its own control style, and split Arousal and X-ray, which are unrelated",
+        "Clean up callout layout. Leaders cross the anatomy and each other. On 'Outside', 'Outer lips' points to empty skin and five labels stack on the right while the left side is unused. Use collision-aware placement on both sides, shorter leaders, and dimmed non-selected labels",
+        "Reclaim mobile viewport. The title, Tour button, segmented bar, isolate banner, bottom sheet and 5-icon tab bar leave the model a sliver. Collapse the title on interaction and move view tabs into the sheet or a single dropdown. The tab bar also duplicates actions; 'Manual' is unclear",
+        "Make the isolated part look like the rest of the model. The thick black outline and flat maroon fill on the mobile uterus look like a different renderer. Keep the material and add a subtle highlight or ghost context instead",
+        "Move interaction hints out of the content panel into a one-time onboarding overlay or a dismissible caption. Use the reclaimed panel space for one more fact or a mini-diagram so the right column is never mostly instructions"
+      ]
+    }
+  ]
+}

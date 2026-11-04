@@ -1,0 +1,93 @@
+{
+  "round": "round-0",
+  "spentTotal": 0.4,
+  "results": [
+    {
+      "model": "google/gemini-4-argon",
+      "score": 6.4,
+      "looksLikeAISlop": false,
+      "slopTells": [
+        "Monospace uppercase eyebrow labels ('START HERE', 'COMMON BUG')",
+        "Dashed pink callout box inside dark card",
+        "Rows of dark segmented pill toggles"
+      ],
+      "strengths": [
+        "Copywriting and 'hardware manual' conceit ('COMMON BUG', specs table, 'Male equivalent') are sharp, human, and genuinely engaging",
+        "Thoughtful, educational interactive controls (Arousal slider, X-ray slider, skin tone selector, 5cm scale bar)",
+        "Clean typographic hierarchy inside the detail inspection card",
+        "Color-coded anatomical system dots tie the 3D pins to the legend effectively"
+      ],
+      "topFixes": [
+        "Fix the broken mobile interaction: tapping a part on iPhone ('Uterus') renders the detail card completely below the fold with zero visual feedback in the viewport; use a bottom sheet or drawer overlaying the canvas.",
+        "Upgrade the 3D shaders and geometry: compared to BioDigital Human, the procedural-looking lathe/tube geometry and flat matte Phong shading look plasticky and uncanny\u2014add subsurface scattering, subtle tissue normal maps, and softer alpha falloff on clipped edges.",
+        "De-clutter 3D label pins: in the side-cut and mobile views, bulky dark pills stack and occlude the anatomy; use thin leader lines to external labels or compact dots that expand on hover/tap.",
+        "Prevent hidden-part selection bugs: on iPhone 'Outside' view, 'Uterus' is selectable and floating directly over the clitoral hood even though it is an internal organ.",
+        "Fix mobile toolbar overflow: the second row of view toggles ('Labels', 'Cut in half'...) is clipped flush against the right viewport edge and stacks awkwardly; consolidate secondary view modes into a single compact popover or scrollable rail.",
+        "Improve contrast and affordance of the bottom control bar on desktop: '5 cm' in dark grey on black is illegible, and the 'AROUSAL' slider track looks like a static white bar rather than a draggable scrubber.",
+        "Eliminate the jarring light-page-header to dark-canvas split on desktop: commit to a full-viewport dark canvas (like NASA Eyes or BioDigital) with the title and controls floating cleanly over the scene.",
+        "Differentiate the 'Parts' button from the view-mode segmented control\u2014right now it looks like an unselected tab rather than a drawer/index trigger."
+      ]
+    },
+    {
+      "model": "~openai/gpt-astra-latest",
+      "score": 4.8,
+      "looksLikeAISlop": true,
+      "slopTells": [
+        "Pink-on-aubergine palette, translucent pills and outlined dark panels form a familiar AI-demo aesthetic.",
+        "Uppercase monospace eyebrows and dashed pink callouts substitute developer styling for a distinctive editorial identity.",
+        "Rows of similarly styled toggles expose features without establishing an interaction hierarchy.",
+        "Repeated 'COMMON BUG' callouts feel templated; describing normal anatomical variation this way undermines the joke."
+      ],
+      "strengths": [
+        "The desktop layout gives the anatomy substantial space rather than burying it beneath a marketing hero.",
+        "Selected labels and active view buttons have clear contrast.",
+        "Desktop explanations combine readable paragraphs with useful, scannable facts.",
+        "The title and anatomical correction establish an approachable, opinionated voice.",
+        "Visible labels, reset and guided-tour entry points make the basic exploration concept understandable."
+      ],
+      "topFixes": [
+        "Rebuild the 3D art direction first. Waxy surfaces, muddy creases, exposed polygon edges and intersecting cutaway geometry look prototype-grade beside BioDigital. Use coherent anatomical meshes, clean section caps and softer lighting\u2014or commit to intentionally simplified illustration.",
+        "Make mobile an explorer, not a stacked desktop page. Compress the header and two control rows, fit the scene into the remaining viewport, and open selected-part explanations in a bottom sheet so feedback appears immediately rather than below the canvas.",
+        "Fix selection visibility: the phone shows 'Uterus' selected over opaque external anatomy with no visible uterus. Reveal the relevant internal layer or transition to a cutaway and visibly highlight the selected structure.",
+        "Replace floating label piles with small anchored hotspots and collision-aware leader lines. The phone labels obscure the anatomy they should explain; prioritize the selected label and hide occluded structures.",
+        "Separate camera presets from display settings. Keep Outside, Clitoris and Side cut as primary views; move Labels, system coloring and section tools into a secondary menu. Clarify the distinction between 'Side cut', 'Cut in half' and 'Cross-section'.",
+        "Recompose the desktop stage around a stable inspector column. The external model is cropped at the top while substantial lower-right space goes unused; frame the full subject and move the bottom sliders into a compact, labeled controls area.",
+        "Create a more disciplined visual system: neutral canvas, one action accent, anatomical colors reserved for identification, fewer rounded containers, and fewer monospace labels. Increase the contrast of the scale and secondary controls.",
+        "Tighten the educational presentation: rename 'COMMON BUG' to 'Worth knowing' or 'Common misconception' as appropriate, add source links to numerical claims, and replace the wrapping mobile arrow-chip sequence with a vertical diagram."
+      ]
+    },
+    {
+      "model": "anthropic/claude-opus-5.5",
+      "score": 5.4,
+      "looksLikeAISlop": true,
+      "slopTells": [
+        "Monospace uppercase letterspaced eyebrows everywhere ('WOOTEN LABS', 'START HERE', 'CLITORIS', 'COMMON BUG', 'AROUSAL', 'X-RAY', 'SKIN')",
+        "Two rows of segmented toggle chips competing at the top, with no real distinction between 'view' and 'display mode'",
+        "Hot-pink-on-near-black accent system: pink CTA, pink mono readout, pink dashed callout, pink label dots",
+        "Dashed-border 'COMMON BUG' callout box is a stock dev-themed card trope",
+        "Generic dark rounded card panel floating top-right",
+        "Dark pill labels with a coloured dot on every part, the default 'hotspot' look from countless three.js demos",
+        "Same CTA repeated twice in one glance ('Guided tour' and 'Start the guided tour')",
+        "Faint grid floor added as decoration"
+      ],
+      "strengths": [
+        "The copy has a real voice and real specifics: the 'Technically the vulva' asterisk, 'Common bug', 'Male equivalent', size and nerve-fibre counts, 'Three exits, not one'. It is not vague filler.",
+        "The info panel has clear internal hierarchy: category, name, a.k.a., body, callout, then a tabular spec list. It is scannable and correctly ordered.",
+        "The side cut view communicates spatial relationships reasonably and is genuinely educational.",
+        "Colour-by-system dots (yellow urinary, purple clitoral, brown bowel) give the labels a meaningful second channel.",
+        "The display headline face is confident, and the light page with a dark stage gives an immediate focal point.",
+        "The scope is well chosen for the audience: arousal slider, X-ray, skin tones and a guided tour of 32 parts."
+      ],
+      "topFixes": [
+        "Rebuild the hero 3D asset. The outside view reads as an inflated clay blob with smeared, baked-in dark smudges and no surface detail, specular response or subsurface scattering. BioDigital sets the bar here. Add proper SSS skin shading, soft studio lighting, contact shadows and a 3/4 default camera instead of a dead-on flat front view.",
+        "Fix the mobile tap bug: tapping Uterus in the Outside view drops a 'Uterus' label onto the clitoral hood. Selecting an internal part should auto-switch to Side cut or X-ray and fly the camera to it. Otherwise the anatomy is actively misleading.",
+        "On mobile, replace the below-the-fold info card with a draggable bottom sheet (peek, half, full) over the 3D stage. Right now a tap gives no visible result unless you scroll. Move Arousal, X-ray and Skin into that sheet or a compact bottom dock.",
+        "Collapse the mobile header and chips. The title block plus two chip rows eat about 30% of the viewport, and the second row is clipped mid-word at 'Cross-section' with no scroll fade. Use one horizontally scrolling view switcher with edge fades and put display toggles behind a single 'Layers' button.",
+        "Declutter labels. In Side cut, 20+ pills overlap and the leader-less dots float ambiguously. Use leader lines to anchor points, show labels only for the current system or on hover, add collision avoidance, and shrink mobile labels (they are about 2x too large and hide the model).",
+        "Strip the slop styling. Drop the mono uppercase eyebrows except perhaps one data readout. Retire the pink dashed callout for a quieter tinted inset. Limit pink to a single primary action, and keep one 'Guided tour' entry point.",
+        "Redesign the bottom control bar. Two identical full-width sliders give arousal and X-ray equal weight. Add tick marks and state names (Baseline, Plateau, Orgasm) to the arousal track, make X-ray a compact control, and stop the scale bar ('5 cm') from colliding with the dock.",
+        "Go edge-to-edge with the stage on desktop like NASA Eyes. The inset dark card on a grey page with a tiny header feels like a demo embed. Integrate the title into the stage chrome, and group Reset view with the other camera controls in a consistent vertical rail."
+      ]
+    }
+  ]
+}

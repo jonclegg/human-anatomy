@@ -1,0 +1,84 @@
+{
+  "round": "round-6",
+  "spentTotal": 2.358577930000024,
+  "results": [
+    {
+      "model": "google/gemini-4-argon",
+      "score": 7.6,
+      "looksLikeAISlop": false,
+      "slopTells": [],
+      "strengths": [
+        "Strong, cohesive 'Haynes Owner's Manual' editorial direction with high-contrast black/white UI, numbered callout badges, and crisp Swiss-inspired typography",
+        "Exceptional copywriting: direct, unpretentious, scientifically grounded, and genuinely informative without any generic filler",
+        "Smart interactive mechanics like the Arousal physiological slider, X-ray opacity control, and 'Run an orgasm' simulation button",
+        "Clean adaptation to mobile with a bottom dock, native-feeling bottom sheet, and contextual 'Showing X on its own' banner"
+      ],
+      "topFixes": [
+        "Upgrade the 3D geometry and shaders: the anatomy currently looks like low-poly procedural primitives (spheres, tubes, cones) with harsh black toon outlines; invest in sculpted organic meshes with subsurface scattering and softer anatomical transitions like BioDigital Human",
+        "Fix 3D transparency sorting and Z-fighting in X-ray mode (seen in the Clitoris and Uterus views), where overlapping semi-transparent tubes create muddy, visually confusing artifacts",
+        "Prevent 3D leader lines and callout pins from clipping off the top of the viewport or colliding with the page title (e.g., '1 Mons pubis' pin extending off-screen in the clitoris view)",
+        "Consolidate the physiological controls (Arousal slider, X-ray toggle, Orgasms trigger) into their own dedicated dock or floating panel on desktop rather than cramming them into the bottom of the right-hand reading card",
+        "Improve the X-ray control UX: on first load it looks like a static 'Off' pill button, then transforms into a slider when active; keep the slider track consistently visible or use a clearer progressive disclosure pattern",
+        "Prevent full-page vertical scrolling from completely abandonar the 3D context on mobile (screenshot 6)—keep a sticky mini-header or floating 'Back to 3D model' button when reading the long-form manual below",
+        "Refine the 3D cross-section cut planes in 'Side cut' view: currently the sliced edges show hollow backfaces and awkward black outlines instead of clean, solid-capped anatomical cross-sections",
+        "Tighten the typographic hierarchy and padding inside the right-hand info card on desktop—the 'Common misconception' box and spec table feel slightly cramped against the card edges"
+      ]
+    },
+    {
+      "model": "~openai/gpt-astra-latest",
+      "score": 6.4,
+      "looksLikeAISlop": false,
+      "slopTells": [
+        "Generic white bordered panels and segmented controls; utilitarian rather than distinctive."
+      ],
+      "strengths": [
+        "A coherent owner's-manual concept, with numbered parts, figure captions and direct, occasionally funny copy.",
+        "Restrained grayscale interface lets the anatomy dominate; yellow selection highlights are immediately legible.",
+        "Strong heading hierarchy, readable explanations and useful factual summaries.",
+        "Labeled tools and explicit gesture instructions make exploration reasonably discoverable.",
+        "Mobile gets a dedicated toolbar and detail sheet rather than merely shrinking the desktop sidebar.",
+        "Feels purpose-built, not like a fashionable AI landing-page template."
+      ],
+      "topFixes": [
+        "Make the 3D asset the first investment. Blurred skin shading, visible seams, thin shell-like cut surfaces and crude internal geometry make this look like a prototype beside BioDigital. Improve meshes, section caps, material differentiation and lighting before polishing UI chrome.",
+        "Replace blanket X-ray transparency with selective isolation. The selected clitoris and uterus views contain a confusing tangle of translucent structures. Keep the selected organ opaque, ghost only essential anatomical context and hide unrelated geometry. 'On its own' should actually look isolated.",
+        "Constrain the desktop camera to the unobstructed canvas between the toolbar and inspector. The selected clitoris view balloons behind the heading and panels and crops important context. Fit each selection deliberately, including its labels.",
+        "Recompose mobile around the anatomical focal point. First load spends too much height on the upper skin surface while the useful anatomy sits low. Reduce the tour button's dominance, compact the header and center the relevant structures in the available viewport.",
+        "Upgrade callouts from small boxed captions to a coherent annotation system: consistent label columns, collision-aware leader lines, larger invisible hit targets and fewer simultaneous labels. Preserve context without covering the model with badges.",
+        "Separate primary exploration from simulation controls. Keep views and part selection prominent; put arousal, X-ray and contraction playback in a clearly labeled secondary group. 'Slice across' versus 'Side cut' needs clearer differentiation.",
+        "Give mobile detail sheets deliberate collapsed, half-height and expanded states. The uterus sheet obscures much of the model, while its bottom fade washes out text. Reframe the organ above the sheet and provide a clearer continuation cue; retain an explicit active view or isolation state.",
+        "Push the manual identity beyond bold headings and default panels. Unify numbering, captions, rules, spacing and icon strokes into a more precise editorial system. Break the mobile reference section into compact illustrated comparisons rather than a long, visually monotonous table."
+      ]
+    },
+    {
+      "model": "anthropic/claude-opus-5.5",
+      "score": 6.6,
+      "looksLikeAISlop": false,
+      "slopTells": [
+        "Floating white card panels with 1px borders on all four sides of the canvas",
+        "Segmented chip row for views, a standard component-library pattern",
+        "Left icon-plus-label tool menu that reads like a default sidebar kit",
+        "Black pill CTAs used for three different priority levels (Guided tour, Run an orgasm, Show all)",
+        "Some explainer copy slides into listicle cadence ('Pleasure. It is the only…')"
+      ],
+      "strengths": [
+        "Committed editorial voice: wide heavy grotesk display, asterisk joke and 'Start with the exits' give it real personality, not vague filler",
+        "Numbered callouts with leader lines and 'Fig. 1 · External view' captions sell the owner's-manual conceit well",
+        "Restrained palette with no gradients or glass; a single yellow selection accent is disciplined and legible",
+        "Detail panel has strong content hierarchy: number badge, title, plain-English subtitle, misconception box, spec table, male-equivalent line",
+        "Mobile layout is considered: views move to the top, there's a thumb-zone bottom bar, a bottom sheet for details and a clear 'Showing Uterus on its own / Show all' state banner",
+        "Long-form scroll content (homology table, numbered lists) is clean, readable editorial typesetting"
+      ],
+      "topFixes": [
+        "Rebuild the 3D rendering to one coherent style. Right now the airbrushed blurry skin blob, hard black toon outlines and flat-shaded tubes clash, and next to BioDigital it reads as a student model. Pick either clean stylized matte shading with consistent edge lines or proper PBR, then add AO and a soft contact shadow.",
+        "Fix the outside view's silhouette. The mons and thighs fade into a vignette blob with no form. Frame the camera tighter, give the surface real modelled topology, and remove the ~40% of the canvas that is shapeless gradient.",
+        "Constrain callout layout. Labels must never enter the title zone (Mons pubis collides with the header in X-ray), leaders shouldn't run 200px, and anchor dots shouldn't float in empty skin (Outer lips). Cluster labels into left and right gutters with straight-elbow leaders and fewer labels per view.",
+        "Fix view-state honesty. With X-ray at 86% the tab still says 'Outside' and the caption still says 'Fig. 1 · External view'. Either X-ray becomes its own state or the caption and tab update to reflect it.",
+        "Split the right panel. Part info and model controls (arousal slider, X-ray, Run an orgasm) are crammed into one card with three competing headings. Move the controls into a compact dock near the view switcher so the info card stays purely editorial.",
+        "Unify the control chrome on a single grid. The left tool card, bottom segmented control, bottom-left fig caption and top-right Guided tour button all float at unrelated offsets. Align them to shared margins and baselines, and demote Guided tour to a secondary style so it stops competing with the title.",
+        "On mobile, shrink the header (title at about 60% size, Guided tour as an icon or text link) and let the model fill the viewport. Make the bottom sheet start at a peek height of about 30% so the selected organ stays visible.",
+        "Replace the generic icon set (Slice, Colour code, Arousal) with custom glyphs that match the manual's technical-drawing language, and give X-ray an inline slider in place of the On/Off pill."
+      ]
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+node_modules/
+test-results/
+screens/
+# screenshots of other companies' sites, used only as the design benchmark
+design-review/references/
+# design-review screenshots stay local; each round's reviews.json and the notes are kept
+design-review/**/*.jpg
+design-review/**/*.png
+design-review/report.html

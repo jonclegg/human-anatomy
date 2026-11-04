@@ -1,0 +1,85 @@
+{
+  "round": "round-11",
+  "spentTotal": 4.730571293000025,
+  "results": [
+    {
+      "model": "google/gemini-4-argon",
+      "score": 7.6,
+      "looksLikeAISlop": false,
+      "slopTells": [],
+      "strengths": [
+        "Crisp, clever 'owner's manual' editorial art direction with strong typographic voice and high-contrast numbered callouts",
+        "Zero AI-slop clichés: disciplined neutral palette with purposeful yellow highlight, sharp spec-table formatting, and concise, informative copy",
+        "Excellent 2D-to-3D leader line integration that keeps dense anatomical labeling legible without colliding",
+        "Thoughtful mobile adaptation with a clean bottom dock, segmented view switcher, and bottom sheet"
+      ],
+      "topFixes": [
+        "Upgrade the 3D shaders and geometry: compared to BioDigital Human, the meshes look low-poly and flat-shaded with harsh clipping edges in the side-cut view and a muddy radial vignette on the 'Outside' view; add subsurface scattering, ambient occlusion, and clean cross-section caps",
+        "Remove the black cartoon outline shader on isolated mobile organs (e.g., the Uterus view)—it clashes with the smooth rendering used elsewhere and makes the mesh look jagged",
+        "Consolidate the fragmented desktop HUD: five separate floating regions (top-left header + menu, bottom-left sliders, bottom-center tabs, top-right button, right inspector card) create visual clutter; merge the left tool menu and bottom-left sliders into a single unified control rail or dock",
+        "Redesign the bottom-left slider panel: standard HTML-style range inputs and the 'On · 88%' pill look utilitarian and awkward; replace with custom, compact scrubbing bars that integrate toggle and percentage cleanly",
+        "Fix mobile viewport crowding when a part is selected: stacking the header, view tabs, 'Showing Uterus' banner, 3D model, bottom sheet, and bottom tab bar leaves almost no room for the 3D canvas; collapse the top view tabs or overlay the bottom sheet over the bottom bar when active",
+        "Give interactive rows in the right-hand inspector and mobile manual (e.g., '17 Uterus — size of a pear') clear hover/tap affordances like subtle chevrons so they read as clickable navigation rather than static text tables",
+        "Resolve the mobile scroll architecture: scrolling down into a long-form article below a full-screen 3D touch canvas easily causes scroll-hijacking and loses all navigation chrome; keep the manual inside the expandable sheet or maintain a sticky header"
+      ]
+    },
+    {
+      "model": "~openai/gpt-astra-latest",
+      "score": 6.2,
+      "looksLikeAISlop": false,
+      "slopTells": [
+        "Generic bordered panels and segmented controls feel like default application components.",
+        "Repeated rounded containers provide little identity beyond the bold title."
+      ],
+      "strengths": [
+        "Coherent technical-manual direction rather than fashionable gradient-and-glass decoration.",
+        "Strong heading hierarchy, readable body copy and restrained monochrome chrome.",
+        "Numbered callouts connect the model and explanations; yellow selection is immediately legible.",
+        "Plain-language explanations and specific anatomical comparisons suit curious beginners.",
+        "Mobile uses labeled tools and a bottom sheet rather than simply shrinking the desktop sidebar.",
+        "View switching, reset and guided-tour entry points are visibly discoverable."
+      ],
+      "topFixes": [
+        "Rebuild the 3D presentation before polishing the UI: the cutaway exposes crude tube geometry, abrupt planar cuts and inconsistent shading; the exterior close-up has a muddy, blurred surround. Use coherent anatomical meshes, clean section surfaces and deliberate lighting. This is the biggest gap to BioDigital and the other benchmarks.",
+        "Make the pelvis—not the mannequin—the opening focal point. On both screen sizes, the relevant anatomy occupies a tiny fraction of the canvas. Start substantially closer and retain whole-body context as an optional overview or inset.",
+        "Recompose the mobile selected state. The header, view tabs, isolation banner, explanation sheet and bottom toolbar leave only a narrow inspection area. Fold isolation status into the sheet, collapse secondary chrome and offer clear compact/expanded sheet positions.",
+        "Replace the scattered desktop control boxes with a deliberate workspace: one compact tool rail, one aligned inspector and a consistent view-navigation zone. Move arousal and opacity settings into a contextual drawer instead of giving them permanent first-load prominence.",
+        "Improve callout hierarchy and placement. Desktop labels are tiny, while mobile labels visually outweigh the organs. Scale labels independently of the model, prevent collisions, shorten leader lines and reveal secondary annotations progressively.",
+        "Clarify control semantics and state: distinguish toggles from actions, rename 'Slice across' to a clearer section-plane control, and preserve an explicit active-view indicator when an organ is isolated. The mobile uterus state currently leaves every view tab looking inactive.",
+        "Develop the manual identity beyond heavy headings: standardize figure numbering, annotation styling, rule weights and spacing. Keep the restrained palette, but give the gray canvas and pale body enough tonal separation to avoid the washed-out prototype appearance.",
+        "Make the mobile reading experience intentional. The selected explanation visibly fades mid-paragraph inside an already crowded screen; provide an obvious expand/read action. Break the long manual into navigable sections and turn dense comparison tables into clearer paired entries on narrow screens."
+      ]
+    },
+    {
+      "model": "anthropic/claude-opus-5.5",
+      "score": 6.6,
+      "looksLikeAISlop": false,
+      "slopTells": [
+        "Floating white card panels pinned to all four corners, a generic dashboard-overlay layout",
+        "Segmented row of view chips (Body / Outside / Clitoris / Side cut / All organs) with a black-fill active state",
+        "Dot-separated breadcrumb eyebrow 'Wooten Labs · Owner's manual · 33 parts'",
+        "Left panel mixes toggles, modes and a one-shot action ('Reset view') in one undifferentiated list",
+        "Every control is the same black-pill-on-white treatment, so nothing reads as primary"
+      ],
+      "strengths": [
+        "Real editorial voice. 'Three tubes, three exits', '*Technically the vulva' and 'Run an orgasm' land the tongue-in-cheek brief without emoji or cringe",
+        "Strong type pairing. The wide heavy grotesk headline against a neutral sans body feels like a printed manual, not a template",
+        "Numbered black part badges tie callouts, lists and the 'n of 33' stepper into one coherent indexing system",
+        "Part detail panel is well structured: name, plain-English alias, body copy, a boxed 'Common misconception', then a tidy spec table with a male equivalent",
+        "Restrained monochrome palette with a single yellow selection state. No pink-on-dark, no glass",
+        "Mobile bottom sheet with drag handle, prev/next stepper and fade-truncated copy is a correct native pattern",
+        "The 'Same parts, different build' comparison table is genuinely useful content, set like a reference book"
+      ],
+      "topFixes": [
+        "Fix the first-load framing on desktop. The pelvis occupies roughly 3% of the viewport inside a ghostly mannequin, surrounded by dead space and four panels. Open on a 3/4 pelvis close-up with the body as faint context, or run a 1.5s camera dolly from body to pelvis so the hero moment actually happens.",
+        "Bring rendering quality to one standard, at least near BioDigital level. The Outside view is a blurry brown smear with no surface detail. The isolated uterus on mobile is flat red with a thick black clip-art outline. The side cut has flat shading and muddy browns. Add subsurface scattering, ambient occlusion, consistent tissue colours and a single lighting rig across all views.",
+        "Collapse the four corner panels into two zones. Put the view switcher and tools together in one left rail, and the inspector on the right. Move Arousal, X-ray and Body outline into a contextual drawer that appears only when relevant. Right now the 3D canvas is boxed in on all sides.",
+        "Separate control types in the left panel. Overlays (Callouts, Colour code) should be visible on/off switches. Modes (Slice across) need their own group. Reset view should become an icon button near the canvas. Today 'Callouts' uses the same black fill as an active view tab, which is ambiguous.",
+        "Add label collision and leader-line logic. In Outside and Side cut, leaders run long distances across anatomy and stack in tight columns (Vestibule, Outer lips, Inner lips, Vaginal opening, Hymen). Shorten leaders, anchor labels to the nearest free edge, and fade non-selected labels when a part is active.",
+        "Give the brand one ownable accent and a signature interaction. The yellow selection is the only colour moment. Use it deliberately on the stepper, active part and the 'Run an orgasm' button, and turn that button into a real hero feature with a timeline scrubber instead of a generic outline button.",
+        "Tighten mobile scale. Callout chips and the five-tab segmented control are oversized and eat the model. Use smaller label chips, a scrollable tab strip at reduced weight, and pull the 'Showing Uterus on its own / Show all' banner into the sheet header.",
+        "Polish the micro-details. Align the Arousal tick labels under their ticks and show the current stage name on the thumb. Make 'On · 88%' and 'Off' a consistent toggle-plus-value pattern. Give 'Fig. 0 · The pelvis in the body' more presence, or drop it, since it currently floats as orphaned grey text above the tabs."
+      ]
+    }
+  ]
+}

@@ -1,0 +1,1812 @@
+<title>Wooten Labs Vagina Manual</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="description" content="An interactive 3D guide to the vulva, vagina, clitoris and the rest of the pelvic anatomy, from Wooten Labs.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: the 3D model fills the screen; parts, inspector and controls float over it as glass panels. A short manual follows. */
+:root {
+  --bg: #f3f1f4; --surface: #ffffff; --surface-2: #ebe6ed; --ink: #1c1820; --muted: #645c6a; --line: #dcd4df;
+  --accent: #a3164d; --accent-soft: #f6dce6; --on-accent: #ffffff;
+  --stage-top: #2a2130; --stage-bottom: #0f0b12; --stage-ink: #f3ecf4; --stage-muted: #b3a8b9; --stage-line: rgba(255,255,255,0.10);
+  --glass: rgba(18,13,21,0.80); --glass-line: rgba(255,255,255,0.12); --glass-chip: rgba(255,255,255,0.08);
+  --stage-accent: #f2669a; --stage-accent-soft: rgba(242,102,154,0.14); --chip-on: #f3ecf4; --chip-on-ink: #1c1820;
+  --display: "Bricolage Grotesque", "Avenir Next", "Segoe UI", system-ui, sans-serif;
+  --body: "IBM Plex Sans", "Helvetica Neue", system-ui, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --radius: 12px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) { --bg: #131015; --surface: #1c181f; --surface-2: #262129; --ink: #f0eaf2; --muted: #a79eae; --line: #342d38; --accent: #f2669a; --accent-soft: #3a1828; --on-accent: #1a0a11; color-scheme: dark; }
+}
+:root[data-theme="dark"] { --bg: #131015; --surface: #1c181f; --surface-2: #262129; --ink: #f0eaf2; --muted: #a79eae; --line: #342d38; --accent: #f2669a; --accent-soft: #3a1828; --on-accent: #1a0a11; color-scheme: dark; }
+[hidden] { display: none !important; }
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font-family: var(--body); font-size: 15px; line-height: 1.5;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+.wrap { max-width: 1600px; margin: 0 auto; }
+h1, h2, h3 { font-family: var(--display); text-wrap: balance; margin: 0; letter-spacing: -0.01em; }
+p { margin: 0; }
+button { font: inherit; color: inherit; }
+button:focus-visible, input:focus-visible, a:focus-visible { outline: 2px solid var(--stage-accent); outline-offset: 2px; }
+
+.bar { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 16px; padding-block: 14px 12px; }
+.brand { font-family: var(--mono); font-size: 11.5px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--muted); }
+.bar h1 { font-size: clamp(24px, 3vw, 32px); font-weight: 800; }
+.bar h1 sup { font-size: 0.5em; color: var(--accent); }
+.bar p { color: var(--muted); font-size: 14px; }
+
+/* Viewer */
+.viewer { position: relative; height: max(580px, calc(100svh - 76px)); border-radius: var(--radius); overflow: hidden; color: var(--stage-ink);
+  background: radial-gradient(120% 90% at 50% 35%, var(--stage-top), var(--stage-bottom)); }
+.stage { position: absolute; inset: 0; touch-action: none; }
+.stage::before { content: ""; position: absolute; inset: 0; pointer-events: none;
+  background-image: linear-gradient(var(--stage-line) 1px, transparent 1px), linear-gradient(90deg, var(--stage-line) 1px, transparent 1px);
+  background-size: 40px 40px; mask-image: radial-gradient(80% 70% at 50% 50%, #000 30%, transparent 85%); opacity: 0.4; }
+#scene { position: absolute; inset: 0; width: 100%; height: 100%; display: block; cursor: grab; }
+#scene.pointing { cursor: pointer; }
+#labels { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+.tag { position: absolute; left: 0; top: 0; pointer-events: auto; display: inline-flex; align-items: center; gap: 6px; white-space: nowrap;
+  padding: 3px 9px 3px 4px; border-radius: 999px; border: 1px solid var(--glass-line); background: var(--glass); color: var(--stage-ink); font-size: 12px; cursor: pointer; }
+.tag i { width: 9px; height: 9px; border-radius: 50%; background: var(--dot); box-shadow: 0 0 0 2px rgba(16,12,19,0.9), 0 0 0 3px var(--dot); margin-left: 2px; }
+.tag.on { background: var(--chip-on); color: var(--chip-on-ink); font-weight: 600; }
+.tag.static { pointer-events: none; background: transparent; border-color: transparent; color: var(--stage-muted); font-family: var(--mono); font-size: 11px; }
+#tip { position: absolute; pointer-events: none; padding: 4px 9px; border-radius: 6px; background: var(--chip-on); color: var(--chip-on-ink); font-size: 12.5px; font-weight: 600; transform: translate(12px, 12px); }
+.reset { position: absolute; right: 10px; bottom: calc(var(--dock-height, 56px) + 20px); z-index: 2; padding: 7px 12px; font-size: 12.5px; cursor: pointer; }
+.loading { position: absolute; inset: 0; display: grid; place-items: center; font-family: var(--mono); font-size: 12.5px; color: var(--stage-muted); pointer-events: none; }
+
+.glass { background: var(--glass); border: 1px solid var(--glass-line); border-radius: 10px; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
+.stage-top { position: absolute; top: 10px; left: 10px; right: 10px; display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; pointer-events: none; z-index: 3; }
+.stage-top > * { pointer-events: auto; }
+.group { display: flex; flex-wrap: wrap; gap: 8px; }
+.seg { display: inline-flex; flex-wrap: wrap; gap: 2px; padding: 3px; }
+.seg button, .pill { border: 0; background: transparent; color: var(--stage-ink); padding: 6px 11px; border-radius: 7px; cursor: pointer; font-size: 13px; }
+.seg button:hover, .pill:hover { background: var(--glass-chip); }
+.seg button[aria-pressed="true"], .pill[aria-expanded="true"] { background: var(--chip-on); color: var(--chip-on-ink); font-weight: 600; }
+.pill { padding: 9px 13px; }
+.tour-btn { border: 0; background: var(--stage-accent); color: #1a0a11; font-weight: 600; padding: 9px 14px; border-radius: 9px; cursor: pointer; font-size: 13.5px; }
+.tour-btn[aria-pressed="true"] { background: var(--chip-on); }
+
+.drawer { position: absolute; left: 10px; top: 62px; bottom: 82px; width: 260px; overflow: auto; padding: 12px; z-index: 2; }
+.drawer h2 { font-family: var(--mono); font-size: 11px; font-weight: 500; letter-spacing: 0.12em; text-transform: uppercase; color: var(--stage-muted); margin: 2px 0 8px; }
+.layers { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px; }
+.chip { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--glass-line); background: var(--glass-chip); border-radius: 999px; padding: 4px 10px 4px 8px; font-size: 12.5px; cursor: pointer; color: var(--stage-ink); }
+.chip i { width: 9px; height: 9px; border-radius: 50%; background: var(--dot); }
+.chip[aria-pressed="false"] { background: transparent; color: var(--stage-muted); }
+.chip[aria-pressed="false"] i { background: transparent; box-shadow: inset 0 0 0 1.5px var(--dot); }
+.group-name { font-family: var(--display); font-weight: 600; font-size: 13px; margin: 10px 0 2px; display: flex; align-items: center; gap: 6px; }
+.group-name i { width: 8px; height: 8px; border-radius: 2px; background: var(--dot); }
+.part-list { list-style: none; margin: 0; padding: 0; }
+.part-list button { width: 100%; text-align: left; background: none; border: 0; padding: 4px 8px; border-radius: 6px; cursor: pointer; font-size: 13.5px; color: var(--stage-ink); }
+.part-list button:hover { background: var(--glass-chip); }
+.part-list button[aria-current="true"] { background: var(--stage-accent-soft); color: var(--stage-accent); font-weight: 600; }
+
+.inspector { position: absolute; right: 10px; top: 62px; width: 330px; max-height: calc(100% - 146px); overflow: auto; padding: 16px; display: grid; gap: 12px; z-index: 2; }
+.inspector-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.sys { display: inline-flex; align-items: center; gap: 6px; font-family: var(--mono); font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--stage-muted); }
+.sys i { width: 9px; height: 9px; border-radius: 50%; background: var(--dot); }
+.close { border: 0; background: var(--glass-chip); color: var(--stage-ink); width: 28px; height: 28px; border-radius: 7px; cursor: pointer; font-size: 16px; line-height: 1; }
+.inspector h2 { font-size: 26px; font-weight: 800; line-height: 1.05; }
+.aka { font-family: var(--mono); font-size: 12px; color: var(--stage-muted); margin-top: 3px; }
+.inspector p { font-size: 14px; }
+.bug { border: 1px dashed var(--stage-accent); border-radius: 8px; padding: 9px 11px; background: var(--stage-accent-soft); font-size: 13.5px; }
+.bug b { color: var(--stage-accent); font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.1em; text-transform: uppercase; display: block; margin-bottom: 2px; font-weight: 500; }
+.stats { display: grid; grid-template-columns: auto 1fr; gap: 3px 12px; margin: 0; font-size: 13px; font-variant-numeric: tabular-nums; }
+.stats dt { color: var(--stage-muted); }
+.stats dd { margin: 0; font-weight: 600; }
+.homolog { font-size: 13px; padding-top: 9px; border-top: 1px solid var(--glass-line); }
+.homolog span { color: var(--stage-muted); }
+.tour-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding-bottom: 10px; border-bottom: 1px solid var(--glass-line); }
+.tour-bar .count { font-family: var(--mono); font-size: 12px; color: var(--stage-muted); margin-right: auto; font-variant-numeric: tabular-nums; }
+.btn { border: 1px solid var(--glass-line); background: var(--glass-chip); color: var(--stage-ink); padding: 6px 11px; border-radius: 8px; cursor: pointer; font-size: 13px; }
+.btn:hover { border-color: var(--stage-accent); }
+.btn.primary { background: var(--stage-accent); border-color: var(--stage-accent); color: #1a0a11; font-weight: 600; }
+.btn[disabled] { opacity: 0.45; cursor: default; }
+.exits { display: grid; gap: 6px; font-size: 13.5px; }
+.exits div { display: flex; gap: 8px; align-items: baseline; }
+.exits i { width: 10px; height: 10px; border-radius: 50%; background: var(--dot); flex: none; }
+.linkish { background: none; border: 0; padding: 0; color: var(--stage-accent); cursor: pointer; text-decoration: underline; text-underline-offset: 2px; font-weight: 600; }
+.small { font-size: 12.5px; color: var(--stage-muted); }
+
+.section-panel { position: absolute; left: 10px; bottom: 82px; width: 320px; padding: 12px; display: grid; gap: 8px; z-index: 2; }
+.section-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; font-size: 13.5px; }
+.section-head span { font-family: var(--mono); font-size: 11.5px; color: var(--stage-accent); font-variant-numeric: tabular-nums; }
+#sectionCanvas { width: 100%; height: auto; aspect-ratio: 4 / 3; border-radius: 8px; background: rgba(0,0,0,0.25); }
+.section-slider { display: flex; align-items: center; gap: 8px; font-family: var(--mono); font-size: 10.5px; color: var(--stage-muted); text-transform: uppercase; letter-spacing: 0.06em; }
+.dock { position: absolute; left: 10px; right: 10px; bottom: 10px; display: flex; flex-wrap: wrap; align-items: center; gap: 10px 22px; padding: 10px 14px; z-index: 2; }
+.dock .ctl { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; min-width: 0; }
+.dock .arousal { flex: 1 1 380px; }
+.dock .xray { flex: 0 1 240px; }
+.dock label, .dock .name { font-family: var(--mono); font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--stage-muted); white-space: nowrap; }
+.dock output { font-family: var(--mono); font-size: 12px; color: var(--stage-accent); white-space: nowrap; font-variant-numeric: tabular-nums; min-width: 9.5em; }
+input[type="range"] { flex: 1; min-width: 80px; accent-color: var(--stage-accent); }
+.tones { display: flex; gap: 6px; }
+.tones button { width: 22px; height: 22px; border-radius: 50%; border: 2px solid rgba(16,12,19,0.9); box-shadow: 0 0 0 1px var(--glass-line); background: var(--sw); cursor: pointer; }
+.tones button[aria-pressed="true"] { box-shadow: 0 0 0 2px var(--stage-accent); }
+
+/* Manual */
+.manual { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr)); gap: 40px 48px; padding-block: 48px 32px; }
+.manual section { display: grid; gap: 12px; align-content: start; min-width: 0; }
+.manual h2 { font-size: 24px; font-weight: 800; }
+.manual p { max-width: 62ch; }
+.route { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.route button { border: 1px solid var(--line); background: var(--surface); border-radius: 8px; padding: 7px 11px; cursor: pointer; }
+.route button:hover { border-color: var(--accent); }
+.route span { color: var(--muted); }
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: 14px; }
+th, td { text-align: left; padding: 8px 12px; border-bottom: 1px solid var(--line); }
+th { font-family: var(--mono); font-size: 11px; font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); background: var(--surface-2); }
+tr:last-child td { border-bottom: 0; }
+.bugs { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.bugs li { border-left: 2px solid var(--accent); padding: 2px 0 2px 12px; }
+.bugs b { display: block; }
+.bugs span { color: var(--muted); font-size: 14px; }
+footer { border-top: 1px solid var(--line); padding-block: 18px 32px; color: var(--muted); font-size: 12.5px; display: grid; gap: 6px; }
+
+@media (max-width: 820px) {
+  .viewer { height: auto; overflow: visible; background: none; display: grid; gap: 10px; }
+  .stage { position: relative; height: 68svh; min-height: 420px; border-radius: var(--radius); overflow: hidden; background: radial-gradient(120% 90% at 50% 35%, var(--stage-top), var(--stage-bottom)); }
+  .drawer, .inspector, .dock, .section-panel { position: static; width: auto; max-height: none; backdrop-filter: none; -webkit-backdrop-filter: none; background: var(--stage-bottom); }
+  .stage-top { position: static; order: -1; display: grid; gap: 6px; }
+  .stage-top .group { flex-wrap: nowrap; overflow-x: auto; gap: 6px; }
+  .stage-top .seg { flex-wrap: nowrap; flex: none; }
+  .seg button, .pill, .tour-btn { white-space: nowrap; padding: 7px 10px; }
+  .stage-top .glass { backdrop-filter: none; -webkit-backdrop-filter: none; background: var(--stage-bottom); }
+  .dock { order: 1; } .section-panel { order: 2; } .inspector { order: 3; } .drawer { order: 4; }
+  .stage { order: 0; }
+  .reset { top: 10px; bottom: auto; background: var(--stage-bottom); backdrop-filter: none; -webkit-backdrop-filter: none; }
+  .dock output { min-width: 0; }
+}
+@media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
+</style>
+
+<div class="wrap">
+  <header class="bar">
+    <span class="brand">Wooten Labs</span>
+    <h1>The Vagina Manual<sup>*</sup></h1>
+    <p>*Technically the vulva. The vagina is only the internal canal.</p>
+  </header>
+
+  <section class="viewer" id="viewer" aria-label="Interactive 3D model">
+    <div class="stage-top">
+        <div class="group">
+          <button type="button" class="pill glass" id="partsBtn" aria-expanded="false" aria-controls="drawer">Parts</button>
+          <div class="seg glass" role="group" aria-label="Views" id="views">
+            <button type="button" data-view="front" aria-pressed="true">Outside</button>
+            <button type="button" data-view="clitoris" aria-pressed="false">Clitoris</button>
+            <button type="button" data-view="pee" aria-pressed="false">Side cut</button>
+            <button type="button" data-view="inside" aria-pressed="false">Everything</button>
+          </div>
+        </div>
+        <div class="group">
+          <div class="seg glass" role="group" aria-label="Display">
+            <button type="button" id="labelsBtn" aria-pressed="true">Labels</button>
+            <button type="button" id="cutBtn" aria-pressed="false">Cut in half</button>
+            <button type="button" id="codedBtn" aria-pressed="false">Color by system</button>
+            <button type="button" id="sectionBtn" aria-pressed="false">Cross-section</button>
+          </div>
+          <button type="button" class="tour-btn" id="tourBtn" aria-pressed="false">Guided tour</button>
+        </div>
+    </div>
+    <div class="stage" id="stage">
+      <canvas id="scene" aria-label="3D model of the vulva and pelvic organs. Drag to rotate, scroll to zoom, click a part for details."></canvas>
+      <button type="button" class="reset glass" id="resetBtn" aria-label="Reset the view">Reset view</button>
+      <div id="labels"></div>
+      <div id="tip" hidden></div>
+      <div class="loading" id="loading">Loading the 3D model…</div>
+    </div>
+    <aside class="drawer glass" id="drawer" aria-label="Layers and parts" hidden>
+      <h2>Layers</h2>
+      <div class="layers" id="layers"></div>
+      <h2>Parts</h2>
+      <div id="partGroups"></div>
+    </aside>
+    <aside class="inspector glass" id="inspector" aria-live="polite"></aside>
+    <aside class="section-panel glass" id="sectionPanel" aria-label="Cross-section of the vagina" hidden>
+      <div class="section-head"><b>Slice across the vagina</b><span id="sectionDepthOut"></span></div>
+      <canvas id="sectionCanvas" width="600" height="450" aria-label="Cross-section drawing: vagina, urethra, bladder, rectum"></canvas>
+      <label class="section-slider"><span>Opening</span><input type="range" id="sectionDepth" min="4" max="92" value="35" aria-label="Slice depth"><span>Cervix</span></label>
+      <p class="small" id="sectionNote"></p>
+    </aside>
+    <div class="dock glass" id="dock">
+      <div class="ctl arousal">
+        <label for="arousal">Arousal</label>
+        <input type="range" id="arousal" min="0" max="100" value="0">
+        <output id="arousalOut" for="arousal">Baseline · 9.0 cm</output>
+        <button type="button" class="btn primary" id="orgasmBtn">Run an orgasm</button>
+      </div>
+      <div class="ctl xray">
+        <label for="xray">X-ray</label>
+        <input type="range" id="xray" min="0" max="100" value="0">
+      </div>
+      <div class="ctl">
+        <span class="name">Skin</span>
+        <div class="tones" id="tones" role="group" aria-label="Skin tone"></div>
+      </div>
+    </div>
+  </section>
+
+  <main class="manual">
+    <section id="exits">
+      <h2>Three exits, not one</h2>
+      <p>Front to back: urethral opening (pee), vaginal opening (periods, sex, birth), anus (poop). The female urethra is about 4 cm long, versus about 20 cm in men, which is why UTIs are so common.</p>
+      <div class="route" aria-label="Where pee comes from">
+        <button type="button" data-select="ureters" data-view="inside">Ureters</button><span>→</span>
+        <button type="button" data-select="bladder" data-view="pee">Bladder</button><span>→</span>
+        <button type="button" data-select="urethra" data-view="pee">Urethra</button><span>→</span>
+        <button type="button" data-select="meatus" data-view="front">Urethral opening</button>
+      </div>
+    </section>
+    <section id="homology">
+      <h2>Same parts, different build</h2>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Vulva owners</th><th>Penis owners</th></tr></thead>
+          <tbody>
+            <tr><td>Clitoral glans, body, crura</td><td>Penile glans, shaft, crura</td></tr>
+            <tr><td>Vestibular bulbs</td><td>Bulb of the penis</td></tr>
+            <tr><td>Labia minora</td><td>Underside of the shaft</td></tr>
+            <tr><td>Labia majora</td><td>Scrotum</td></tr>
+            <tr><td>Clitoral hood</td><td>Foreskin</td></tr>
+            <tr><td>Ovaries</td><td>Testes</td></tr>
+            <tr><td>Skene's glands · Bartholin's glands</td><td>Prostate · Cowper's glands</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+    <section id="bugs">
+      <h2>Common bugs</h2>
+      <ul class="bugs" id="bugList"></ul>
+    </section>
+  </main>
+
+  <footer>
+    <span>Sizes from Longhurst et al., <i>Clinical Anatomy</i> 2023 (clitoris meta-analysis, 21 studies); Lloyd et al., <i>BJOG</i> 2005 (vulval and vaginal ranges); MRI studies of vaginal and uterine angles. Orgasm data: Herbenick et al. 2018. Arousal phases: Masters &amp; Johnson 1966.</span>
+    <span>Educational model, simplified for clarity. Bodies vary widely. Not medical advice.</span>
+  </footer>
+</div>
+
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.min.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+} }
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+performance.mark('manual:module-start');
+
+/* ---------- Coordinates ----------
+   1 unit = 1 cm. +x = the body's left/right, +y = anterior (toward the belly),
+   +z = out of the vulva (inferior when standing). S(x, y, s) takes "s" = height above the vulva, standing. */
+const V = (x, y, z) => new THREE.Vector3(x, y, z);
+const S = (x, y, s) => new THREE.Vector3(x, y, -s);
+const smooth = (e0, e1, x) => { const t = Math.min(1, Math.max(0, (x - e0) / (e1 - e0))); return t * t * (3 - 2 * t); };
+const lerp = (a, b, t) => a + (b - a) * t;
+const mirror = points => points.map(p => V(-p.x, p.y, p.z));
+const bend = y => -0.13 * Math.max(0, y - 2.5) ** 2;          // the front of the vulva curves up into the mons
+const E = (x, y, z) => V(x, y, z + bend(y));                    // external surface point
+function endRound(t, k0, k1) {
+  let r = 1;
+  if (k0 > 0 && t < k0) { const u = 1 - t / k0; r *= Math.sqrt(Math.max(0, 1 - u * u)); }
+  if (k1 > 0 && t > 1 - k1) { const u = (t - (1 - k1)) / k1; r *= Math.sqrt(Math.max(0, 1 - u * u)); }
+  return r;
+}
+
+/* Tube with an elliptical, per-point cross-section. profile(t) -> [radiusAlongHint, radiusAcross, offsetAlongHint, offsetAcross] */
+function tubeGeometry(points, profile, { segments = 96, radial = 32, hint = V(0, 0, 1), closed = false } = {}) {
+  const curve = new THREE.CatmullRomCurve3(points, closed, 'centripetal');
+  const rings = closed ? segments : segments + 1;
+  const position = new Float32Array(rings * radial * 3);
+  const P = new THREE.Vector3(), T = new THREE.Vector3(), N = new THREE.Vector3(), B = new THREE.Vector3();
+  let k = 0;
+  for (let i = 0; i < rings; i++) {
+    const t = i / segments;
+    curve.getPointAt(Math.min(1, t), P); curve.getTangentAt(Math.min(1, t), T);
+    N.copy(hint).addScaledVector(T, -hint.dot(T));
+    if (N.lengthSq() < 1e-8) N.set(1, 0, 0).addScaledVector(T, -T.x);
+    N.normalize(); B.crossVectors(T, N);
+    const shape = profile(Math.min(1, t));   // [radiusAlongHint, radiusAcross, offsets…] or angle => [u, v]
+    for (let j = 0; j < radial; j++) {
+      const angle = j / radial * Math.PI * 2;
+      const [u, v] = typeof shape === 'function' ? shape(angle)
+        : [Math.cos(angle) * shape[0] + (shape[2] || 0), Math.sin(angle) * shape[1] + (shape[3] || 0)];
+      position[k++] = P.x + N.x * u + B.x * v;
+      position[k++] = P.y + N.y * u + B.y * v;
+      position[k++] = P.z + N.z * u + B.z * v;
+    }
+  }
+  const index = [];
+  for (let i = 0; i < segments; i++) {
+    const i2 = (i + 1) % rings;
+    for (let j = 0; j < radial; j++) {
+      const j2 = (j + 1) % radial;
+      const a = i * radial + j, b = i2 * radial + j, c = i2 * radial + j2, d = i * radial + j2;
+      index.push(a, b, d, b, c, d);
+    }
+  }
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute('position', new THREE.BufferAttribute(position, 3));
+  geometry.setIndex(index);
+  geometry.computeVertexNormals();
+  return geometry;
+}
+function ellipsoidGeometry(center, radii, rotation = [0, 0, 0]) {
+  const geometry = new THREE.SphereGeometry(1, 48, 32);
+  const matrix = new THREE.Matrix4().compose(center, new THREE.Quaternion().setFromEuler(new THREE.Euler(...rotation)), radii);
+  return geometry.applyMatrix4(matrix);
+}
+function mergeGeometries(list) {
+  let vertexCount = 0; list.forEach(g => vertexCount += g.attributes.position.count);
+  const position = new Float32Array(vertexCount * 3), index = [];
+  let offset = 0;
+  for (const g of list) {
+    const ng = g.index ? g : g.toNonIndexed();
+    position.set(ng.attributes.position.array, offset * 3);
+    if (ng.index) for (const i of ng.index.array) index.push(i + offset);
+    else for (let i = 0; i < ng.attributes.position.count; i++) index.push(i + offset);
+    offset += ng.attributes.position.count;
+  }
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute('position', new THREE.BufferAttribute(position, 3));
+  geometry.setIndex(index);
+  geometry.computeVertexNormals();
+  return geometry;
+}
+
+/* ---------- Content ---------- */
+const LAYERS = [
+  { id: 'external', name: 'Vulva (outside)', dot: '#e889a3' },
+  { id: 'clitoris', name: 'Clitoris', dot: '#9a4fe0' },
+  { id: 'reproductive', name: 'Reproductive', dot: '#e0507a' },
+  { id: 'urinary', name: 'Pee plumbing', dot: '#f2c230' },
+  { id: 'glands', name: 'Glands', dot: '#25c2b3' },
+  { id: 'neighbors', name: 'Bowel', dot: '#9a7262' },
+  { id: 'muscle', name: 'Pelvic floor', dot: '#e0533f' },
+  { id: 'bones', name: 'Bones', dot: '#d9cdb4' },
+];
+const PARTS = {
+  mons: { layer: 'external', name: 'Mons pubis', short: 'Mons pubis', aka: 'The front pad', sys: 'Vulva',
+    what: 'A cushion of fat over the pubic bone. Grows hair at puberty.',
+    does: 'Pads the pubic bone during sex, cycling and other impacts. The hair cuts friction and holds scent from nearby sweat glands.',
+    bug: "Still not the vagina. Nothing you can see from the outside is the vagina.",
+    homolog: 'Same area in men, usually with less fat', stats: [['Sits over', 'Pubic symphysis'], ['Changes with', 'Hormones, age, weight']] },
+  labiaMajora: { layer: 'external', name: 'Labia majora', short: 'Outer lips', aka: 'Outer lips', sys: 'Vulva',
+    what: 'Two padded folds of skin running from the mons back toward the perineum. Hair on the outside, smooth skin with oil and sweat glands on the inside.',
+    does: 'Close over and protect everything inside. They flatten and part slightly during arousal.',
+    bug: 'They grow from the same embryonic tissue that becomes the scrotum.',
+    homolog: 'Scrotum', stats: [['Length', '7–12 cm'], ['Built from', 'Labioscrotal swellings']] },
+  labiaMinora: { layer: 'external', name: 'Labia minora', short: 'Inner lips', aka: 'Inner lips', sys: 'Vulva',
+    what: 'Thin, hairless folds inside the outer lips. They join above the clitoris to form the hood and join again below the vaginal opening.',
+    does: 'Protect the vestibule and its openings. Full of nerves and blood vessels, so they swell and darken with arousal.',
+    bug: 'Inner lips that stick out past the outer lips, or one side longer than the other, are common and normal. Porn is not a reference sample.',
+    homolog: 'Skin on the underside of the penis', stats: [['Length', '2–10 cm'], ['Width', '0.7–5 cm'], ['Asymmetry', 'Common']] },
+  hood: { layer: 'external', name: 'Clitoral hood', short: 'Hood', aka: 'Prepuce', sys: 'Vulva',
+    what: 'A fold of skin over the clitoral glans. Each inner lip splits at the top: the outer fold arches over the glans to form the hood, and the inner fold runs underneath it as the frenulum.',
+    does: 'Shields the glans, which is often too sensitive for direct contact. At high arousal the glans pulls back under it.',
+    bug: "If it seems to vanish mid-session, you didn't lose it. That's the retraction, and it usually means things are going well.",
+    homolog: 'Foreskin', stats: [['Glans retracts', 'Plateau phase']] },
+  vestibule: { layer: 'external', name: 'Vestibule', short: 'Vestibule', aka: 'The lobby', sys: 'Vulva',
+    what: 'The smooth, moist area inside the inner lips. The urethral opening, the vaginal opening and the gland ducts all open here.',
+    does: "The boundary zone between outer skin and internal lining. A faint line on the inner lips (Hart's line) marks where one becomes the other.",
+    bug: 'Two separate openings sit in this small area: the urethra up front and the vagina behind it.',
+    homolog: 'No direct match. In men the urethra closes over and runs inside the penis.', stats: [['Contains', 'Urethral and vaginal openings'], ['Surface', 'Mucous membrane']] },
+  meatus: { layer: 'external', name: 'Urethral opening', short: 'Urethral opening (pee)', aka: 'Where pee comes out', sys: 'Pee plumbing', dot: '#f2c230',
+    what: 'A small slit between the clitoral glans and the vaginal opening. The end of the urethra.',
+    does: "Urine leaves the body here. Skene's gland ducts open right beside it.",
+    bug: 'Pee does not come out of the vagina. It has its own opening about 2 cm below the clitoris, just above the vaginal opening.',
+    homolog: 'Opening at the tip of the penis', stats: [['Clitoris to here', '~22 mm avg'], ['Size', 'A few mm']] },
+  introitus: { layer: 'external', name: 'Vaginal opening', short: 'Vaginal opening', aka: 'Introitus', sys: 'Reproductive', dot: '#e0507a',
+    what: 'The entrance to the vagina, behind the urethral opening. Ringed by the hymen and, deeper, by the vestibular bulbs and the bulbospongiosus muscle.',
+    does: 'Period blood and babies leave through it. Penetrative sex happens here. The muscle around it can tighten and relax.',
+    bug: "It isn't a permanently open hole. At rest the walls touch and it opens when something goes in.",
+    homolog: 'None', stats: [['Clitoris to here', '~43 mm avg'], ['Stretches to', '~10 cm in childbirth']] },
+  hymen: { layer: 'external', name: 'Hymen', short: 'Hymen', aka: 'Vaginal corona', sys: 'Reproductive', dot: '#e0507a',
+    what: 'A thin, stretchy fringe of tissue partly around the vaginal opening. Shapes vary: ring, crescent, fringed, and rarely one that covers the opening completely.',
+    does: 'No known essential job. It is left over from fetal development.',
+    bug: "It doesn't 'pop', and it usually has an opening from birth (period blood leaves through it). You can't read sexual history from it. The WHO calls virginity testing unscientific.",
+    homolog: 'None', stats: [['Typical shape', 'Crescent or ring'], ['As a virginity test', 'Not valid']] },
+  perineum: { layer: 'external', name: 'Perineum', short: 'Perineum', aka: 'The bridge', sys: 'Vulva',
+    what: 'The skin between the bottom of the vaginal opening and the anus. Under it is the perineal body, a knot of tissue where several pelvic floor muscles anchor.',
+    does: 'Ties the pelvic floor together. Stretches a lot in childbirth and can tear.',
+    bug: 'It has its own nerve supply and is often sensitive. Frequently overlooked.',
+    homolog: 'Perineum (usually longer in men)', stats: [['Length', '1.5–5.5 cm']] },
+  glans: { layer: 'clitoris', name: 'Clitoral glans', short: 'Clitoral glans', aka: 'The clitoris you know about', sys: 'Clitoris',
+    what: 'The visible tip of the clitoris, under the hood at the top of the vulva.',
+    does: "Pleasure. It is the only human organ whose only known job is pleasure. A 2022 study counted about 10,000 nerve fibres supplying it.",
+    bug: 'This is the tip of an iceberg. The whole structure is about 10 cm and mostly internal. Turn up the X-ray to see it.',
+    homolog: 'Glans (head) of the penis', stats: [['Size', '6.4 × 5.1 mm avg'], ['Nerve fibres', '~10,000'], ['Whole organ', '~10 cm']] },
+  clitBody: { layer: 'clitoris', name: 'Clitoral body', short: 'Clitoral body', aka: 'The shaft', sys: 'Clitoris',
+    what: 'Erectile tissue running from the glans up toward the pubic bone, under the hood. It bends back on itself, held by a suspensory ligament.',
+    does: 'Fills with blood during arousal and firms up. You can often feel it as a cord under the skin above the glans.',
+    bug: 'The clitoris gets erect. Same mechanism as a penis: arteries open, spongy tissue fills, outflow veins get squeezed.',
+    homolog: 'Shaft of the penis (corpora cavernosa)', stats: [['Length', '~25 mm avg'], ['Width', '~9 mm']] },
+  crura: { layer: 'clitoris', name: 'Clitoral crura', short: 'Crura (legs)', aka: 'The legs', sys: 'Clitoris',
+    what: 'Two legs of erectile tissue that split from the body and run back along the pubic arch on each side.',
+    does: 'Swell with blood during arousal and anchor the clitoris to bone. Wrapped by the ischiocavernosus muscles, which contract during orgasm.',
+    bug: 'Clitoral tissue spans the whole area, not one button. Pressure across the vulva can reach it.',
+    homolog: 'Crura of the penis (the root inside the body)', stats: [['Length', '~52 mm each avg']] },
+  bulbs: { layer: 'clitoris', name: 'Vestibular bulbs', short: 'Bulbs', aka: 'Clitoral bulbs', sys: 'Clitoris',
+    what: 'Two elongated bodies of spongy erectile tissue under the labia, hugging either side of the vaginal opening.',
+    does: 'Engorge during arousal, which plumps the vulva and firms and cushions the vaginal entrance. Covered by the bulbospongiosus muscle.',
+    bug: "Described by Georg Kobelt in 1844, then left out of many textbooks. Their full 3D relationship to the clitoris was mapped with MRI by urologist Helen O'Connell between 1998 and 2005.",
+    homolog: 'Bulb of the penis (corpus spongiosum)', stats: [['Length', '~52 mm avg'], ['Width', '~10 mm']] },
+  vagina: { layer: 'reproductive', name: 'Vagina', short: 'Vagina', aka: 'The actual vagina', sys: 'Reproductive',
+    what: 'A muscular, elastic canal from the vaginal opening to the cervix. Lined with folds (rugae) that let it stretch. Its lower third rises steeply, then it bends back toward the sacrum.',
+    does: 'Route for period flow, the birth canal, and where penetrative sex happens. Self-cleaning: Lactobacillus bacteria keep it acidic (pH 3.8–4.5), which keeps other microbes out.',
+    bug: "It isn't an open tunnel. At rest the front and back walls touch, so a slice across it is H-shaped: about 2.8 cm wide and under 1 cm thick. Turn on Cross-section to see it. With arousal the inner two-thirds lengthens and balloons.",
+    homolog: 'Mostly none. The upper vagina comes from the Müllerian ducts, which disappear in male embryos.', stats: [['Length at rest', '6.5–12.5 cm'], ['pH', '3.8–4.5'], ['Cleaning products needed', 'None']] },
+  gArea: { layer: 'reproductive', name: 'G-area', short: 'G-area', aka: 'G-spot (disputed)', sys: 'Reproductive',
+    what: 'A region on the front wall of the vagina, a few centimetres in, where some people report strong sensation. Feels slightly ridged.',
+    does: "Probably not a separate organ. Researchers now describe it as the place where the internal clitoris, the urethra and Skene's glands press together behind the vaginal wall (the clitourethrovaginal complex).",
+    bug: "Not everyone has a hotspot here, and not finding one isn't a failure. Front-wall pressure is mostly indirect clitoral stimulation.",
+    homolog: 'Loosely, prostate stimulation', stats: [['Location', 'Front wall, ~3–5 cm in'], ['Status', 'Contested']] },
+  cervix: { layer: 'reproductive', name: 'Cervix', short: 'Cervix', aka: 'The neck of the uterus', sys: 'Reproductive',
+    what: 'The lower end of the uterus. It bulges into the top of the vagina, with a tiny opening (the os) through it.',
+    does: 'Lets period blood out and sperm in. Its mucus changes through the cycle (clear and stretchy around ovulation). Opens to about 10 cm in labour.',
+    bug: "The vagina is a dead end. A tampon can't get lost past here; the os is a few millimetres wide.",
+    homolog: 'None', stats: [['Length', '2.5–3.5 cm'], ['Angle to vagina', '~70–90°'], ['Os', 'A few mm (10 cm in labour)']] },
+  uterus: { layer: 'reproductive', name: 'Uterus', short: 'Uterus', aka: 'Womb', sys: 'Reproductive',
+    what: 'A hollow, thick-walled muscle about the size of a pear, usually tipped forward so it rests on top of the bladder.',
+    does: 'Builds a lining each cycle for a possible pregnancy and sheds it if none happens (a period). Grows to hold a full-term baby. Contracts during orgasm, periods (cramps) and labour.',
+    bug: 'It lifts up and back during arousal, which helps open up the top of the vagina. About 1 in 5 people have a uterus tilted backward, which is normal.',
+    homolog: 'None', stats: [['Size', '~7.5 × 5 × 3 cm'], ['Weight', '~50–70 g'], ['In pregnancy', 'Pear to watermelon']] },
+  tubes: { layer: 'reproductive', name: 'Fallopian tubes', short: 'Fallopian tubes', aka: 'Uterine tubes', sys: 'Reproductive',
+    what: 'Two thin tubes leading from the top corners of the uterus toward the ovaries. Their ends flare into finger-like fimbriae.',
+    does: 'The fimbriae sweep a released egg into the tube. Fertilisation usually happens in the tube, not the uterus; the embryo then drifts down over several days.',
+    bug: "The tubes aren't attached to the ovaries. There's a gap, and the egg has to be caught.",
+    homolog: 'None', stats: [['Length', '10–12 cm'], ['Fertilisation site', 'Ampulla (wide part)']] },
+  ovaries: { layer: 'reproductive', name: 'Ovaries', short: 'Ovaries', aka: 'The gonads', sys: 'Reproductive',
+    what: 'Two almond-sized glands either side of the uterus, held by ligaments against the side wall of the pelvis.',
+    does: 'Store eggs and release about one per cycle. Produce estrogen, progesterone and some testosterone.',
+    bug: "Eggs aren't made over a lifetime. Everyone with ovaries is born with 1–2 million immature eggs and ovulates only about 400–500 of them.",
+    homolog: 'Testes', stats: [['Size', '~3 × 2 × 1 cm'], ['Eggs at birth', '1–2 million'], ['Ovulated', '~400–500']] },
+  bladder: { layer: 'urinary', name: 'Bladder', short: 'Bladder', aka: 'Pee tank', sys: 'Pee plumbing',
+    what: 'A stretchy muscular bag behind the pubic bone, in front of the uterus and vagina.',
+    does: 'Stores urine from the kidneys until a convenient moment. Its muscular wall (the detrusor) squeezes to empty it.',
+    bug: 'The uterus rests on top of it, which is why pregnancy means constant bathroom trips.',
+    homolog: 'Same in everyone', stats: [['First urge', '~150–250 mL'], ['Holds', '~400–500 mL']] },
+  urethra: { layer: 'urinary', name: 'Urethra', short: 'Urethra', aka: 'The pee pipe', sys: 'Pee plumbing',
+    what: 'A short tube from the bladder to the urethral opening, running just in front of the vagina, along its front wall.',
+    does: "Carries urine out. Two sphincters keep it shut until you decide otherwise. Skene's glands sit along it.",
+    bug: 'About 4 cm long versus roughly 20 cm in men. Bacteria have a much shorter trip, so about half of women get at least one UTI. Peeing after sex helps.',
+    homolog: 'Urethra (much longer in men, and it carries semen too)', stats: [['Length', '3–5 cm'], ['Exit', 'Urethral opening']] },
+  ureters: { layer: 'urinary', name: 'Ureters', short: 'Ureters', aka: 'Kidney pipes', sys: 'Pee plumbing',
+    what: 'Two thin tubes that bring urine down from the kidneys (higher up in the back, off this model) into the bladder.',
+    does: 'Push urine along with waves of muscle contraction, a few spurts a minute.',
+    bug: "Each ureter passes right beside the cervix, under the uterine artery. Surgeons call it 'water under the bridge' because it's easy to injure during a hysterectomy.",
+    homolog: 'Same in everyone', stats: [['Length', '25–30 cm']] },
+  bartholin: { layer: 'glands', name: "Bartholin's glands", short: "Bartholin's glands", aka: 'Greater vestibular glands', sys: 'Glands',
+    what: 'Two pea-sized glands just behind the bulbs, with ducts opening at about 4 and 8 o’clock beside the vaginal opening.',
+    does: 'Release a little mucus into the vestibule during arousal.',
+    bug: "They aren't the main source of lubrication. Most of it seeps through the vaginal walls from engorged blood vessels. A blocked duct can form a Bartholin's cyst.",
+    homolog: "Cowper's (bulbourethral) glands", stats: [['Size', 'Pea'], ['Duct openings', '4 and 8 o’clock']] },
+  skene: { layer: 'glands', name: "Skene's glands", short: "Skene's glands", aka: 'Paraurethral glands', sys: 'Glands',
+    what: 'Small glands on either side of the urethra, draining beside the urethral opening.',
+    does: 'Make fluid containing PSA, the same protein the prostate makes. Thought to be the source of female ejaculate, a small amount of thin, milky fluid.',
+    bug: "Ejaculation and 'squirting' are probably different things. Ultrasound studies suggest larger-volume squirting is mostly fluid from the bladder, sometimes mixed with Skene's fluid.",
+    homolog: 'Prostate', stats: [['Secretes', 'PSA-containing fluid']] },
+  anus: { layer: 'neighbors', name: 'Anus', short: 'Anus', aka: 'Next door', sys: 'Bowel',
+    what: 'The exit of the digestive tract. Not part of the reproductive system; shown for orientation.',
+    does: 'Poop leaves here. Its bacteria are the most common cause of urinary tract infections, which is why you wipe front to back.',
+    bug: 'Three separate exits: urethra (pee), vagina, anus (poop).',
+    homolog: 'Same in everyone', stats: [['Clitoris to here', '~76 mm avg']] },
+  rectum: { layer: 'neighbors', name: 'Rectum', short: 'Rectum', aka: 'Next door', sys: 'Bowel',
+    what: 'The last part of the large intestine, directly behind the vagina, separated from it by a thin wall (the rectovaginal septum).',
+    does: 'Stores stool until you reach a toilet.',
+    bug: 'Shown so you can see how tightly things are packed: bladder in front, vagina and uterus in the middle, rectum behind.',
+    homolog: 'Same in everyone', stats: [['Length', '~12 cm']] },
+  bulbospongiosus: { layer: 'muscle', name: 'Bulbospongiosus', short: 'Bulbospongiosus', aka: 'Muscle over the bulbs', sys: 'Muscle',
+    what: 'A thin muscle on each side of the vaginal opening, covering the vestibular bulbs. It runs from the perineal body forward to the clitoris.',
+    does: 'Squeezes the bulbs and narrows the vaginal entrance, pushes blood toward the clitoris during arousal, and contracts in rhythm at orgasm.',
+    bug: "Part of why the entrance can feel tight: it's a ring of muscle that can tense or relax, not a fixed size.",
+    homolog: 'Bulbospongiosus (wraps the bulb of the penis)', stats: [['Covers', 'Vestibular bulbs']] },
+  ischiocavernosus: { layer: 'muscle', name: 'Ischiocavernosus', short: 'Ischiocavernosus', aka: 'Muscle over the crura', sys: 'Muscle',
+    what: 'A muscle covering each clitoral crus along the arch of the pubic bone.',
+    does: 'Compresses the crura so blood stays in the erectile tissue, keeping the clitoris firm during arousal.',
+    bug: 'Clitoral erection is helped by muscle, the same way as in a penis.',
+    homolog: 'Ischiocavernosus (over the penile crura)', stats: [['Covers', 'Clitoral crura']] },
+  analSphincter: { layer: 'muscle', name: 'External anal sphincter', short: 'Anal sphincter', aka: 'The voluntary ring', sys: 'Muscle',
+    what: 'A ring of muscle around the anal canal, joined to the perineal body in front.',
+    does: 'Keeps the anus closed until you decide otherwise. It also contracts during orgasm.',
+    bug: "It's anchored to the perineal body, so a bad perineal tear in childbirth can reach it and cause incontinence.",
+    homolog: 'Same in everyone', stats: [['Length', '~2–3 cm']] },
+  perinealBody: { layer: 'muscle', name: 'Perineal body', short: 'Perineal body', aka: 'Central tendon of the perineum', sys: 'Muscle',
+    what: 'A wedge of tough fibre and muscle, about 3 cm deep, between the lower vagina and the anal canal, under the skin of the perineum.',
+    does: 'The anchor where the pelvic floor muscles, the bulbospongiosus and the anal sphincter all meet. It holds the lower vagina and the anus in place.',
+    bug: "It's what tears, or is cut (an episiotomy), in childbirth. Damage to it is a common cause of pelvic floor problems later.",
+    homolog: 'Perineal body (same in men)', stats: [['Depth', '~3–4 cm'], ['Meeting point of', '~8 muscles']] },
+  pelvicFloor: { layer: 'muscle', name: 'Pelvic floor', short: 'Pelvic floor', aka: 'Levator ani and friends', sys: 'Muscle',
+    what: 'A bowl-shaped sling of muscle across the bottom of the pelvis. The urethra, vagina and rectum pass through a gap in it.',
+    does: 'Holds up the bladder, uterus and bowel, keeps you continent, and contracts rhythmically during orgasm about 0.8 seconds apart.',
+    bug: "Vaginal 'tightness' is muscle tone and arousal, not mileage. It changes with age and childbirth, not with number of partners. Kegels train it.",
+    homolog: 'Same muscles in everyone', stats: [['Orgasm contractions', '~0.8 s apart']] },
+  pelvis: { layer: 'bones', name: 'Pelvis', short: 'Pelvis', aka: 'Bones, for scale', sys: 'Skeleton',
+    what: 'The pubic bone in front, the arch curving back to the sitting bones, and the sacrum and tailbone behind. The clitoral crura run along the arch.',
+    does: 'Anchors all the soft tissue. The female pelvis is wider, and the arch under the pubic bone is roughly 80–90° compared with about 50–60° in males.',
+    bug: 'Everything on this page fits inside this ring of bone, roughly the size of two cupped hands.',
+    homolog: 'Same bones, different proportions', stats: [['Subpubic angle', '~80–90°']] },
+};
+const PART_ORDER = LAYERS.flatMap(layer => Object.keys(PARTS).filter(id => PARTS[id].layer === layer.id));
+const LAYER_DOT = Object.fromEntries(LAYERS.map(l => [l.id, l.dot]));
+const dotFor = id => PARTS[id].dot || LAYER_DOT[PARTS[id].layer];
+
+const BUGS = [
+  ['"Vagina" means everything down there', 'The outside is the vulva. The vagina is the internal canal.'],
+  ['Pee comes out of the vagina', 'It has its own opening, between the clitoris and the vagina.'],
+  ['The clitoris is a small button', "That's the tip. The whole organ is about 10 cm, mostly internal."],
+  ['The vagina is an open tube', 'At rest the walls touch. It opens and lengthens with arousal.'],
+  ['Penetration alone should do it', 'Only about 18% of women say intercourse alone is enough to orgasm (Herbenick 2018).'],
+  ['The hymen pops and proves virginity', "It's stretchy tissue with a natural opening. It proves nothing."],
+  ['Lots of sex makes it loose', "It's elastic. Tone comes from muscles, arousal, age and childbirth."],
+  ['It needs washes and douches', "It's self-cleaning. Douching upsets its pH."],
+]
+
+/* ---------- Anatomy (rest pose, then arousal-dependent pieces) ---------- */
+const INTROITUS = S(0, -1.1, 0.3);
+const LOWER_DIR = S(0, -0.25, 0.97).normalize();   // lower third rises steeply
+const UPPER_DIR = S(0, -0.70, 0.71).normalize();   // upper two-thirds angle back toward the sacrum
+const LOWER_LENGTH = 3;
+const BEND_POINT = INTROITUS.clone().addScaledVector(LOWER_DIR, LOWER_LENGTH);
+const UPPER_ANTERIOR = S(0, 0.71, 0.70).normalize(); // perpendicular to the upper vagina, toward the front wall
+const GLANS_REST = E(0, 2.9, 0.38);
+const vaginaLength = a => 8 + 2.6 * a;
+/* the canal's centre line: steep for the lower third, then curving gradually (over ~1.6 cm, as on MRI) back toward the sacrum */
+const vaginaDirection = s => LOWER_DIR.clone().lerp(UPPER_DIR, smooth(LOWER_LENGTH - 0.8, LOWER_LENGTH + 0.8, s)).normalize();
+function vaginaAxis(s) {
+  const point = INTROITUS.clone(), step = 0.05;
+  let travelled = 0;
+  while (travelled + step <= s) { point.addScaledVector(vaginaDirection(travelled + step / 2), step); travelled += step; }
+  return point.addScaledVector(vaginaDirection(s), s - travelled);
+}
+function vaginaPoints(a) {
+  const L = vaginaLength(a), points = [];
+  for (let k = 0; k <= 24; k++) points.push(vaginaAxis(L * k / 24));
+  return points;
+}
+/* Cross-section of the canal at fraction t of its length. Above the entrance the collapsed vagina is
+   H-shaped: front and back walls touch across the middle (the crossbar), with small grooves at each side
+   (the uprights). The opening itself is a front-to-back slit. Walls are ~4 mm of muscle (MRI).
+   width/center/side are half-sizes of the space inside (the lumen), in cm. */
+const VAGINAL_WALL = 0.4;
+function vaginaSection(t, a, pulse) {
+  const rugae = 1 + 0.03 * Math.sin(t * 74) * (1 - smooth(0.55, 0.8, t));
+  const entrance = smooth(0, 0.11, t), vault = smooth(0.68, 0.9, t);   // the slit at the opening turns into the side-to-side canal over ~1 cm
+  /* arousal ("tenting", Masters & Johnson): the inner part balloons into a rounded chamber while the
+     lower third stays snug and even narrows (the orgasmic platform), so it is a bulb behind a neck, not a funnel */
+  const balloon = smooth(0.4, 0.6, t) * (1 - 0.3 * smooth(0.86, 1, t));
+  let width = lerp(0.14, 0.9, entrance) + 0.1 * smooth(0.06, 0.3, t) + 0.22 * smooth(0.7, 0.92, t);   // the opening is a closed slit at rest
+  let center = lerp(0.62, 0.03, entrance) + 0.95 * vault;
+  let side = lerp(0.62, 0.28, entrance) + 0.75 * vault;
+  width += a * (0.08 * (1 - entrance) + 0.95 * balloon); center += a * 1.3 * balloon; side += a * 1.0 * balloon;
+  const lowerThird = smooth(0.38, 0.05, t);
+  const squeeze = 1 - lowerThird * (0.12 * a + 0.22 * pulse);
+  const end = endRound(t, 0, 0.12);
+  const k = end * squeeze;
+  /* the vault widens mostly forward, where the cervix comes in through the front wall.
+     rugae are folds of the lining only: they ripple the inside surface, not the outside of the wall */
+  return { width: width * k, center: center * k, side: side * k, wall: VAGINAL_WALL * Math.max(end, 1e-4), forward: 0.62 * vault * end, rugae };
+}
+/* outline of the space inside (H-shaped: the walls touch across the middle, with grooves at the sides)
+   or of the outside of the wall (a smooth flattened oval, a little fuller at the sides over the grooves),
+   as angle => [lateral, front-to-back] */
+function vaginaOutline(section, outer) {
+  const power = outer ? 1 : 0.5;
+  const soft = x => Math.sign(x) * Math.abs(x) ** power;
+  return angle => {
+    const c = soft(Math.cos(angle)), s = soft(Math.sin(angle));
+    const half = outer
+      ? section.center + section.wall + 0.25 * (section.side - section.center) * c * c
+      : section.center + (section.side - section.center) * Math.abs(c) ** 6;
+    const ripple = outer ? 1 : section.rugae;
+    return [(section.width * ripple + (outer ? section.wall : 0)) * c, half * ripple * s - section.forward];   // second coordinate points to the back
+  };
+}
+function uterusPose(a) {
+  const L = vaginaLength(a);
+  const os = vaginaAxis(L - 1.55).addScaledVector(UPPER_ANTERIOR, 0.42);
+  const cervixAngle = THREE.MathUtils.degToRad(62 + 18 * a);         // version: cervix ~73° to the upper vagina at rest; lifts with arousal
+  const flexion = THREE.MathUtils.degToRad(14 - 6 * a);               // mild anteflexion: the body rises ~48° up and forward over the bladder
+  return { os, cervixDir: S(0, Math.cos(cervixAngle), Math.sin(cervixAngle)).normalize(), flexion };
+}
+
+/* ---------- Renderer ---------- */
+const stage = document.getElementById('stage');
+const canvas = document.getElementById('scene');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.0;
+renderer.localClippingEnabled = true;
+const scene = new THREE.Scene();
+const pmrem = new THREE.PMREMGenerator(renderer);
+scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+const camera = new THREE.PerspectiveCamera(32, 1, 0.1, 500);
+/* turntable: dragging sideways spins the model about the screen's up axis (camera.up), dragging up-down tilts it.
+   Screen "up" never rolls, and a pixel of drag turns the model the same amount on a phone as on a desktop.
+   One finger or the left button rotates; two fingers pinch to zoom and move together to pan; right-drag or shift-drag pans. */
+class TurntableControls extends THREE.EventDispatcher {
+  constructor(camera, element) {
+    super();
+    this.camera = camera; this.element = element; this.target = new THREE.Vector3();
+    this.minDistance = 5; this.maxDistance = 90; this.rotateSpeed = 0.005;   // radians per pixel
+    this.pointers = new Map(); this.panning = false;
+    this.last = { position: new THREE.Vector3(), target: new THREE.Vector3(), up: new THREE.Vector3() };
+    element.addEventListener('pointerdown', event => this.pointerDown(event));
+    element.addEventListener('pointermove', event => this.pointerMove(event));
+    element.addEventListener('pointerup', event => this.pointerUp(event));
+    element.addEventListener('pointercancel', event => this.pointerUp(event));
+    element.addEventListener('contextmenu', event => event.preventDefault());
+    element.addEventListener('wheel', event => { event.preventDefault(); this.zoom(Math.exp(event.deltaY * 0.0015)); }, { passive: false });
+  }
+  pointerDown(event) {
+    if (this.pointers.size === 0) {
+      this.element.setPointerCapture(event.pointerId);
+      this.panning = event.pointerType === 'mouse' && (event.button !== 0 || event.shiftKey || event.ctrlKey || event.metaKey);
+      this.dispatchEvent({ type: 'start' });
+    }
+    this.pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+  }
+  pointerMove(event) {
+    const previous = this.pointers.get(event.pointerId);
+    if (!previous) return;
+    const current = { x: event.clientX, y: event.clientY };
+    if (this.pointers.size === 1) {
+      if (this.panning) this.pan(current.x - previous.x, current.y - previous.y);
+      else this.rotate(current.x - previous.x, current.y - previous.y);
+    } else {
+      /* two fingers: the gap between them zooms, their midpoint pans */
+      const other = [...this.pointers].find(([id]) => id !== event.pointerId)[1];
+      const gapBefore = Math.hypot(previous.x - other.x, previous.y - other.y), gapAfter = Math.hypot(current.x - other.x, current.y - other.y);
+      if (gapBefore > 0 && gapAfter > 0) this.zoom(gapBefore / gapAfter);
+      this.pan((current.x - previous.x) / 2, (current.y - previous.y) / 2);
+    }
+    this.pointers.set(event.pointerId, current);
+  }
+  pointerUp(event) {
+    if (!this.pointers.delete(event.pointerId)) return;
+    if (this.element.hasPointerCapture(event.pointerId)) this.element.releasePointerCapture(event.pointerId);
+    if (this.pointers.size === 0) this.dispatchEvent({ type: 'end' });
+  }
+  rotate(dx, dy) {
+    const up = this.camera.up.clone().normalize();
+    const eye = this.camera.position.clone().sub(this.target);
+    eye.applyAxisAngle(up, -dx * this.rotateSpeed);
+    /* tilt about the screen's right-hand axis, stopping short of looking straight along "up" */
+    const polar = eye.angleTo(up), limit = 0.12;
+    const tilt = THREE.MathUtils.clamp(polar - dy * this.rotateSpeed, limit, Math.PI - limit) - polar;
+    eye.applyAxisAngle(new THREE.Vector3().crossVectors(up, eye).normalize(), tilt);
+    this.camera.position.copy(this.target).add(eye);
+  }
+  pan(dx, dy) {
+    const eye = this.camera.position.clone().sub(this.target);
+    const perPixel = 2 * eye.length() * Math.tan(THREE.MathUtils.degToRad(this.camera.fov) / 2) / this.element.clientHeight;
+    const right = new THREE.Vector3().setFromMatrixColumn(this.camera.matrixWorld, 0);
+    const screenUp = new THREE.Vector3().setFromMatrixColumn(this.camera.matrixWorld, 1);
+    const shift = right.multiplyScalar(-dx * perPixel).addScaledVector(screenUp, dy * perPixel);
+    this.camera.position.add(shift); this.target.add(shift);
+  }
+  zoom(factor) {
+    const eye = this.camera.position.clone().sub(this.target);
+    eye.setLength(THREE.MathUtils.clamp(eye.length() * factor, this.minDistance, this.maxDistance));
+    this.camera.position.copy(this.target).add(eye);
+  }
+  update() {
+    this.camera.lookAt(this.target);
+    const { last } = this;
+    if (last.position.equals(this.camera.position) && last.target.equals(this.target) && last.up.equals(this.camera.up)) return;
+    last.position.copy(this.camera.position); last.target.copy(this.target); last.up.copy(this.camera.up);
+    this.dispatchEvent({ type: 'change' });
+  }
+}
+const controls = new TurntableControls(camera, canvas);
+/* draw only when something changed: an idle page costs nothing */
+let needsRender = true, renderCount = 0;
+const invalidate = () => { needsRender = true; };
+controls.addEventListener('change', invalidate);
+controls.addEventListener('start', () => { flight = null; });   // grabbing the model ends a camera move in progress
+/* the model is authored in vulva-facing coordinates; the root group stands it upright (world +Y = up, +Z = the body's front) */
+const root = new THREE.Group(); scene.add(root);
+scene.add(new THREE.HemisphereLight(0xfff0f3, 0x6a4c55, 0.45));
+const key = new THREE.DirectionalLight(0xffffff, 1.9); key.position.set(12, -10, 18); scene.add(key);
+const rim = new THREE.DirectionalLight(0xffc4d4, 0.9); rim.position.set(-12, 16, -14); scene.add(rim);
+const fill = new THREE.DirectionalLight(0xa8c4ff, 0.4); fill.position.set(-14, -6, 8); scene.add(fill);
+const cutPlane = new THREE.Plane(V(-1, 0, 0), 0);
+
+const TONES = [
+  { skin: '#ebc2aa', labia: '#cf9c8e', minor: '#c98488', dark: '#a8756b', mucosa: '#d27a84', mucosaLight: '#e7a2aa', mucosaDark: '#a9505e', glans: '#d27884' },
+  { skin: '#c9966f', labia: '#a8705f', minor: '#a7646a', dark: '#855244', mucosa: '#c46a74', mucosaLight: '#dd949c', mucosaDark: '#9a4552', glans: '#c66a78' },
+  { skin: '#8f5f3d', labia: '#6c4232', minor: '#74434a', dark: '#4f2f1f', mucosa: '#ab5562', mucosaLight: '#c8828c', mucosaDark: '#813b47', glans: '#b05868' },
+  { skin: '#5b3926', labia: '#43281c', minor: '#4f2c30', dark: '#2e1a12', mucosa: '#94454f', mucosaLight: '#b5717a', mucosaDark: '#6e2f39', glans: '#9e4a5a' },
+];
+const STYLE = {
+  skin: { real: 'skin', coded: '#cdbcb0', skinLike: true },
+  labiaMajora: { real: 'labia', coded: '#c4ad9f', skinLike: true },
+  labiaMinora: { real: 'minor', coded: '#e889a3', flush: true, wet: 0.5 },
+  hood: { real: 'minor', coded: '#e889a3', flush: true },
+  vestibule: { real: 'mucosa', coded: '#f0a6b8', wet: 1, flush: true },
+  hymen: { real: 'mucosaLight', coded: '#f6c1cf', wet: 1 },
+  meatus: { real: 'mucosaDark', coded: '#f2c230' },
+  glans: { real: 'glans', coded: '#b06cf0', flush: true, wet: 0.6 },
+  clitBody: { real: '#8e3a4c', coded: '#8a46d0' },
+  crura: { real: '#8a3648', coded: '#8a46d0' },
+  bulbs: { real: '#7d3245', coded: '#6f3fbf' },
+  vagina: { real: '#c45f6b', coded: '#e0507a', opacity: 0.95, wet: 1 },
+  gArea: { real: '#ffcf6e', coded: '#ffd166', opacity: 0.9, glow: '#ffb347' },
+  cervix: { real: '#dc9099', coded: '#f28fb0', wet: 0.7 },
+  uterus: { real: '#b9595a', coded: '#d6406a' },
+  tubes: { real: '#cf8080', coded: '#ef7d9b' },
+  ovaries: { real: '#e6c7a9', coded: '#f7a36a' },
+  bladder: { real: '#d9ab98', coded: '#f2c230', opacity: 0.93 },
+  urethra: { real: '#d2918a', coded: '#f2c230' },
+  ureters: { real: '#dbb59e', coded: '#e8b52a' },
+  bartholin: { real: '#eed2bf', coded: '#25c2b3' },
+  skene: { real: '#eed2bf', coded: '#25c2b3' },
+  anus: { real: 'dark', coded: '#9a7262' },
+  rectum: { real: '#a96c5f', coded: '#9a7262' },
+  pelvicFloor: { real: '#a8443d', coded: '#e0533f', opacity: 0.45 },
+  perinealBody: { real: '#b5655f', coded: '#e0533f' },
+  bulbospongiosus: { real: '#b2443f', coded: '#e0533f', opacity: 0.55 },
+  ischiocavernosus: { real: '#b2443f', coded: '#e0533f', opacity: 0.55 },
+  analSphincter: { real: '#a8443d', coded: '#e0533f', opacity: 0.8 },
+  mons: { real: '#e8cf8f', coded: '#f0dba0', skinLike: true },
+  pelvis: { real: '#ece3cf', coded: '#efe6d2', opacity: 0.17, bone: true },
+};
+const EXTERNAL_FADE = new Set(['skin', 'mons', 'labiaMajora', 'labiaMinora', 'hood', 'vestibule', 'hymen', 'meatus', 'anus']);
+
+const materials = {};
+function materialFor(id) {
+  if (materials[id]) return materials[id];
+  const style = STYLE[id];
+  /* standard (not physical) shading: Safari compiles physical shaders very slowly */
+  const material = new THREE.MeshStandardMaterial({
+    roughness: style.bone ? 0.8 : style.skinLike ? 0.62 : 0.5, metalness: 0,
+    side: THREE.DoubleSide, vertexColors: id === 'skin', clippingPlanes: [cutPlane],
+  });
+  if (style.glow) { material.emissive = new THREE.Color(style.glow); material.emissiveIntensity = 0.55; }
+  materials[id] = material;
+  return material;
+}
+
+const layerGroups = {};
+for (const layer of LAYERS) { const group = new THREE.Group(); group.name = layer.id; root.add(group); layerGroups[layer.id] = group; }
+const meshesByPart = {};
+function addMesh(id, geometry, parent) {
+  const mesh = new THREE.Mesh(geometry, materialFor(id));
+  mesh.userData.part = id;
+  (parent || layerGroups[(PARTS[id] || PARTS.mons).layer]).add(mesh);
+  (meshesByPart[id] ||= []).push(mesh);
+  return mesh;
+}
+const setGeometry = (mesh, geometry) => { mesh.geometry.dispose(); mesh.geometry = geometry; };
+
+/* Skin sheet: groin, mons and perineum, with a hole where the vestibule sits */
+const sheetWeights = [];
+function skinShape(x, y, a = 0) {
+  const ax = Math.abs(x);
+  let z = 0.55;
+  z += 1.5 * Math.exp(-(((y - 6.4) / 2.8) ** 2) - (x / 4.6) ** 2);
+  /* labia majora: two broad fat-padded ridges that converge at the posterior commissure and blend into the mons */
+  const ridgeX = lerp(0.5, 1.85, smooth(-3.7, -0.9, y)) - 0.2 * smooth(3.0, 5.5, y) + 0.18 * a;
+  const ridgeSpan = smooth(-4.1, -2.7, y) * (1 - smooth(4.4, 6.4, y));
+  z += 1.0 * (1 - 0.18 * a) * ridgeSpan * Math.exp(-(((ax - ridgeX) / 0.85) ** 2));
+  /* the hood's fold continues up toward the mons as a soft midline ridge */
+  z += 0.32 * Math.exp(-((x / 0.5) ** 2)) * smooth(2.9, 3.4, y) * (1 - smooth(3.9, 5.0, y));
+  z += 2.4 * smooth(3.6, 8.2, ax) * (1 - 0.3 * smooth(4, 9, y));
+  const cleft = (x / 1.75) ** 2 + ((y - 0.6) / 3.6) ** 2;
+  z -= 1.05 * smooth(1.0, 0.25, cleft);
+  const anal = (x / 1.6) ** 2 + ((y + 4.7) / 1.4) ** 2;
+  z -= 0.35 * smooth(1, 0, anal);
+  const edge = Math.hypot(ax / 8.6, (y - 1) / 9.2);
+  z -= 5 * smooth(0.8, 1.0, edge) ** 1.5;
+  return { z: z + bend(y), cleft, anal, edge };
+}
+/* skin patch on an elliptical grid, so its outline stays smooth */
+const SKIN_GRID = { rings: 130, spokes: 240, rx: 8.6, ry: 9.2, cy: 1 };
+const VESTIBULE_EDGE = { rx: 0.95, ry: 2.6, cy: 0.25 };   // the skin's inner edge, tucked under the vestibule
+function skinVertex(i, j) {
+  const { rings, spokes, rx, ry, cy } = SKIN_GRID;
+  const f = (i / rings) ** 1.25, angle = j / spokes * Math.PI * 2;
+  const c = Math.cos(angle), s = Math.sin(angle);
+  return [lerp(VESTIBULE_EDGE.rx * c, rx * c, f), lerp(VESTIBULE_EDGE.cy + VESTIBULE_EDGE.ry * s, cy + ry * s, f)];
+}
+function reshapeSkin(geometry, a) {
+  const { rings, spokes } = SKIN_GRID;
+  const position = geometry.attributes.position;
+  for (let i = 0; i <= rings; i++) for (let j = 0; j < spokes; j++) {
+    const [x, y] = skinVertex(i, j);
+    position.setXYZ(i * spokes + j, x, y, skinShape(x, y, a).z);
+  }
+  position.needsUpdate = true;
+  geometry.computeVertexNormals();
+  geometry.computeBoundingSphere();
+}
+function buildSkin() {
+  const { rings, spokes } = SKIN_GRID;
+  const count = (rings + 1) * spokes;
+  const position = new Float32Array(count * 3), color = new Float32Array(count * 3);
+  for (let i = 0; i <= rings; i++) for (let j = 0; j < spokes; j++) {
+    const [x, y] = skinVertex(i, j);
+    const { cleft, anal } = skinShape(x, y);
+    sheetWeights[i * spokes + j] = [smooth(1.4, 0.6, cleft), smooth(0.48, 0.3, cleft), smooth(1, 0.15, anal)];
+  }
+  const index = [];
+  const hole = (x, y) => Math.hypot(x, y + 4.7) < 0.42;   // the anus; the vestibule edge is the grid's inner ring
+  for (let i = 0; i < rings; i++) for (let j = 0; j < spokes; j++) {
+    const j2 = (j + 1) % spokes;
+    const a = i * spokes + j, b = i * spokes + j2, c = (i + 1) * spokes + j, d = (i + 1) * spokes + j2;
+    const [x0, y0] = skinVertex(i, j), [x1, y1] = skinVertex(i + 1, j2);
+    if (hole((x0 + x1) / 2, (y0 + y1) / 2)) continue;
+    index.push(a, c, b, b, c, d);
+  }
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute('position', new THREE.BufferAttribute(position, 3));
+  geometry.setAttribute('color', new THREE.BufferAttribute(color, 3));
+  geometry.setIndex(index);
+  reshapeSkin(geometry, 0);
+  return geometry;
+}
+const skinMesh = addMesh('skin', buildSkin(), layerGroups.external);
+
+/* Vestibule: flat lining with the vaginal and urethral openings cut out */
+{
+  const shape = new THREE.Shape(); shape.absellipse(0, 0.25, 1.15, 2.85, 0, Math.PI * 2, false, 0);
+  const vaginal = new THREE.Path(); vaginal.absellipse(0, -1.1, 0.15, 0.66, 0, Math.PI * 2, true, 0);
+  const urethral = new THREE.Path(); urethral.absellipse(0, 0.75, 0.11, 0.19, 0, Math.PI * 2, true, 0);
+  shape.holes.push(vaginal, urethral);
+  const geometry = new THREE.ShapeGeometry(shape, 72);
+  geometry.translate(0, 0, -0.05);
+  addMesh('vestibule', geometry);
+}
+/* Hymen: a crescent-shaped rim, thicker at the back */
+addMesh('hymen', tubeGeometry(
+  Array.from({ length: 28 }, (_, k) => { const angle = k / 28 * Math.PI * 2; return V(0.17 * Math.cos(angle), -1.1 + 0.66 * Math.sin(angle), -0.12); }),
+  t => { const back = Math.max(0, -Math.sin(t * Math.PI * 2)); const r = 0.05 + 0.08 * back; return [r * 1.4, r]; },
+  { segments: 120, radial: 12, closed: true }));
+/* Urethral opening */
+{ const ring = new THREE.TorusGeometry(0.13, 0.045, 12, 32); ring.scale(1, 1.55, 1); ring.translate(0, 0.75, -0.03); addMesh('meatus', ring); }
+/* Anus (part of the bowel layer) */
+{ const ring = new THREE.TorusGeometry(0.4, 0.19, 16, 40); ring.translate(0, -4.7, skinShape(0, -4.7).z - 0.08); addMesh('anus', ring); }
+
+/* Inner lips, hood: rebuilt with arousal. The outer lips are sculpted into the skin surface above. */
+const MINORA = [E(0.56, 2.85, 0.14), E(0.68, 2.3, 0.05), E(0.84, 1.1, 0.0), E(0.86, -0.3, -0.01), E(0.7, -1.4, -0.02), E(0.38, -2.2, -0.03), E(0.0, -2.48, -0.04)];
+const minoraMeshes = [addMesh('labiaMinora', new THREE.BufferGeometry()), addMesh('labiaMinora', new THREE.BufferGeometry())];
+let skinArousal = 0;
+function buildLabia(a) {
+  if (Math.abs(a - skinArousal) >= 0.1 || a === 0 && skinArousal !== 0 || a === 1 && skinArousal !== 1) { skinArousal = a; reshapeSkin(skinMesh.geometry, a); }   // the outer lips only flatten slightly
+  const minoraProfile = t => {
+    const r = endRound(t, 0.05, 0.04);
+    const ruffle = 0.015 * Math.sin(t * 11) + 0.012 * Math.sin(t * 5 + 1);
+    const height = (0.42 + 0.26 * Math.sin(Math.PI * t) + ruffle) * r * (1 + 0.3 * a);
+    return [height, 0.09 * (1 + 0.5 * a) * Math.max(0.35, r), 0.8 * height, 0];
+  };
+  /* each inner lip leans toward the midline like a petal */
+  setGeometry(minoraMeshes[0], tubeGeometry(MINORA, minoraProfile, { segments: 160, radial: 28, hint: V(-0.45 + 0.2 * a, 0, 1).normalize() }));
+  setGeometry(minoraMeshes[1], tubeGeometry(mirror(MINORA), minoraProfile, { segments: 160, radial: 28, hint: V(0.45 - 0.2 * a, 0, 1).normalize() }));
+}
+/* Each inner lip splits at the top: its outer fold arches over the glans and meets the other side's, forming the hood;
+   its inner fold runs under the glans as the frenulum. */
+const hoodMesh = addMesh('hood', new THREE.BufferGeometry());
+const frenulumMeshes = [addMesh('labiaMinora', new THREE.BufferGeometry()), addMesh('labiaMinora', new THREE.BufferGeometry())];
+function buildHood(a) {
+  const lift = 0.06 * a;
+  const arch = [E(0.6, 2.7, 0.12), E(0.52, 3.12, 0.36 + lift), E(0.26, 3.4, 0.5 + lift), E(0, 3.47, 0.54 + lift), E(-0.26, 3.4, 0.5 + lift), E(-0.52, 3.12, 0.36 + lift), E(-0.6, 2.7, 0.12)];
+  setGeometry(hoodMesh, tubeGeometry(arch, t => { const r = endRound(t, 0.04, 0.04); const height = (0.36 + 0.1 * Math.sin(Math.PI * t)) * Math.max(0.4, r); return [height, 0.1 * Math.max(0.5, r), 0.75 * height, 0]; },
+    { segments: 80, radial: 24, hint: V(0, -0.55, 0.85).normalize() }));
+  const glans = glansPosition(a);
+  const frenulum = sign => [E(0.62 * sign, 2.45, 0.06), E(0.3 * sign, 2.55, 0.14), glans.clone().add(V(0.05 * sign, -0.24, -0.05))];
+  const profile = t => [0.13 * (1 - 0.4 * t), 0.05, 0.08, 0];
+  setGeometry(frenulumMeshes[0], tubeGeometry(frenulum(1), profile, { segments: 24, radial: 12 }));
+  setGeometry(frenulumMeshes[1], tubeGeometry(frenulum(-1), profile, { segments: 24, radial: 12 }));
+}
+
+/* Clitoris: glans, body, crura, bulbs */
+const glansMesh = addMesh('glans', new THREE.SphereGeometry(1, 40, 28));
+const clitBodyMesh = addMesh('clitBody', new THREE.BufferGeometry());
+const cruraMeshes = [addMesh('crura', new THREE.BufferGeometry()), addMesh('crura', new THREE.BufferGeometry())];
+const bulbMeshes = [addMesh('bulbs', new THREE.BufferGeometry()), addMesh('bulbs', new THREE.BufferGeometry())];
+const CRUS = [S(0, 3.5, 2.45), S(0.7, 3.3, 2.55), S(1.9, 2.3, 2.8), S(3.0, 0.9, 3.0), S(3.75, -0.15, 3.1)];
+const BULB = [S(0.4, 2.4, 1.6), S(0.85, 1.6, 1.3), S(1.25, 0.4, 1.1), S(1.45, -0.8, 1.0), S(1.3, -1.8, 0.95), S(0.95, -2.45, 0.9)];
+const clitBodyPoints = glans => [glans.clone().add(V(0, 0.02, -0.12)), S(0, 3.1, 0.3), S(0, 3.4, 1.05), S(0, 3.6, 1.8), S(0, 3.52, 2.4)];
+function glansPosition(a) { const retract = smooth(0.6, 1, a); return GLANS_REST.clone().add(V(0, 0.1 * retract, -0.32 * retract)); }
+function buildClitoris(a) {
+  const swell = 1 + 0.35 * a;
+  const g = 1 + 0.3 * a;
+  glansMesh.position.copy(glansPosition(a)); glansMesh.scale.set(0.26 * g, 0.32 * g, 0.28 * g);
+  const glans = glansPosition(a);
+  setGeometry(clitBodyMesh, tubeGeometry(clitBodyPoints(glans),
+    t => { const r = (0.3 + 0.16 * smooth(0, 0.4, t)) * swell * endRound(t, 0, 0.12); return [r, r * 0.95]; }, { segments: 60, radial: 24 }));
+  const crusProfile = t => { const r = (0.47 - 0.12 * t) * swell * endRound(t, 0, 0.14); return [r, r * 0.85]; };
+  setGeometry(cruraMeshes[0], tubeGeometry(CRUS, crusProfile, { segments: 70, radial: 22, hint: V(0, 0, 1) }));
+  setGeometry(cruraMeshes[1], tubeGeometry(mirror(CRUS), crusProfile, { segments: 70, radial: 22, hint: V(0, 0, 1) }));
+  const bulbSwell = 1 + 0.45 * a;
+  const bulbProfile = t => { const r = (0.16 + 0.42 * smooth(0, 0.65, t)) * endRound(t, 0.06, 0.24) * bulbSwell; return [r, r * 0.66]; };
+  setGeometry(bulbMeshes[0], tubeGeometry(BULB, bulbProfile, { segments: 70, radial: 24 }));
+  setGeometry(bulbMeshes[1], tubeGeometry(mirror(BULB), bulbProfile, { segments: 70, radial: 24 }));
+}
+
+/* Glands */
+addMesh('bartholin', mergeGeometries([
+  ellipsoidGeometry(S(1.0, -2.5, 1.2), V(0.38, 0.45, 0.36)), ellipsoidGeometry(S(-1.0, -2.5, 1.2), V(0.38, 0.45, 0.36)),
+  tubeGeometry([S(0.85, -2.3, 1.0), S(0.7, -2.0, 0.5), S(0.5, -1.78, 0.06)], () => [0.07, 0.07], { segments: 16, radial: 8 }),
+  tubeGeometry([S(-0.85, -2.3, 1.0), S(-0.7, -2.0, 0.5), S(-0.5, -1.78, 0.06)], () => [0.07, 0.07], { segments: 16, radial: 8 }),
+]));
+addMesh('skene', mergeGeometries([
+  ellipsoidGeometry(S(0.36, 0.38, 1.0), V(0.16, 0.22, 0.32)), ellipsoidGeometry(S(-0.36, 0.38, 1.0), V(0.16, 0.22, 0.32)),
+  tubeGeometry([S(0.33, 0.45, 0.7), S(0.26, 0.62, 0.3), S(0.2, 0.7, 0.04)], () => [0.045, 0.045], { segments: 12, radial: 8 }),
+  tubeGeometry([S(-0.33, 0.45, 0.7), S(-0.26, 0.62, 0.3), S(-0.2, 0.7, 0.04)], () => [0.045, 0.045], { segments: 12, radial: 8 }),
+]));
+
+/* Vagina, G-area */
+const vaginaMesh = addMesh('vagina', new THREE.BufferGeometry());
+const vaginaWallMesh = addMesh('vagina', new THREE.BufferGeometry());
+const gAreaMesh = addMesh('gArea', new THREE.SphereGeometry(1, 32, 16));
+function buildVagina(a, pulse) {
+  const options = { segments: 140, radial: 64, hint: V(1, 0, 0) };
+  setGeometry(vaginaMesh, tubeGeometry(vaginaPoints(a), t => vaginaOutline(vaginaSection(t, a, pulse), false), options));
+  setGeometry(vaginaWallMesh, tubeGeometry(vaginaPoints(a), t => vaginaOutline(vaginaSection(t, a, pulse), true), options));
+  const s = 3.6, L = vaginaLength(a);
+  const section = vaginaSection(s / L, a, pulse);
+  const depth = section.center + section.wall;           // the G-area sits on the outside of the front wall, toward the urethra
+  const tangent = vaginaAxis(s + 0.05).sub(vaginaAxis(s - 0.05)).normalize();
+  const anterior = V(1, 0, 0).cross(tangent).normalize();   // toward the front (+y) wall, the urethra side
+  gAreaMesh.position.copy(vaginaAxis(s)).addScaledVector(anterior, depth + 0.04);
+  gAreaMesh.quaternion.setFromUnitVectors(V(0, 0, 1), anterior);
+  gAreaMesh.scale.set(0.62, 0.75, 0.1);
+}
+
+/* Uterus, cervix, tubes, ovaries: one rig that lifts with arousal */
+let TUBE_POINTS;
+const uterusRig = new THREE.Group(); layerGroups.reproductive.add(uterusRig);
+const uterusBody = new THREE.Group(); uterusBody.position.set(0, 2.85, 0); uterusRig.add(uterusBody);
+{
+  const cervix = new THREE.LatheGeometry([[0.12, 0.28], [0.32, 0.06], [0.68, 0], [1.02, 0.2], [1.22, 0.7], [1.24, 1.6], [1.12, 2.5], [1.0, 3.05]].map(([r, y]) => new THREE.Vector2(r, y)), 64);
+  cervix.scale(1, 1, 0.82);
+  addMesh('cervix', cervix, uterusRig);
+  const os = new THREE.SphereGeometry(0.16, 16, 12); os.scale(1.6, 0.6, 0.6); os.translate(0, 0.22, 0);
+  const osMesh = addMesh('cervix', os, uterusRig); osMesh.material = new THREE.MeshStandardMaterial({ color: '#3a1018', roughness: 0.6, clippingPlanes: [cutPlane] }); osMesh.userData.fixedColor = true;
+  const body = new THREE.LatheGeometry([[0.98, -0.1], [1.15, 0.4], [1.7, 1.2], [2.25, 2.3], [2.55, 3.4], [2.45, 4.3], [1.85, 4.95], [0.9, 5.25], [0.01, 5.32]].map(([r, y]) => new THREE.Vector2(r, y)), 64);
+  body.scale(1, 1, 0.6);
+  addMesh('uterus', body, uterusBody);
+  /* the inside: a slit-like triangular cavity (wide between the tube openings, narrowing to the internal os),
+     lined with endometrium, and the spindle-shaped canal through the cervix. ~7 cm from os to fundus inside. */
+  const lining = color => new THREE.MeshStandardMaterial({ color, roughness: 0.55, side: THREE.DoubleSide, clippingPlanes: [cutPlane] });
+  const cavity = new THREE.LatheGeometry([[0.01, -0.15], [0.16, -0.1], [0.22, 0.5], [0.6, 1.6], [1.1, 2.8], [1.45, 3.6], [1.0, 4.05], [0.01, 4.2]].map(([r, y]) => new THREE.Vector2(r, y)), 48);
+  cavity.scale(1, 1, 0.12);
+  const cavityMesh = addMesh('uterus', cavity, uterusBody); cavityMesh.material = lining('#7e2633'); cavityMesh.userData.fixedColor = true;
+  const canal = new THREE.LatheGeometry([[0.01, 0.05], [0.12, 0.1], [0.22, 0.5], [0.32, 1.4], [0.25, 2.4], [0.14, 2.95], [0.01, 3.0]].map(([r, y]) => new THREE.Vector2(r, y)), 32);
+  canal.scale(1, 1, 0.7);
+  const canalMesh = addMesh('cervix', canal, uterusRig); canalMesh.material = lining('#5a1c28'); canalMesh.userData.fixedColor = true;
+}
+function setUterusPose(a, pulse = 0) {
+  const pose = uterusPose(a);
+  uterusRig.position.copy(pose.os);
+  uterusRig.quaternion.setFromUnitVectors(V(0, 1, 0), pose.cervixDir);
+  uterusBody.rotation.x = pose.flexion;
+  uterusRig.scale.setScalar(1 - 0.035 * pulse);
+}
+setUterusPose(0);
+scene.updateMatrixWorld(true);
+/* tubes and ovaries are authored in the uterine body's own frame (+Y toward the fundus, +Z toward the front),
+   so they stay beside the upper uterus whatever its angle: ovaries behind and to the side, tubes arching over them */
+const OVARY_LOCAL = V(3.4, 3.4, -1.6);
+{
+  const tubesList = [], ovaryList = [];
+  for (const sign of [1, -1]) {
+    const points = [V(2.15 * sign, 4.35, 0), V(4.1 * sign, 5.6, -0.4), V(6.1 * sign, 5.4, -1.3), V(6.8 * sign, 3.6, -2.1), V(6.0 * sign, 1.9, -2.7), V(4.5 * sign, 1.5, -2.6)];
+    if (sign === 1) TUBE_POINTS = points;
+    tubesList.push(tubeGeometry(points, t => { const r = 0.16 + 0.24 * smooth(0.25, 0.8, t) + 0.24 * smooth(0.88, 1, t); return [r, r]; }, { segments: 80, radial: 16 }));
+    const end = points[points.length - 1];
+    for (let k = 0; k < 9; k++) {
+      const angle = k / 9 * Math.PI * 2;
+      const tip = end.clone().add(V(-0.45 * sign + Math.cos(angle) * 0.5, 0.35 + Math.sin(angle) * 0.5, 0.25 + 0.15 * Math.sin(k * 2.3)));
+      tubesList.push(tubeGeometry([end.clone().add(V(Math.cos(angle) * 0.2, Math.sin(angle) * 0.2, 0)), end.clone().lerp(tip, 0.55), tip], t => [0.075 * (1 - 0.6 * t), 0.075 * (1 - 0.6 * t)], { segments: 10, radial: 8 }));
+    }
+    const ovary = OVARY_LOCAL.clone().multiply(V(sign, 1, 1));
+    ovaryList.push(ellipsoidGeometry(ovary, V(0.78, 1.5, 1.05), [0, 0, 0.2 * sign]));
+    ovaryList.push(tubeGeometry([ovary.clone().add(V(-0.7 * sign, 0.2, 0.3)), V(2.3 * sign, 3.7, -0.9), V(1.85 * sign, 3.8, -0.6)], () => [0.13, 0.13], { segments: 20, radial: 10 }));
+  }
+  addMesh('tubes', mergeGeometries(tubesList), uterusBody);
+  addMesh('ovaries', mergeGeometries(ovaryList), uterusBody);
+}
+
+/* Urinary */
+/* a partly filled bladder: a broad, flattened dome low behind the pubic bone, with the uterus resting on top */
+const BLADDER = (() => {
+  const s = 4.2, tangent = vaginaDirection(s), front = V(1, 0, 0).cross(tangent).normalize();
+  const radii = V(3.2, 2.7, 1.8);                          // side to side, along the vagina, front to back: a partly filled dome
+  const center = vaginaAxis(s).addScaledVector(front, VAGINAL_WALL + 0.03 + 0.15 + radii.z);
+  const quaternion = new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().makeBasis(V(1, 0, 0), tangent, front));
+  return { center, quaternion, radii, matrix: new THREE.Matrix4().compose(center, quaternion, radii) };
+})();
+addMesh('bladder', new THREE.SphereGeometry(1, 48, 32).applyMatrix4(BLADDER.matrix));
+const frontWall = (s, extra) => { const front = V(1, 0, 0).cross(vaginaDirection(s)).normalize(); return vaginaAxis(s).addScaledVector(front, VAGINAL_WALL + 0.03 + extra); };
+const URETHRA = [S(0, 0.75, 0.08), frontWall(0.8, 0.5), frontWall(1.5, 0.3), frontWall(2.3, 0.28), frontWall(3.0, 0.32), frontWall(3.4, 0.55)];
+addMesh('urethra', tubeGeometry(URETHRA,
+  t => [0.21 + 0.06 * t, 0.2 + 0.06 * t], { segments: 50, radial: 18 }));
+{
+  /* each ureter enters the back of the bladder base, low and to the side, after passing beside the cervix */
+  const ureter = sign => tubeGeometry([V(0.55 * sign, 0.25, -0.8).applyMatrix4(BLADDER.matrix), S(2.4 * sign, -3.9, 6.4), S(3.5 * sign, -5.8, 9.0), S(4.3 * sign, -6.6, 12.5), S(4.8 * sign, -6.2, 17.5)], () => [0.2, 0.2], { segments: 80, radial: 12 });
+  addMesh('ureters', mergeGeometries([ureter(1), ureter(-1)]));
+}
+
+/* Bowel */
+const RECTUM = [S(0, -4.7, 0.05), S(0, -4.55, 1.5), S(0, -4.3, 3.3), S(0, -6.5, 5.3), S(0, -9.7, 7.5), S(0, -9.4, 10.4), S(0, -7.4, 13.2), S(0, -4.9, 16.0)];
+const rectumRadius = t => 0.42 + 0.45 * smooth(0.05, 0.25, t) + 0.55 * smooth(0.28, 0.5, t) - 0.25 * smooth(0.75, 1, t);
+addMesh('rectum', tubeGeometry(RECTUM, t => [rectumRadius(t), rectumRadius(t) * 0.92], { segments: 120, radial: 28, hint: V(1, 0, 0) }));
+
+/* Pelvic floor: the levator ani bowl, with the hiatus that the urethra, vagina and rectum pass through */
+{
+  const bowl = new THREE.LatheGeometry([[1.95, 0], [2.6, 0.3], [3.5, 0.95], [4.5, 1.85], [5.4, 2.9], [6.1, 4.0]].map(([r, y]) => new THREE.Vector2(r, y)), 72);
+  const mesh = addMesh('pelvicFloor', bowl);
+  mesh.position.copy(S(0, -1.9, 2.1));
+  mesh.quaternion.setFromUnitVectors(V(0, 1, 0), S(0, -0.18, 1).normalize());
+  mesh.scale.set(0.8, 1, 1.28);
+}
+
+/* Muscles of the perineum: sleeves over the bulbs and crura, and the ring around the anal canal */
+{
+  const outward = sign => p => V(p.x + 0.12 * sign, p.y, p.z + 0.05);
+  const bulbSleeve = t => { const r = (0.24 + 0.42 * smooth(0, 0.65, t)) * endRound(t, 0.06, 0.2) + 0.08; return [r, r * 0.7]; };
+  addMesh('bulbospongiosus', mergeGeometries([tubeGeometry(BULB.map(outward(1)), bulbSleeve, { segments: 60, radial: 20 }), tubeGeometry(mirror(BULB).map(outward(-1)), bulbSleeve, { segments: 60, radial: 20 })]));
+  const crusSleeve = t => { const r = (0.47 - 0.12 * t) * endRound(t, 0, 0.14) + 0.14; return [r, r * 0.85]; };
+  addMesh('ischiocavernosus', mergeGeometries([tubeGeometry(CRUS.slice(1), crusSleeve, { segments: 50, radial: 18 }), tubeGeometry(mirror(CRUS).slice(1), crusSleeve, { segments: 50, radial: 18 })]));
+  addMesh('analSphincter', tubeGeometry([S(0, -4.7, 0.15), S(0, -4.6, 1.2), S(0, -4.5, 2.3)], () => [0.9, 0.85], { segments: 24, radial: 28, hint: V(1, 0, 0) }));
+}
+/* Perineal body: the fibromuscular wedge between the lower vagina and the anal canal */
+addMesh('perinealBody', ellipsoidGeometry(S(0, -3.1, 1.6), V(1.35, 0.72, 1.45), [-0.15, 0, 0]));
+/* Mons: the pad of fat between the skin and the pubic bone, built as a layer under the skin so it follows its curve */
+{
+  const columns = 48, rows = 48, x0 = -4.2, x1 = 4.2, y0 = 3.4, y1 = 9.8;
+  const depthAt = (x, y) => 1.9 * smooth(3.4, 5.0, y) * (1 - smooth(8.0, 9.8, y)) * (1 - smooth(1.4, 4.2, Math.abs(x)));
+  const top = [], bottom = [];
+  for (let iy = 0; iy <= rows; iy++) for (let ix = 0; ix <= columns; ix++) {
+    const x = lerp(x0, x1, ix / columns), y = lerp(y0, y1, iy / rows), h = 0.02;
+    const z = skinShape(x, y).z;
+    const normal = V(-(skinShape(x + h, y).z - skinShape(x - h, y).z) / (2 * h), -(skinShape(x, y + h).z - skinShape(x, y - h).z) / (2 * h), 1).normalize();
+    top.push(V(x, y, z - 0.04)); bottom.push(V(x, y, z - 0.04).addScaledVector(normal, -depthAt(x, y)));
+  }
+  const position = new Float32Array((top.length + bottom.length) * 3), index = [];
+  [...top, ...bottom].forEach((p, k) => position.set([p.x, p.y, p.z], k * 3));
+  const offset = top.length, at = (ix, iy) => iy * (columns + 1) + ix;
+  for (let iy = 0; iy < rows; iy++) for (let ix = 0; ix < columns; ix++) {
+    const a = at(ix, iy), b = at(ix + 1, iy), c = at(ix, iy + 1), d = at(ix + 1, iy + 1);
+    index.push(a, b, c, b, d, c, offset + a, offset + c, offset + b, offset + b, offset + c, offset + d);
+  }
+  const pad = new THREE.BufferGeometry();
+  pad.setAttribute('position', new THREE.BufferAttribute(position, 3)); pad.setIndex(index); pad.computeVertexNormals();
+  addMesh('mons', pad);
+}
+
+/* Bones. Each hip bone: the pubic body at the symphysis, a ring of bone (pubic rami, ischium, ischial tuberosity)
+   around the obturator foramen, the cup of the hip socket, and the curved wing of the ilium up to the iliac crest.
+   Behind: the sacrum, a curved wedge that tapers into the coccyx. */
+{
+  const bones = [ellipsoidGeometry(S(0, 3.75, 4.9), V(0.32, 0.7, 1.9), [-0.25, 0, 0])];          // symphysis disc
+  const fromS = ([x, y, sHeight]) => S(x, y, sHeight);
+  for (const sign of [1, -1]) {
+    bones.push(ellipsoidGeometry(S(1.05 * sign, 3.7, 4.9), V(0.75, 0.85, 2.0), [-0.25, 0, 0]));   // pubic body
+    /* obturator ring, a closed loop of bars; thickest at the ischial tuberosity (what you sit on) */
+    const ring = [[1.4, 3.75, 6.2], [3.1, 4.1, 7.4], [5.3, 2.8, 8.5], [6.7, 0.6, 8.5], [6.7, -1.6, 6.7], [6.3, -3.4, 4.4], [5.4, -1.8, 3.2], [4.1, 0.6, 3.0], [2.5, 2.6, 3.0], [1.4, 3.4, 3.6]]
+      .map(([x, y, h]) => S(x * sign, y, h));
+    bones.push(tubeGeometry(ring, t => { const tuberosity = Math.exp(-(((t - 0.5) / 0.08) ** 2)); const r = 0.55 + 0.6 * tuberosity + 0.25 * Math.exp(-(((t - 0.3) / 0.1) ** 2)); return [r * 0.75, r]; },
+      { segments: 160, radial: 18, closed: true, hint: V(1, 0, 0) }));
+    /* hip socket: a cup opening outward, forward and down */
+    const cup = new THREE.SphereGeometry(1.55, 32, 16, 0, Math.PI * 2, 0, Math.PI * 0.55);
+    cup.applyMatrix4(new THREE.Matrix4().compose(S(7.3 * sign, 0.5, 9.0), new THREE.Quaternion().setFromUnitVectors(V(0, 1, 0), V(-0.75 * sign, -0.3, -0.55).normalize()), V(1, 1, 1)));
+    bones.push(cup);
+    /* wing of the ilium: a curved plate from the hip socket and sacroiliac joint up to the iliac crest, bowed outward */
+    const crest = new THREE.CatmullRomCurve3([[11.5, 3.6, 17.5], [13.0, -0.8, 20.2], [11.0, -5.5, 21.0], [5.8, -8.8, 18.0]].map(([x, y, h]) => S(x * sign, y, h)), false, 'centripetal');
+    const baseFront = S(6.9 * sign, 0.8, 10.0), baseBack = S(4.6 * sign, -7.4, 13.6);
+    const columns = 28, rows = 16, position = [], index = [];
+    for (let i = 0; i <= rows; i++) for (let j = 0; j <= columns; j++) {
+      const u = j / columns, v = i / rows;
+      const point = baseFront.clone().lerp(baseBack, u).lerp(crest.getPointAt(u), v);
+      point.x += sign * 0.9 * Math.sin(Math.PI * v) * Math.sin(Math.PI * u);
+      position.push(point.x, point.y, point.z);
+    }
+    for (let i = 0; i < rows; i++) for (let j = 0; j < columns; j++) {
+      const a = i * (columns + 1) + j, b = a + 1, c = a + columns + 1, d = c + 1;
+      index.push(a, c, b, b, c, d);
+    }
+    const wing = new THREE.BufferGeometry();
+    wing.setAttribute('position', new THREE.Float32BufferAttribute(position, 3)); wing.setIndex(index); wing.computeVertexNormals();
+    bones.push(wing);
+    bones.push(tubeGeometry(Array.from({ length: 9 }, (_, k) => crest.getPointAt(k / 8)), () => [0.45, 0.6], { segments: 60, radial: 14 }));   // the crest's thick rim
+    bones.push(tubeGeometry([baseFront, S(6.0 * sign, -3.2, 11.6), baseBack], () => [0.7, 0.7], { segments: 30, radial: 14 }));             // the thick column above the socket
+  }
+  /* sacrum and coccyx: a wedge curving forward at the bottom, ~10 cm wide at the top with flared wings (alae) */
+  const soft = x => Math.sign(x) * Math.abs(x) ** 0.6;
+  bones.push(tubeGeometry([S(0, -6.8, 4.0), S(0, -8.4, 5.2), S(0, -10.2, 7.0), S(0, -11.6, 10.0), S(0, -10.3, 12.6), S(0, -7.6, 15.0)], t => {
+    const halfWidth = t < 0.18 ? lerp(0.35, 1.0, t / 0.18) : lerp(1.0, 5.0, ((t - 0.18) / 0.82) ** 1.3);
+    const halfThick = lerp(0.3, 1.5, t) * endRound(t, 0.03, 0);
+    return angle => [halfThick * soft(Math.cos(angle)), halfWidth * soft(Math.sin(angle))];
+  }, { segments: 90, radial: 36, hint: V(0, 1, 0) }));
+  addMesh('pelvis', mergeGeometries(bones));
+}
+
+/* Scale bar: 5 cm */
+{
+  const points = [V(-7.2, -7.2, 1.2), V(-2.2, -7.2, 1.2)];
+  for (let k = 0; k <= 5; k++) points.push(V(-7.2 + k, -7.2, 1.2), V(-7.2 + k, -7.0, 1.2));
+  const bar = new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints([points[0], points[1], ...points.slice(2)]), new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.55 }));
+  root.add(bar);
+}
+root.rotation.x = Math.PI / 2;
+root.updateMatrixWorld(true);
+
+/* ---------- Anchors for labels and camera focus ---------- */
+const side = x => state.cut ? -Math.abs(x) : x;
+const rigPoint = (object, point) => root.worldToLocal(object.localToWorld(point));
+const ANCHORS = {
+  mons: () => V(0, 6.6, skinShape(0, 6.6).z + 0.1), labiaMajora: () => V(side(1.9), 1.0, skinShape(1.9, 1.0, state.arousal).z + 0.1), labiaMinora: () => E(side(0.7), -0.3, 0.55),
+  hood: () => E(0, 3.5, 0.85), vestibule: () => E(side(0.45), 0.15, 0.0), meatus: () => V(0, 0.75, 0.02), introitus: () => V(0, -1.1, 0),
+  hymen: () => V(side(0.55), -1.75, -0.15), perineum: () => E(0, -3.6, 0.55), glans: () => glansPosition(state.arousal),
+  clitBody: () => S(0, 3.5, 1.5), crura: () => S(side(3.3), 0.4, 3.0), bulbs: () => S(side(1.5), -0.6, 1.0),
+  vagina: () => vaginaAxis(vaginaLength(state.arousal) * 0.62), gArea: () => gAreaMesh.position.clone(),
+  cervix: () => rigPoint(uterusRig, V(0, 1.5, 0)), uterus: () => rigPoint(uterusBody, V(0, 3.2, 0)),
+  tubes: () => rigPoint(uterusBody, V(side(4.6), 4.2, -0.4)), ovaries: () => rigPoint(uterusBody, OVARY_LOCAL.clone().multiply(V(state.cut ? -1 : 1, 1, 1))),
+  bladder: () => BLADDER.center.clone(), urethra: () => frontWall(1.8, 0.3), ureters: () => S(side(3.5), -5.8, 9.0),
+  bartholin: () => S(side(1.0), -2.5, 1.2), skene: () => S(side(0.36), 0.38, 1.0), anus: () => V(0, -4.7, 0.3),
+  rectum: () => S(0, -8.4, 8.0), bulbospongiosus: () => S(side(1.6), -0.6, 1.0), ischiocavernosus: () => S(side(2.6), 1.6, 2.9), analSphincter: () => S(side(0.9), -4.6, 1.2), perinealBody: () => S(0, -3.1, 1.6), pelvicFloor: () => S(side(4.2), -3.2, 4.6), pelvis: () => S(side(4.3), 0.6, 3.0),
+};
+
+/* ---------- State, colours, opacity ---------- */
+const state = { arousal: 0, pulse: 0, xray: 0, cut: false, coded: false, labels: true, tone: 1, selected: null, hovered: null,
+  view: 'front', drawer: false, inspectorOpen: true, tour: null, section: false, sectionDepth: 0.35,
+  layers: Object.fromEntries(LAYERS.map(l => [l.id, l.id !== 'muscle'])) };
+try { const saved = JSON.parse(localStorage.getItem('wl-manual') || '{}'); if (Number.isInteger(saved.tone)) state.tone = saved.tone; } catch (error) { /* storage unavailable */ }
+
+const FLUSH = new THREE.Color('#7a2638');
+function applyColors(includeSkin = false) {
+  const tone = TONES[state.tone];
+  for (const [id, material] of Object.entries(materials)) {
+    const style = STYLE[id];
+    const color = new THREE.Color(state.coded ? style.coded : (tone[style.real] || style.real));
+    if (!state.coded && style.flush) color.lerp(FLUSH, 0.22 * state.arousal);
+    material.color.copy(id === 'skin' ? new THREE.Color('#ffffff') : color);
+    if (style.wet) material.roughness = 0.5 - 0.3 * style.wet * Math.max(state.arousal, 0.2);
+  }
+  if (!includeSkin) return;
+  const colors = skinMesh.geometry.attributes.color;
+  const skin = new THREE.Color(state.coded ? STYLE.skin.coded : tone.skin);
+  const labia = new THREE.Color(state.coded ? STYLE.skin.coded : tone.labia);
+  const mucosa = new THREE.Color(state.coded ? STYLE.vestibule.coded : tone.mucosa);
+  const dark = new THREE.Color(state.coded ? STYLE.anus.coded : tone.dark);
+  const c = new THREE.Color();
+  for (let k = 0; k < colors.count; k++) {
+    const [wLabia, wMucosa, wAnus] = sheetWeights[k];
+    c.copy(skin).lerp(labia, wLabia).lerp(mucosa, wMucosa * 0.85).lerp(dark, wAnus * 0.55);
+    colors.setXYZ(k, c.r, c.g, c.b);
+  }
+  colors.needsUpdate = true;
+}
+function applyOpacity() {
+  const fade = 1 - 0.93 * state.xray;
+  for (const [id, material] of Object.entries(materials)) {
+    const base = STYLE[id].opacity ?? 1;
+    const opacity = EXTERNAL_FADE.has(id) ? fade : id === 'pelvis' && state.cut ? 0.42 : base;   // bone is the landmark in the side cut
+    material.opacity = opacity;
+    material.transparent = opacity < 0.999;
+    material.depthWrite = opacity > 0.6;
+  }
+}
+/* every material always carries the cut plane; moving it out of the way avoids recompiling shaders */
+function applyCut() { cutPlane.constant = state.cut ? 0 : 1e4; }
+function applyLayers() { for (const layer of LAYERS) layerGroups[layer.id].visible = state.layers[layer.id]; }
+
+let lastBuild = -1;
+/* geometry follows arousal in steps of 2% (and the contraction pulse in steps of 5%): smooth to the eye,
+   but the shapes are rebuilt a few dozen times per animation instead of every frame */
+function rebuild(force = false) {
+  const a = Math.round(state.arousal * 50) / 50, pulse = Math.round(state.pulse * 20) / 20;
+  const signature = a * 1000 + pulse;
+  if (!force && signature === lastBuild) return;
+  lastBuild = signature;
+  buildLabia(a); buildHood(a); buildClitoris(a); buildVagina(a, pulse); setUterusPose(a, pulse);
+  invalidate();
+}
+
+/* ---------- UI: drawer, inspector, guided tour ---------- */
+const $ = id => document.getElementById(id);
+const layersEl = $('layers');
+for (const layer of LAYERS) {
+  const button = document.createElement('button');
+  button.type = 'button'; button.className = 'chip'; button.dataset.layer = layer.id;
+  button.style.setProperty('--dot', layer.dot);
+  button.innerHTML = `<i></i>${layer.name}`;
+  button.addEventListener('click', () => { state.layers[layer.id] = !state.layers[layer.id]; syncUI(); });
+  layersEl.append(button);
+}
+const listButtons = {};
+for (const layer of LAYERS) {
+  const wrapper = document.createElement('div');
+  wrapper.innerHTML = `<div class="group-name" style="--dot:${layer.dot}"><i></i>${layer.name}</div>`;
+  const list = document.createElement('ul'); list.className = 'part-list';
+  for (const id of PART_ORDER.filter(id => PARTS[id].layer === layer.id)) {
+    const item = document.createElement('li');
+    const button = document.createElement('button'); button.type = 'button'; button.dataset.part = id;
+    button.textContent = PARTS[id].name;
+    button.addEventListener('click', () => { stopTour(); select(id); focusPart(id); });
+    item.append(button); list.append(item); listButtons[id] = button;
+  }
+  wrapper.append(list); $('partGroups').append(wrapper);
+}
+$('partsBtn').addEventListener('click', () => { state.drawer = !state.drawer; if (state.drawer) state.section = false; syncUI(); });
+const tonesEl = $('tones');
+TONES.forEach((tone, k) => {
+  const button = document.createElement('button'); button.type = 'button'; button.style.setProperty('--sw', tone.skin);
+  button.setAttribute('aria-label', `Skin tone ${k + 1}`);
+  button.addEventListener('click', () => { state.tone = k; try { localStorage.setItem('wl-manual', JSON.stringify({ tone: k })); } catch (error) { /* storage unavailable */ } applyColors(true); syncUI(); });
+  tonesEl.append(button);
+});
+$('bugList').innerHTML = BUGS.map(([title, fix]) => `<li><b>${title}</b><span>${fix}</span></li>`).join('');
+
+/* The tour visits every part, outside in. Each step names the view it is best seen from. */
+const TOUR = [
+  ['mons', 'front'], ['labiaMajora', 'front'], ['labiaMinora', 'front'], ['hood', 'front'], ['glans', 'front'], ['vestibule', 'front'],
+  ['meatus', 'front'], ['introitus', 'front'], ['hymen', 'front'], ['perineum', 'front'], ['anus', 'front'],
+  ['clitBody', 'clitoris'], ['crura', 'clitoris'], ['bulbs', 'clitoris'], ['bartholin', 'clitoris'], ['skene', 'clitoris'],
+  ['vagina', 'pee'], ['gArea', 'pee'], ['cervix', 'pee'], ['uterus', 'pee'], ['tubes', 'inside'], ['ovaries', 'inside'],
+  ['bladder', 'pee'], ['urethra', 'pee'], ['ureters', 'inside'], ['rectum', 'pee'], ['perinealBody', 'pee'], ['bulbospongiosus', 'clitoris'], ['ischiocavernosus', 'clitoris'], ['analSphincter', 'pee'], ['pelvicFloor', 'inside'], ['pelvis', 'inside'],
+];
+const TOUR_STEP_MS = 7000;
+function goTour(index) {
+  const [id, view] = TOUR[index];
+  state.tour = { index, playing: state.tour?.playing ?? true, stepStart: performance.now() };
+  applyView(view);
+  if (id === 'pelvicFloor') state.layers.muscle = true;
+  applyOpacity();
+  state.inspectorOpen = true;
+  select(id);
+  focusPart(id, VIEWS[view]);
+}
+function startTour() { state.tour = { index: 0, playing: true }; goTour(0); }
+function stopTour() { if (!state.tour) return; state.tour = null; renderInspector(); syncUI(); }
+function stepTour(now) {
+  if (!state.tour?.playing) return;
+  if (now - state.tour.stepStart < TOUR_STEP_MS) return;
+  if (state.tour.index + 1 < TOUR.length) goTour(state.tour.index + 1);
+  else { state.tour.playing = false; renderInspector(); syncUI(); }
+}
+$('tourBtn').addEventListener('click', () => state.tour ? stopTour() : startTour());
+
+const escapeHtml = text => text.replace(/[&<>"]/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]));
+function renderInspector() {
+  const el = $('inspector');
+  if (el.hidden !== !state.inspectorOpen) { el.hidden = !state.inspectorOpen; requestAnimationFrame(resize); }
+  const id = state.selected;
+  const tour = state.tour ? `
+    <div class="tour-bar">
+      <span class="count" id="tourCount">Tour ${state.tour.index + 1} / ${TOUR.length}</span>
+      <button type="button" class="btn" data-tour="prev" ${state.tour.index === 0 ? 'disabled' : ''}>Back</button>
+      <button type="button" class="btn" data-tour="play">${state.tour.playing ? 'Pause' : 'Play'}</button>
+      <button type="button" class="btn primary" data-tour="next" ${state.tour.index === TOUR.length - 1 ? 'disabled' : ''}>Next</button>
+      <button type="button" class="btn" data-tour="stop">End</button>
+    </div>` : '';
+  if (!id) {
+    el.innerHTML = `
+      <div class="inspector-head"><span class="sys" style="--dot:var(--stage-accent)"><i></i>Start here</span><button type="button" class="close" data-close aria-label="Close panel">×</button></div>
+      <h2>Click any part</h2>
+      <p>Or take the guided tour of all ${PART_ORDER.length} parts.</p>
+      <button type="button" class="btn primary" data-tour="start">Start the guided tour</button>
+      <div class="exits">
+        <div style="--dot:#f2c230"><i></i><span><button type="button" class="linkish" data-select="meatus">Urethral opening</button>: pee</span></div>
+        <div style="--dot:#e0507a"><i></i><span><button type="button" class="linkish" data-select="introitus">Vaginal opening</button>: periods, sex, birth</span></div>
+        <div style="--dot:#9a7262"><i></i><span><button type="button" class="linkish" data-select="anus">Anus</button>: poop</span></div>
+      </div>
+      <p class="small">Drag to rotate. Scroll or pinch to zoom. Right-drag or two-finger drag to pan. Reset brings the view back.</p>`;
+    return;
+  }
+  const part = PARTS[id];
+  el.innerHTML = `${tour}
+    <div class="inspector-head"><span class="sys" style="--dot:${dotFor(id)}"><i></i>${escapeHtml(part.sys)}</span><button type="button" class="close" data-close aria-label="Close panel">×</button></div>
+    <div><h2 id="inspectorTitle">${escapeHtml(part.name)}</h2><div class="aka">a.k.a. ${escapeHtml(part.aka)}</div></div>
+    <p>${escapeHtml(part.what)}</p>
+    <p>${escapeHtml(part.does)}</p>
+    <div class="bug"><b>Common bug</b>${escapeHtml(part.bug)}</div>
+    <dl class="stats">${part.stats.map(([k, v]) => `<dt>${escapeHtml(k)}</dt><dd>${escapeHtml(v)}</dd>`).join('')}</dl>
+    <div class="homolog"><span>Male equivalent:</span> <b>${escapeHtml(part.homolog)}</b></div>`;
+}
+document.addEventListener('click', event => {
+  const target = event.target.closest('[data-select],[data-view],[data-tour],[data-close]');
+  if (!target || target.closest('#views')) return;
+  const action = target.dataset.tour;
+  if (action === 'start') startTour();
+  if (action === 'stop') stopTour();
+  if (action === 'next' && state.tour) goTour(Math.min(TOUR.length - 1, state.tour.index + 1));
+  if (action === 'prev' && state.tour) goTour(Math.max(0, state.tour.index - 1));
+  if (action === 'play' && state.tour) { state.tour.playing = !state.tour.playing; state.tour.stepStart = performance.now(); renderInspector(); }
+  if (target.hasAttribute('data-close')) { state.inspectorOpen = false; stopTour(); renderInspector(); }
+  if (target.dataset.select) {
+    stopTour();
+    if (target.dataset.view) setView(target.dataset.view);
+    select(target.dataset.select);
+    focusPart(target.dataset.select, target.dataset.view ? VIEWS[target.dataset.view] : null);
+    if (target.closest('.manual')) $('viewer').scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
+  }
+});
+
+function phaseName(a) { return a < 0.04 ? 'Baseline' : a < 0.4 ? 'Excitement' : a < 0.85 ? 'Plateau' : 'Late plateau'; }
+function syncUI() {
+  invalidate();
+  applyLayers();
+  $('drawer').hidden = !state.drawer;
+  $('sectionPanel').hidden = !state.section;
+  $('sectionBtn').setAttribute('aria-pressed', String(state.section));
+  slicePlane.visible = state.section;
+  if (state.section) drawSection();
+  $('partsBtn').setAttribute('aria-expanded', String(state.drawer));
+  for (const button of layersEl.children) button.setAttribute('aria-pressed', String(state.layers[button.dataset.layer]));
+  for (const [id, button] of Object.entries(listButtons)) button.setAttribute('aria-current', String(id === state.selected));
+  [...tonesEl.children].forEach((button, k) => button.setAttribute('aria-pressed', String(k === state.tone)));
+  $('labelsBtn').setAttribute('aria-pressed', String(state.labels));
+  $('cutBtn').setAttribute('aria-pressed', String(state.cut));
+  $('codedBtn').setAttribute('aria-pressed', String(state.coded));
+  $('tourBtn').setAttribute('aria-pressed', String(!!state.tour));
+  $('tourBtn').textContent = state.tour ? 'End tour' : 'Guided tour';
+  $('xray').value = Math.round(state.xray * 100);
+  $('arousal').value = Math.round(state.arousal * 100);
+  $('arousalOut').textContent = orgasm?.status || `${phaseName(state.arousal)} · ${vaginaLength(state.arousal).toFixed(1)} cm`;
+  $('orgasmBtn').disabled = !!orgasm;
+}
+function select(id) {
+  state.selected = id;
+  if (id) { state.inspectorOpen = true; if (!state.layers[PARTS[id].layer]) state.layers[PARTS[id].layer] = true; }
+  renderInspector(); syncUI();
+}
+
+/* ---------- Camera ---------- */
+let flight = null;
+function flyTo(position, target, up = camera.up, duration = 900) {
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches) duration = 0;
+  flight = { from: camera.position.clone(), to: position.clone(), fromTarget: controls.target.clone(), toTarget: target.clone(),
+    fromUp: camera.up.clone(), toUp: up.clone().normalize(), start: performance.now(), duration };
+}
+const VIEWS = {
+  front: { position: V(0, -26, 15), target: V(0, 0.6, 0.6), up: V(0, 0.48, 0.88), xray: 0, cut: false, layers: { muscle: false } },
+  clitoris: { position: V(14, -13, 10), target: V(0.4, 1.8, 1.0), up: V(0, 1, 0), xray: 0.86, cut: false, layers: { reproductive: false, urinary: false, neighbors: false, muscle: false, glands: true, clitoris: true } },
+  pee: { position: V(38, 6.5, -0.8), target: V(0, 6.5, -0.8), up: V(0, 1, 0), xray: 0, cut: true, layers: { reproductive: true, urinary: true, neighbors: true, clitoris: true, muscle: true } },
+  inside: { position: V(27, 13, 26), target: V(0, 6.5, -0.8), up: V(0, 1, 0), xray: 0.88, cut: false, layers: { reproductive: true, urinary: true, neighbors: true, clitoris: true, glands: true, muscle: false } },
+};
+function applyView(name) {
+  const view = VIEWS[name];
+  state.view = name;
+  state.xray = view.xray;
+  if (state.cut !== view.cut) { state.cut = view.cut; applyCut(); }
+  if (name === 'front') for (const layer of LAYERS) state.layers[layer.id] = layer.id !== 'muscle';
+  else for (const layer of LAYERS) if (layer.id in view.layers) state.layers[layer.id] = view.layers[layer.id];
+  for (const button of $('views').children) button.setAttribute('aria-pressed', String(button.dataset.view === name));
+  applyOpacity(); syncUI();
+}
+function setView(name) {
+  applyView(name);
+  const view = VIEWS[name];
+  flyTo(view.position, view.target, view.up);
+}
+function focusPart(id, fromView = null) {
+  const part = PARTS[id];
+  state.layers[part.layer] = true;
+  if (!fromView && part.layer !== 'external' && part.layer !== 'neighbors' && !state.cut && state.xray < 0.6) state.xray = 0.86;
+  if (!fromView && (id === 'anus' || id === 'perineum')) state.xray = Math.min(state.xray, 0.2);
+  applyOpacity(); syncUI();
+  const anchor = root.localToWorld(ANCHORS[id]());
+  const direction = fromView ? fromView.position.clone().sub(fromView.target).normalize() : camera.position.clone().sub(controls.target).normalize();
+  const distance = ['glans', 'meatus', 'hymen', 'introitus', 'hood', 'skene', 'gArea', 'bartholin'].includes(id) ? 14 : part.layer === 'external' ? 26 : 22;
+  flyTo(anchor.clone().addScaledVector(direction, distance), anchor, fromView ? fromView.up : camera.up);
+}
+for (const button of $('views').children) button.addEventListener('click', () => { stopTour(); setView(button.dataset.view); });
+$('resetBtn').addEventListener('click', () => { stopTour(); setView(state.view); });
+$('labelsBtn').addEventListener('click', () => { state.labels = !state.labels; syncUI(); });
+$('cutBtn').addEventListener('click', () => { state.cut = !state.cut; applyCut(); syncUI(); });
+$('codedBtn').addEventListener('click', () => { state.coded = !state.coded; applyColors(true); syncUI(); });
+$('xray').addEventListener('input', event => { state.xray = event.target.value / 100; applyOpacity(); syncUI(); });
+$('arousal').addEventListener('input', event => { if (orgasm) return; state.arousal = event.target.value / 100; applyColors(); syncUI(); });
+
+/* ---------- Orgasm sequence: ramp, ~10 contractions 0.8 s apart, resolution ---------- */
+let orgasm = null;
+$('orgasmBtn').addEventListener('click', () => {
+  orgasm = { start: performance.now(), from: state.arousal, muscleWasOn: state.layers.muscle, status: 'Building…' };
+  state.layers.muscle = true; syncUI();
+});
+function stepOrgasm(now) {
+  if (!orgasm) return;
+  const elapsed = now - orgasm.start;
+  const ramp = 900, contractions = 10, interval = 800, resolve = 5000;
+  if (elapsed < ramp) { state.arousal = lerp(orgasm.from, 1, smooth(0, ramp, elapsed)); state.pulse = 0; orgasm.status = 'Building…'; }
+  else if (elapsed < ramp + contractions * interval) {
+    const local = elapsed - ramp, k = Math.floor(local / interval), phase = local - k * interval;
+    state.arousal = 1;
+    state.pulse = (phase < 380 ? Math.sin(Math.PI * phase / 380) : 0) * (1 - k * 0.06);
+    orgasm.status = `Contraction ${k + 1} / ${contractions}`;
+  } else if (elapsed < ramp + contractions * interval + resolve) {
+    state.pulse = 0; state.arousal = 1 - smooth(0, resolve, elapsed - ramp - contractions * interval);
+    orgasm.status = 'Resolution';
+  } else {
+    state.arousal = 0; state.pulse = 0; state.layers.muscle = orgasm.muscleWasOn; orgasm = null;
+  }
+  const floor = meshesByPart.pelvicFloor[0];
+  floor.scale.set(0.8 * (1 - 0.05 * state.pulse), 1 - 0.12 * state.pulse, 1.28 * (1 - 0.05 * state.pulse));
+  materials.pelvicFloor.emissive.set('#ff5a3c'); materials.pelvicFloor.emissiveIntensity = 0.8 * state.pulse;
+  applyColors(); syncUI();
+}
+
+/* ---------- Cross-section: a slice across the vagina at any depth, like an axial MRI ---------- */
+const slicePlane = new THREE.Group();
+{
+  const square = new THREE.PlaneGeometry(7, 7);
+  slicePlane.add(new THREE.Mesh(square, new THREE.MeshBasicMaterial({ color: '#f2669a', transparent: true, opacity: 0.16, side: THREE.DoubleSide, depthWrite: false })));
+  slicePlane.add(new THREE.LineSegments(new THREE.EdgesGeometry(square), new THREE.LineBasicMaterial({ color: '#f2669a' })));
+  slicePlane.visible = false;
+  root.add(slicePlane);
+}
+/* where a tube's centre line crosses the slice plane, in slice coordinates [lateral, front], with its curve parameter */
+function crossing(points, origin, normal, lateral, front) {
+  const curve = new THREE.CatmullRomCurve3(points, false, 'centripetal');
+  let previous = curve.getPointAt(0), previousDistance = previous.clone().sub(origin).dot(normal);
+  for (let k = 1; k <= 400; k++) {
+    const point = curve.getPointAt(k / 400), distance = point.clone().sub(origin).dot(normal);
+    if (Math.sign(distance) !== Math.sign(previousDistance)) {
+      const hit = previous.clone().lerp(point, previousDistance / (previousDistance - distance)).sub(origin);
+      if (hit.length() < 6) return { u: hit.dot(lateral), v: hit.dot(front), t: k / 400 };
+    }
+    previous = point; previousDistance = distance;
+  }
+  return null;
+}
+const bladderInverse = BLADDER.matrix.clone().invert();
+let lastSection = null;
+function drawSection() {
+  const canvas2d = $('sectionCanvas'), context = canvas2d.getContext('2d');
+  const width = canvas2d.width, height = canvas2d.height, scale = height / 7.5;   // 7.5 cm tall field
+  const L = vaginaLength(state.arousal), s = L * state.sectionDepth;
+  const origin = vaginaAxis(s), normal = vaginaAxis(s + 0.05).sub(vaginaAxis(s - 0.05)).normalize();
+  const lateral = V(1, 0, 0), front = lateral.clone().cross(normal).normalize();   // toward the belly
+  slicePlane.position.copy(origin); slicePlane.quaternion.setFromUnitVectors(V(0, 0, 1), normal);
+  const toCanvas = (u, v) => [width / 2 + u * scale, height / 2 - v * scale];
+  context.clearRect(0, 0, width, height);
+  /* bladder and cervix: shade every grid cell whose 3D point is inside them */
+  const point = new THREE.Vector3(), local = new THREE.Vector3();
+  let cervixSeen = false, bladderSeen = false;
+  const cervixCells = [];
+  uterusRig.updateMatrixWorld(true);
+  const toRig = uterusRig.matrixWorld.clone().invert().multiply(root.matrixWorld);
+  for (let px = 0; px < width; px += 4) for (let py = 0; py < height; py += 4) {
+    const u = (px - width / 2) / scale, v = (height / 2 - py) / scale;
+    point.copy(origin).addScaledVector(lateral, u).addScaledVector(front, v);
+    if (local.copy(point).applyMatrix4(bladderInverse).lengthSq() < 1) { context.fillStyle = '#e6c25a'; context.fillRect(px, py, 4, 4); bladderSeen = true; continue; }
+    local.copy(point).applyMatrix4(toRig);
+    if (local.y > 0.05 && local.y < 3.05 && (local.x / 1.22) ** 2 + (local.z / (1.22 * 0.82)) ** 2 < 1) { cervixCells.push([px, py]); cervixSeen = true; }
+  }
+  const section = vaginaSection(s / L, state.arousal, state.pulse);
+  const outline = (shape, fill, stroke) => {
+    context.beginPath();
+    for (let k = 0; k <= 128; k++) { const [u, v] = shape(k / 128 * Math.PI * 2); const [x, y] = toCanvas(u, -v); k ? context.lineTo(x, y) : context.moveTo(x, y); }
+    context.closePath(); context.fillStyle = fill; context.fill();
+    if (stroke) { context.strokeStyle = stroke; context.lineWidth = 2; context.stroke(); }
+  };
+  /* the lumen is drawn over the wall but leaves the cervix showing through where it sits in the vault */
+  outline(vaginaOutline(section, true), '#b8525f', '#e07a8a');
+  outline(vaginaOutline(section, false), '#2a0d14', '#ff9fb2');
+  context.fillStyle = '#e8a3ab';
+  for (const [px, py] of cervixCells) context.fillRect(px, py, 4, 4);
+  if (cervixSeen) { const [x, y] = cervixCells[Math.floor(cervixCells.length / 2)]; context.fillStyle = '#2a0d14'; context.font = '600 22px "IBM Plex Sans", system-ui, sans-serif'; context.fillText('Cervix', x - 34, y + 7); }
+  const ring = (hit, radius, fill, label) => {
+    if (!hit) return;
+    const [x, y] = toCanvas(hit.u, hit.v);
+    context.beginPath(); context.arc(x, y, radius * scale, 0, Math.PI * 2); context.fillStyle = fill; context.fill();
+    context.beginPath(); context.arc(x, y, radius * scale * 0.3, 0, Math.PI * 2); context.fillStyle = '#2a0d14'; context.fill();
+    context.fillStyle = '#f3ecf4'; context.font = '600 22px "IBM Plex Sans", system-ui, sans-serif';
+    context.fillText(label, x + radius * scale + 8, y + 7);
+  };
+  const urethra = crossing(URETHRA, origin, normal, lateral, front);
+  const rectum = crossing(RECTUM, origin, normal, lateral, front);
+  ring(urethra, 0.25, '#e8b52a', 'Urethra');
+  ring(rectum, rectum ? rectumRadius(rectum.t) : 0, '#9a7262', 'Rectum');
+  context.font = '500 19px "IBM Plex Mono", ui-monospace, monospace';
+  const caption = (text, x, y, color) => {   // outlined so captions stay readable over the shaded organs
+    context.lineWidth = 6; context.strokeStyle = 'rgba(16,12,19,0.92)'; context.strokeText(text, x, y);
+    context.fillStyle = color; context.fillText(text, x, y);
+  };
+  caption('FRONT (belly side)', 16, 30, '#d6cddb'); caption('BACK (spine side)', 16, height - 16, '#d6cddb');
+  if (bladderSeen) caption('Bladder', width - 104, 30, '#e6c25a');
+  context.fillStyle = '#f3ecf4'; context.fillText('Vagina', width / 2 + (section.width + section.wall) * scale + 8, height / 2 + 7);
+  const [barX, barY] = [width - 16 - scale, height - 22];
+  context.strokeStyle = '#f3ecf4'; context.lineWidth = 3; context.beginPath(); context.moveTo(barX, barY); context.lineTo(barX + scale, barY); context.stroke();
+  context.fillStyle = '#b3a8b9'; context.fillText('1 cm', barX + scale / 2 - 22, barY - 10);
+  const outerWidth = 2 * (section.width + section.wall), thickness = 2 * (section.center + section.wall);
+  $('sectionDepthOut').textContent = `${s.toFixed(1)} cm in`;
+  $('sectionNote').textContent = cervixSeen
+    ? `The cervix sits inside the top of the vagina here, with the space around it (the fornices) open.`
+    : `${outerWidth.toFixed(1)} cm wide, ${thickness.toFixed(1)} cm thick. The front and back walls touch, so the space inside is H-shaped.`;
+  if (rectum) rectum.radius = rectumRadius(rectum.t);
+  /* back edge of the vagina's outer wall on the midline, in the same front-positive coordinate as the neighbours */
+  const back = -(section.center + section.wall - section.forward);
+  lastSection = { depth: s, width: outerWidth, thickness, back, lumenThickness: 2 * section.center, urethra, rectum, cervix: cervixSeen, bladder: bladderSeen };
+  invalidate();
+}
+$('sectionBtn').addEventListener('click', () => { state.section = !state.section; if (state.section) state.drawer = false; syncUI(); });
+$('sectionDepth').addEventListener('input', event => { state.sectionDepth = event.target.value / 100; syncUI(); });
+
+/* ---------- Labels ---------- */
+const labelsEl = $('labels');
+let pressedTag = null;
+const tagEls = {};
+for (const id of PART_ORDER) {
+  const tag = document.createElement('button');
+  tag.type = 'button'; tag.className = 'tag'; tag.style.setProperty('--dot', dotFor(id));
+  tag.innerHTML = `<i></i>${PARTS[id].short}`;
+  /* a press on a label is handed to the canvas, so dragging from a label still rotates; a clean click selects the label's part */
+  tag.addEventListener('pointerdown', event => { pressedTag = id; event.preventDefault(); canvas.dispatchEvent(new PointerEvent('pointerdown', event)); });
+  tag.addEventListener('click', event => { if (event.detail === 0) { stopTour(); select(id); } });   // keyboard activation
+  tag.hidden = true;
+  labelsEl.append(tag); tagEls[id] = tag;
+}
+const scaleTag = document.createElement('span'); scaleTag.className = 'tag static'; scaleTag.textContent = '5 cm'; labelsEl.append(scaleTag);
+const SURFACE_PARTS = new Set([...PART_ORDER.filter(id => PARTS[id].layer === 'external'), 'glans', 'anus']);
+const tagWidths = {};
+function measureTags() { for (const [id, tag] of Object.entries(tagEls)) { tag.hidden = false; tagWidths[id] = tag.offsetWidth; tag.hidden = true; } invalidate(); }
+const projected = new THREE.Vector3();
+const OVERLAYS = ['.dock', '#inspector', '#drawer', '#sectionPanel', '.stage-top .group'];
+function updateLabels(width, height) {
+  const origin = stage.getBoundingClientRect();
+  /* floating panels count as already-placed boxes, so labels never sit underneath them */
+  const placed = [...document.querySelectorAll(OVERLAYS.join(','))].filter(el => !el.hidden && el.offsetParent).map(el => el.getBoundingClientRect())
+    .map(r => [r.left - origin.left, r.top - origin.top, r.right - origin.left, r.bottom - origin.top]);
+  const overlayCount = placed.length;
+  const order = [state.selected, state.hovered, ...PART_ORDER].filter((id, k, list) => id && list.indexOf(id) === k);
+  for (const id of order) {
+    const tag = tagEls[id];
+    const buried = !state.cut && state.xray < 0.5 && !SURFACE_PARTS.has(id);   // hidden under opaque skin
+    const show = (state.labels && !buried || id === state.selected || id === state.hovered) && state.layers[PARTS[id].layer];
+    if (!show) { tag.hidden = true; continue; }
+    projected.copy(root.localToWorld(ANCHORS[id]())).project(camera);
+    if (projected.z > 1 || Math.abs(projected.x) > 1.05 || Math.abs(projected.y) > 1.05) { tag.hidden = true; continue; }
+    const x = (projected.x + 1) / 2 * width - 8, y = (1 - projected.y) / 2 * height - 11;
+    const box = [x, y, x + (tagWidths[id] || 90), y + 22];
+    const important = id === state.selected || id === state.hovered;
+    if (placed.slice(0, overlayCount).some(b => box[0] < b[2] && box[2] > b[0] && box[1] < b[3] && box[3] > b[1])) { tag.hidden = true; continue; }
+    if (!important && placed.some(b => box[0] < b[2] && box[2] > b[0] && box[1] < b[3] && box[3] > b[1])) { tag.hidden = true; continue; }
+    placed.push(box);
+    tag.hidden = false;
+    tag.classList.toggle('on', id === state.selected);
+    tag.style.transform = `translate(${x.toFixed(1)}px, ${y.toFixed(1)}px)`;
+  }
+  projected.copy(root.localToWorld(V(-4.7, -7.2, 1.2))).project(camera);
+  scaleTag.hidden = projected.z > 1;
+  scaleTag.style.transform = `translate(${((projected.x + 1) / 2 * width - 16).toFixed(1)}px, ${((1 - projected.y) / 2 * height + 4).toFixed(1)}px)`;
+}
+
+/* ---------- Picking ---------- */
+const raycaster = new THREE.Raycaster();
+const pointer = new THREE.Vector2();
+const tip = $('tip');
+function resolvePart(hit) {
+  const id = hit.object.userData.part, p = root.worldToLocal(hit.point.clone());
+  if (id === 'skin') {
+    if (Math.hypot(p.x, p.y + 4.7) < 1.1) return 'anus';
+    if (Math.abs(p.x) < 0.6 && p.y > 2.9 && p.y < 4.6) return 'hood';
+    if (p.y > 3.8 && Math.abs(p.x) < 5.5) return 'mons';
+    if (p.y < -2.4 && p.y > -4.0 && Math.abs(p.x) < 2.2) return 'perineum';
+    if (Math.abs(p.x) < 3.2 && p.y > -2.6 && p.y <= 3.8) return 'labiaMajora';
+    return null;
+  }
+  if (id === 'vestibule') {
+    if ((p.x / 0.5) ** 2 + ((p.y + 1.1) / 0.98) ** 2 < 1.7) return 'introitus';
+    if (Math.hypot(p.x, p.y - 0.75) < 0.38) return 'meatus';
+  }
+  return id;
+}
+function pick(clientX, clientY) {
+  const rect = canvas.getBoundingClientRect();
+  pointer.set((clientX - rect.left) / rect.width * 2 - 1, -((clientY - rect.top) / rect.height) * 2 + 1);
+  raycaster.setFromCamera(pointer, camera);
+  const targets = [];
+  scene.traverseVisible(object => { if (object.isMesh && object.userData.part) targets.push(object); });
+  const hits = raycaster.intersectObjects(targets, false).filter(hit => !state.cut || hit.point.x <= 0.001);
+  const solid = hits.find(hit => hit.object.material.opacity > 0.35);
+  const hit = solid || hits[0];
+  return hit ? resolvePart(hit) : null;
+}
+let down = null, hoverEvent = null;
+canvas.addEventListener('pointerdown', event => { down = { x: event.clientX, y: event.clientY }; });
+canvas.addEventListener('pointerup', event => {
+  if (down && Math.hypot(event.clientX - down.x, event.clientY - down.y) < 5) { const id = pressedTag || pick(event.clientX, event.clientY); if (id) { stopTour(); select(id); } }
+  down = null; pressedTag = null;
+});
+canvas.addEventListener('pointermove', event => { if (event.pointerType === 'mouse') hoverEvent = event; });
+canvas.addEventListener('pointerleave', () => { hoverEvent = null; state.hovered = null; tip.hidden = true; canvas.classList.remove('pointing'); });
+
+/* ---------- Loop ---------- */
+/* centre the model in the space the floating inspector leaves free, and keep the horizontal field of view on tall screens */
+function resize() {
+  const { clientWidth: width, clientHeight: height } = stage;
+  renderer.setSize(width, height, false);
+  const inspector = $('inspector');
+  const floating = !inspector.hidden && getComputedStyle(inspector).position === 'absolute';
+  const shift = floating ? (inspector.offsetWidth + 10) / 2 : 0;
+  camera.aspect = (width + 2 * shift) / height;
+  camera.fov = width / height < 1.2 ? 2 * Math.atan(Math.tan(THREE.MathUtils.degToRad(16)) * 1.2 * height / width) * 180 / Math.PI : 32;
+  camera.setViewOffset(width + 2 * shift, height, 2 * shift, 0, width, height);
+  stage.style.setProperty('--dock-height', `${$('dock').offsetHeight}px`);
+  invalidate();
+}
+new ResizeObserver(resize).observe(stage);
+function animate(now) {
+  requestAnimationFrame(animate);
+  frame(now);
+}
+function frame(now) {
+  stepOrgasm(now);
+  stepTour(now);
+  rebuild();
+  if (flight) {
+    const t = flight.duration ? Math.min(1, (now - flight.start) / flight.duration) : 1;
+    const e = t < 0.5 ? 4 * t * t * t : 1 - (-2 * t + 2) ** 3 / 2;
+    camera.position.lerpVectors(flight.from, flight.to, e); controls.target.lerpVectors(flight.fromTarget, flight.toTarget, e);
+    camera.up.lerpVectors(flight.fromUp, flight.toUp, e).normalize();
+    if (t >= 1) flight = null;
+  }
+  controls.update();
+  if (hoverEvent && !down) {
+    const id = pick(hoverEvent.clientX, hoverEvent.clientY);
+    if (id !== state.hovered) invalidate();
+    state.hovered = id;
+    canvas.classList.toggle('pointing', !!id);
+    if (id) {
+      const rect = stage.getBoundingClientRect();
+      tip.hidden = false; tip.textContent = PARTS[id].name;
+      tip.style.left = `${hoverEvent.clientX - rect.left}px`; tip.style.top = `${hoverEvent.clientY - rect.top}px`;
+    } else tip.hidden = true;
+    hoverEvent = null;
+  }
+  if (flight || orgasm) needsRender = true;
+  if (!needsRender) return;
+  needsRender = false;
+  renderCount++;
+  for (const [id, material] of Object.entries(materials)) {
+    if (id === 'pelvicFloor' && orgasm) continue;
+    if (STYLE[id].glow) continue;
+    material.emissive.set(id === state.selected ? '#ff3d7f' : '#000000');
+    material.emissiveIntensity = id === state.selected ? 0.35 : 0;
+  }
+  renderer.render(scene, camera);
+  updateLabels(stage.clientWidth, stage.clientHeight);
+}
+
+/* how the organs sit against each other (cm, degrees), for checking against Gray's midline section */
+function relations() {
+  const inside = (matrixInverse, point) => point.clone().applyMatrix4(matrixInverse).length();   // 1 on the surface
+  const bladderInv = BLADDER.matrix.clone().invert();
+  /* gap between the bladder and the outside of the vagina's front wall, over the stretch where the bladder lies on it */
+  let bladderToVagina = Infinity;
+  for (let s = 2.5; s <= 6; s += 0.1) {
+    const wall = frontWall(s, 0), toCenter = BLADDER.center.clone().sub(wall).normalize();
+    for (let d = -1; d <= 3; d += 0.01) if (inside(bladderInv, wall.clone().addScaledVector(toCenter, d)) <= 1) { bladderToVagina = Math.min(bladderToVagina, d); break; }
+  }
+  /* retropubic space: the bladder's front against the back of the pubic symphysis */
+  const symphysisBack = S(0, 3.75 - 0.8, 4.9);
+  let bladderFront = -Infinity;
+  for (let k = 0; k < 4000; k++) {
+    const u = Math.random() * 2 - 1, theta = Math.random() * Math.PI * 2, r = Math.sqrt(1 - u * u);
+    const point = V(r * Math.cos(theta), r * Math.sin(theta), u).applyMatrix4(BLADDER.matrix);
+    if (Math.abs(point.z + 4.9) < 2) bladderFront = Math.max(bladderFront, point.y);
+  }
+  /* the urethra hugs the front wall along its middle */
+  const urethraCurve = new THREE.CatmullRomCurve3(URETHRA, false, 'centripetal');
+  let urethraToVagina = 0;
+  for (let t = 0.3; t <= 0.8; t += 0.02) {
+    const point = urethraCurve.getPointAt(t);
+    let nearest = Infinity;
+    for (let s = 0.2; s <= 5; s += 0.05) nearest = Math.min(nearest, point.distanceTo(frontWall(s, 0)));
+    urethraToVagina = Math.max(urethraToVagina, nearest - 0.27);
+  }
+  uterusBody.updateMatrixWorld(true);
+  const isthmus = rigPoint(uterusBody, V(0, 0, 0)), fundus = rigPoint(uterusBody, V(0, 5.3, 0));
+  const bodyAxis = fundus.clone().sub(isthmus).normalize();
+  const uterusBodyAngle = THREE.MathUtils.radToDeg(Math.atan2(-bodyAxis.z, bodyAxis.y));   // above the forward horizontal, standing
+  const ovary = rigPoint(uterusBody, OVARY_LOCAL), bodyMiddle = rigPoint(uterusBody, V(0, 3.2, 0));
+  const rectumCurve = new THREE.CatmullRomCurve3(RECTUM, false, 'centripetal');
+  let fundusToRectum = Infinity;
+  for (let t = 0; t <= 1; t += 0.01) fundusToRectum = Math.min(fundusToRectum, fundus.distanceTo(rectumCurve.getPointAt(t)) - rectumRadius(t));
+  /* rectovaginal septum: the back wall of the middle vagina against the front of the rectum */
+  let rectumToVagina = Infinity;
+  for (let s = 3.5; s <= 6; s += 0.1) {
+    const back = V(1, 0, 0).cross(vaginaDirection(s)).normalize().negate();
+    const wall = vaginaAxis(s).addScaledVector(back, VAGINAL_WALL + 0.03);
+    for (let t = 0; t <= 1; t += 0.005) rectumToVagina = Math.min(rectumToVagina, wall.distanceTo(rectumCurve.getPointAt(t)) - rectumRadius(t));
+  }
+  return {
+    rectumToVagina, bladderToVagina, retropubicSpace: symphysisBack.y - bladderFront, urethraToVagina, uterusBodyAngle,
+    ovaryHeightVsUterus: -(ovary.z - bodyMiddle.z), ovaryFromMidline: Math.abs(ovary.x), fundusToRectum,
+    uterineCavityLength: 2.95 + 4.35,    // cervical canal plus body cavity: what a clinician's uterine sound measures
+    uterusIntoBladder: (() => {          // points of the uterus's outer surface that sit inside the bladder (should be none)
+      const profile = [[0.98, -0.1], [1.15, 0.4], [1.7, 1.2], [2.25, 2.3], [2.55, 3.4], [2.45, 4.3], [1.85, 4.95], [0.9, 5.25]];
+      let count = 0;
+      for (const [r, y] of profile) for (let k = 0; k < 32; k++) {
+        const angle = k / 32 * Math.PI * 2, point = rigPoint(uterusBody, V(r * Math.cos(angle), y, r * 0.6 * Math.sin(angle)));
+        if (point.clone().applyMatrix4(bladderInv).length() < 0.98) count++;
+      }
+      return count;
+    })(),
+    promontoryToSymphysis: S(0, -7.6 + 1.6, 15.0).distanceTo(S(0, 3.75 - 0.8, 6.9)),   // the obstetric conjugate
+  };
+}
+
+/* Test and debugging hook: read-only views of the model plus the same actions the UI uses. */
+window.wootenManual = {
+  state, camera, controls, select, setView, startTour, stopTour, frame, TOUR,
+  screenOf(id) {
+    const rect = canvas.getBoundingClientRect();
+    const p = root.localToWorld(ANCHORS[id]()).project(camera);
+    return { x: rect.left + (p.x + 1) / 2 * rect.width, y: rect.top + (1 - p.y) / 2 * rect.height, inFront: p.z < 1 };
+  },
+  pick: (x, y) => pick(x, y),
+  busy: () => !!flight,
+  renders: () => renderCount,
+  section: () => lastSection,
+  /* resting-state measurements in cm and degrees, for checking the model against published ranges */
+  measure() {
+    const length = points => new THREE.CatmullRomCurve3(points, false, 'centripetal').getLength();
+    const glans = glansPosition(0);
+    const surface = (x, y) => V(x, y, skinShape(x, y).z);
+    const pose = uterusPose(0);
+    const degrees = (u, v) => THREE.MathUtils.radToDeg(u.angleTo(v));
+    const outerWidth = t => { const section = vaginaSection(t, 0, 0); return 2 * (section.width + section.wall); };
+    const widths = Array.from({ length: 41 }, (_, k) => outerWidth(k / 40));
+    const mid = widths.slice(8, 30);
+    const middle = vaginaSection(0.45, 0, 0);
+    return {
+      glansLength: 2 * 0.32, glansWidth: 2 * 0.26,
+      clitBodyLength: length(clitBodyPoints(glans)), crusLength: length(CRUS), bulbLength: length(BULB),
+      glansToMeatus: glans.distanceTo(V(0, 0.75, 0)), glansToIntroitus: glans.distanceTo(V(0, -1.1, 0)), glansToAnus: glans.distanceTo(V(0, -4.7, 0.3)),
+      minoraLength: length(MINORA), minoraWidth: 1.8 * (0.42 + 0.26 + 0.027), majoraLength: 5.2 - -3.6, perineumLength: surface(0, -2.48).distanceTo(surface(0, -4.3)),
+      vaginaLength: length(vaginaPoints(0)), vaginaEntranceWidth: outerWidth(1.1 / vaginaLength(0)), vaginaMidWidth: Math.min(...mid), vaginaMaxWidth: Math.max(...widths),
+      vaginaMidDepth: 2 * (middle.center + middle.wall), vaginaLumenDepth: 2 * middle.center, vaginaWall: middle.wall, vaginaHShape: middle.side / middle.center,
+      vaginaBend: 180 - degrees(LOWER_DIR, UPPER_DIR),
+      vaginaOuterRoundness: (() => {      // filled share of the bounding box: an ellipse is 0.785, a rectangle 1
+        const outline = vaginaOutline(middle, true), points = Array.from({ length: 256 }, (_, k) => outline(k / 256 * Math.PI * 2));
+        let area = 0; points.forEach(([x1, y1], k) => { const [x2, y2] = points[(k + 1) % 256]; area += x1 * y2 - x2 * y1; });
+        const xs = points.map(p => p[0]), ys = points.map(p => p[1]);
+        return Math.abs(area / 2) / ((Math.max(...xs) - Math.min(...xs)) * (Math.max(...ys) - Math.min(...ys)));
+      })(),
+      arousedWidths: Array.from({ length: 21 }, (_, k) => { const section = vaginaSection(k / 20, 1, 0); return 2 * (section.width + section.wall); }),
+      restWidths: Array.from({ length: 21 }, (_, k) => { const section = vaginaSection(k / 20, 0, 0); return 2 * (section.width + section.wall); }),
+      urethraLength: length(URETHRA), cervixLength: 3.05, uterusLength: 2.85 + 5.32, uterusWidth: 2 * 2.55, uterusDepth: 2 * 2.55 * 0.6,
+      versionAngle: degrees(UPPER_DIR, pose.cervixDir), flexionAngle: 180 - THREE.MathUtils.radToDeg(pose.flexion),
+      tubeLength: length(TUBE_POINTS),
+      ...relations(), ovaryLength: 2 * 1.5, ovaryWidth: 2 * 1.05, ovaryDepth: 2 * 0.78,
+    };
+  },
+  /* share of a 24 x 24 grid of canvas pixels that the model covers (the background clears to transparent) */
+  coverage() {
+    renderer.render(scene, camera);
+    const gl = renderer.getContext(), pixel = new Uint8Array(4);
+    let hits = 0;
+    for (let i = 0; i < 24; i++) for (let j = 0; j < 24; j++) {
+      gl.readPixels(Math.floor((i + 0.5) / 24 * gl.drawingBufferWidth), Math.floor((j + 0.5) / 24 * gl.drawingBufferHeight), 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, pixel);
+      if (pixel[3] > 0) hits++;
+    }
+    return hits / 576;
+  },
+};
+
+const loading = $('loading');
+camera.position.copy(VIEWS.front.position); controls.target.copy(VIEWS.front.target); camera.up.copy(VIEWS.front.up).normalize();
+rebuild(true); applyColors(true); applyOpacity(); applyCut(); renderInspector(); syncUI(); resize();
+performance.mark('manual:built');
+loading.textContent = 'Preparing shaders…';
+await renderer.compileAsync(scene, camera);
+performance.mark('manual:compiled');
+frame(performance.now());
+performance.mark('manual:first-frame');
+loading.remove();
+document.fonts.ready.then(measureTags);
+measureTags();
+requestAnimationFrame(animate);
+document.documentElement.dataset.modelReady = 'true';
+</script>

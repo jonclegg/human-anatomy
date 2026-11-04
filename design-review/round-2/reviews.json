@@ -1,0 +1,89 @@
+{
+  "round": "round-2",
+  "spentTotal": 0.796415780000018,
+  "results": [
+    {
+      "model": "google/gemini-4-argon",
+      "score": 7.6,
+      "looksLikeAISlop": false,
+      "slopTells": [
+        "Soft diffuse drop-shadows on floating white cards feel slightly generic SaaS"
+      ],
+      "strengths": [
+        "Strong Dieter Rams / Braun / Teenage Engineering technical manual aesthetic (yellow/black/white/grey palette)",
+        "Sharp, plain-spoken, zero-fluff copywriting and information design",
+        "Clean tabular specifications and numbered badge system that ties 3D space to 2D text",
+        "Thoughtful mobile adaptation with bottom sheet and docked toolbars",
+        "Clever interactive simulation controls (Arousal slider, X-ray, Run an orgasm)"
+      ],
+      "topFixes": [
+        "Upgrade 3D shaders and lighting: the model currently looks like clay/plastic with harsh CG speculars, and the 'Side cut' view exposes paper-thin single-sided mesh walls and clipping artifacts—add subsurface scattering, soft studio rim lighting, and capped cross-section geometry.",
+        "Resolve the redundant view controls: 'Cut in half' in the left toolbar and 'Side cut' in the bottom segmented control compete conceptually; consolidate camera/preset views and slicing tools into one clear mental model.",
+        "Fix 3D label occlusion and leader lines: numbered pins sit directly on top of tiny anatomical structures (obscuring the clitoral glans and openings) and collide vertically; pull labels outside the silhouette with crisp hairline leader lines when zoomed out.",
+        "Anchor the floating UI panels to a stricter Swiss grid: on desktop, the five separate floating islands (header, left nav, bottom tabs, right inspector, bottom-right sliders) feel scattered; unify the right-hand cards into a single docked inspector rail.",
+        "Sharpen card styling to match the 'Owner's Manual' theme: replace the soft, blurry SaaS drop-shadows and large border-radii with crisp 1px structural borders, tighter radii (4–6px), and exposed hairlines.",
+        "Improve mobile 3D-to-article transition: scrolling down into a long-form text page from a full-screen 3D touch canvas is jarring and easy to miss; add an explicit 'Read full manual' trigger or split-screen scroll choreography.",
+        "Add visual feedback to the '5 cm' scale indicator: right now it's just floating text with an almost invisible hairline—give it crisp tick marks so it reads immediately as an engineering scale bar.",
+        "Fix number badge collisions in the mobile scroll view: the '1, 2, 3, 4' badges for the urinary tract reuse numbers already assigned to completely different parts (1 = Mons pubis, 2 = Outer lips) on the 3D model, breaking the numbering system."
+      ]
+    },
+    {
+      "model": "~openai/gpt-astra-latest",
+      "score": 6.2,
+      "looksLikeAISlop": false,
+      "slopTells": [
+        "Floating rounded white panels and soft shadows feel like default component-library styling.",
+        "Repeated uppercase metadata and heavy headings occasionally substitute for finer hierarchy."
+      ],
+      "strengths": [
+        "Black, white and safety yellow give the manual a coherent, utilitarian identity without sexual-wellness clichés.",
+        "The title and plainspoken explanations have an actual editorial voice.",
+        "Labeled tools, explicit gesture instructions and visible reset make exploration approachable.",
+        "Yellow selection connects the active anatomical label to the information hierarchy.",
+        "The mobile bottom sheet is an appropriate adaptation rather than a squeezed desktop sidebar.",
+        "Readable body typography and ruled tables support the educational material."
+      ],
+      "topFixes": [
+        "Rebuild the 3D presentation before polishing the chrome. The exterior looks like molded plastic; the cutaway exposes faceted tubes, abrupt ends and intersecting surfaces. Improve geometry, section caps, tissue differentiation and lighting. This is the largest gap versus BioDigital and the other benchmarks.",
+        "Frame every camera preset inside the unobstructed canvas area. The desktop cutaway extends behind the right panel, while the mobile selected state pushes anatomy behind the top tabs. Recalculate framing when panels open rather than letting interface elements cover the subject.",
+        "Replace labels sitting directly on anatomy with collision-aware callouts and leader lines. On mobile, the numbered badges obscure the very structures being taught. Show fewer labels by default and emphasize only the selected structure and its immediate neighbors.",
+        "Consolidate the interaction hierarchy. 'Side cut' versus 'Cut in half', 'Everything' versus 'By system', and separate X-ray controls make the model state difficult to understand. Separate camera presets, visibility and simulation into clearly named groups with synchronized states.",
+        "Give desktop a deliberate workspace layout: a defined viewer, compact tool rail and consistent inspector. The current panels feel scattered around a large gray field, with excessive unused space below the model and competing anchors at every edge.",
+        "Simplify the phone toolbar to the essential actions and move secondary tools into a labeled overflow sheet. Keep the selected organ visible above the information sheet, reduce the sheet's introductory padding, and make its scrolling affordance clearer than fading out body text.",
+        "Make numbering consistent across the entire experience. '1' identifies Mons pubis on the model but Ureters in the article; '4' identifies Hood versus Urethral opening. Use persistent anatomical IDs, or visually distinguish instructional steps from model references.",
+        "Refine the typographic and color hierarchy: reduce competing bold weights, reserve yellow for selection rather than large explanatory blocks, and tighten metadata styling. Replace the nearly invisible '5 cm' scale with a clearly drawn, legible scale bar."
+      ]
+    },
+    {
+      "model": "anthropic/claude-opus-5.5",
+      "score": 6.2,
+      "looksLikeAISlop": false,
+      "slopTells": [
+        "Grey uppercase tracked eyebrow labels everywhere (WOOTEN LABS / OWNER'S MANUAL / 32 PARTS, AROUSAL, X-RAY, COMMON MISCONCEPTION, REPRODUCTIVE, VULVA OWNERS)",
+        "Four floating white rounded-card panels docked to the corners like a default dashboard template",
+        "Segmented pill tab bar plus a separate toggle-chip tool column, two parallel control systems",
+        "Yellow used as the only accent for everything: active toggle, selected label, slider thumbs, misconception box",
+        "7-item icon tab bar on mobile, a stock app-shell pattern"
+      ],
+      "strengths": [
+        "Copy is the best part: specific, funny and factual ('pee / periods, sex, birth / poop', 'Technically the vulva', 'Run an orgasm', male-equivalent rows). Nothing vague",
+        "The 'Start with the exits' card gives a clear, opinionated entry point instead of an empty viewer",
+        "The black/yellow 'owner's manual' identity with a wide heavy grotesk is distinctive and on-concept, not generic SaaS",
+        "No glassmorphism, gradients or emoji. The light neutral stage keeps the subject clinical and non-sleazy",
+        "Numbered callouts tie the model, the list and the detail card together; the selected state (yellow pill) is legible",
+        "The part detail card has good structure: name, plain-English subtitle, body, misconception, spec table",
+        "The mobile bottom sheet with a grabber is the right pattern, and the long-form tables below are clean editorial typography"
+      ],
+      "topFixes": [
+        "Upgrade the 3D model; it is far below benchmark. The smooth clay blob with flat vertex shading has no subsurface or material separation. The stray grey pelvic-bone tubes read as handles or a mannequin stand. Use proper PBR materials, soft contact shadow, rim light and SSS on tissue, and either render the bones properly or hide them in the Outside view.",
+        "Fix framing and occlusion. The model sits off-center and the side cut runs under the right info card (the rectum disappears behind it). Compute a safe viewport that excludes the panels, and auto-fit the camera to it per view and on selection.",
+        "Solve label collisions. Perineum/Anus and Outer lips/Vaginal opening stack, and labels sit directly on geometry with muddy text shadows. Add leader lines to anchors, repel and declutter labels, put solid label backgrounds instead of shadows, and hide low-priority labels at the current zoom.",
+        "Collapse the duplicate controls into one system. 'Cut in half' (left rail) and 'Side cut' (bottom tabs) do the same job. Make the bottom segmented control the single view switcher, keep the left rail for modifiers, and keep tab state honest: mobile still shows 'Outside' while it renders an x-ray of the internals.",
+        "Stop overloading yellow. Reserve it for the current selection on the model. Give toggles a quieter active state (black fill or a check), and give the misconception box its own treatment (outlined, or a different tint).",
+        "Make numbering global and stable. The mobile urinary list restarts at 1–4 while the model uses 6/7/25. One part should always have one number.",
+        "Rework the mobile layout. The model gets about 45% of the screen with dead space below it, and the header plus tabs eat the top 17%. Shrink the title on scroll, move the view tabs into the bottom sheet or tool bar, and cut the 7-item tab bar to 4–5 with overflow. On selection, open the sheet at about 40% height so the model stays visible and re-centers on the part.",
+        "Polish the instrument panel. The '5 cm' scale label has no visible bar. 'Baseline · 8.0 cm' is unexplained (8 cm of what?). X-ray is a 0–100 slider labelled 'Off' that should snap or show a %. Tighten the slider tick labels, which are unevenly spaced and tiny at 10px grey."
+      ]
+    }
+  ]
+}

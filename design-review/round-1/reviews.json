@@ -1,0 +1,91 @@
+{
+  "round": "round-1",
+  "spentTotal": 0.4017802800000254,
+  "results": [
+    {
+      "model": "google/gemini-4-argon",
+      "score": 7.2,
+      "looksLikeAISlop": false,
+      "slopTells": [
+        "Unlabeled vertical icon dock using generic Lucide/Feather icons",
+        "Standard 1px-bordered dark cards with default-feeling range sliders"
+      ],
+      "strengths": [
+        "Warm editorial typography and coral/espresso palette avoid both sterile medical blue and tacky pink clichés",
+        "Sharp, human, unpretentious copywriting with scannable tabular breakdowns",
+        "Clean information architecture inside the anatomy detail cards",
+        "Thoughtful functional touches like the 5 cm scale bar and arousal/X-ray state controls"
+      ],
+      "topFixes": [
+        "Upgrade the 3D shaders and geometry: compared to BioDigital Human, the mesh looks low-poly, faceted, and plasticky with harsh, muddy vertex shading and crude semi-transparent tube cutouts.",
+        "Eliminate the duplicate 'Guided tour' CTAs on desktop (white pill in top right AND orange button inside the 'Start anywhere' card).",
+        "Fix the 3D label occlusion and depth-testing: on mobile, tapping 'Uterus' renders an floating pin right through the opaque front of the mons pubis, and in 'Side cut' view the 16+ labels clutter the model—use leader lines to the perimeter or hide occluded pins.",
+        "Add text labels or immediate hover/tap affordances to the cryptic 6-icon vertical toolbar on the left; icons like the three-circles and axis-ring are inscrutable.",
+        "Redesign the bottom-right simulation card: replace generic browser-style range inputs with custom scrubbers featuring tick marks for 'Rest / Excitement / Plateau', and integrate 'X-ray' into the view controls rather than pairing it with 'Run an orgasm'.",
+        "Fix the mobile viewport and scroll architecture: a full-screen 3D canvas that also scrolls down into long-form editorial tables creates gesture conflicts with drag-to-turn; make the long-form guide an explicit drawer or tab.",
+        "Move the vertical icon dock on mobile to a compact horizontal bar or collapse it so it doesn't crowd the 3D model off-center.",
+        "Fix the low-contrast dark-on-dark subtitle text ('Womb' under 'Uterus' in the mobile bottom sheet is nearly invisible) and stop the '5 cm' scale bar from colliding with the model mesh in Side cut view."
+      ]
+    },
+    {
+      "model": "~openai/gpt-astra-latest",
+      "score": 6.1,
+      "looksLikeAISlop": false,
+      "slopTells": [
+        "Rounded dark panels and pill controls feel somewhat kit-derived.",
+        "Repeated guided-tour CTAs weaken the otherwise deliberate hierarchy."
+      ],
+      "strengths": [
+        "Editorial serif typography and the italic orange 'Manual' establish a recognizable identity.",
+        "Warm black, ivory and orange avoid the predictable pink-on-dark anatomy aesthetic.",
+        "The model is genuinely the desktop focal point, not a thumbnail inside a dashboard.",
+        "Desktop explanations have useful hierarchy: definition, misconception, measurements and comparison.",
+        "Plainspoken copy suits the curious-beginner audience without relying on emoji or empty marketing language.",
+        "The mobile reading section has restrained rules, readable text and consistent typography."
+      ],
+      "topFixes": [
+        "Rebuild the 3D asset and rendering before polishing the chrome. The exterior looks like melted plastic; the cutaway exposes jagged planes, hollow tubes and muddy intersections. Use coherent geometry, clean section caps and controlled material roughness. This is the largest gap against BioDigital and the other benchmarks.",
+        "Fix internal-part selection: the mobile uterus state places an orange label on opaque exterior skin while 'Outside' remains selected. Reveal the selected organ through an explicit cutaway or X-ray transition and synchronize the view indicator.",
+        "Make the mobile detail sheet useful immediately. In the supplied selection state, its category and oversized heading consume nearly all visible sheet space while the explanation falls below the viewport. Open it high enough to show the definition, with compact metadata and a clear expand affordance.",
+        "Replace the tall, cryptic mobile icon rail with a compact labeled toolbar and an overflow menu. Keep Parts, Labels and Reset discoverable; expose secondary visualization settings on demand. Preserve at least 44px touch targets.",
+        "Art-direct camera framing separately for each view and breakpoint. The desktop cutaway runs off the top; mobile leaves substantial dead space below the model. Fit the anatomy within a defined stage that accounts for headers, controls and the open detail sheet.",
+        "Redesign annotations with collision avoidance, short leader lines and restrained text halos. The cutaway's lower labels are crowded, tiny desktop dots look difficult to target, and heavy mobile text shadows cheapen the rendering. Prioritize key landmarks rather than showing every label at once.",
+        "Unify the desktop control hierarchy. View tabs, icon tools, tour entry and physiology sliders currently occupy disconnected islands. Group camera and visibility controls together, put simulations behind a clearly labeled secondary section, and retain one primary tour CTA.",
+        "Increase contrast and minimum sizes for secondary UI text, especially slider captions, the scale and muted controls. Keep the expressive serif for titles, but reduce decorative italic microcopy and make functional text consistently readable."
+      ]
+    },
+    {
+      "model": "anthropic/claude-opus-5.5",
+      "score": 6.2,
+      "looksLikeAISlop": true,
+      "slopTells": [
+        "Condensed display serif with a single coral italic accent word ('Manual'), a very common default for AI-generated editorial sites",
+        "Coral accent on warm near-black with Inter-style body text; the palette and type pairing could belong to any template",
+        "Rounded thin-bordered dark card panels stacked on the right, none with a distinct identity",
+        "Pill segmented control for views plus a pill 'Guided tour' button",
+        "Colored-dot category eyebrows ('• Clitoris', '• Reproductive')",
+        "Callout block with a coral left border and an italic heading ('Common misconception'), the stock LLM 'insight box'",
+        "Vertical icon rail of generic line icons (half-circle, gyroscope, trefoil) whose meaning can't be guessed",
+        "Two identical CTAs for the guided tour on one screen"
+      ],
+      "strengths": [
+        "Copy is genuinely good: specific, factual, wry and on-brief ('Technically the vulva', 'pee / periods, sex, birth / poop', the UTI length fact, the 'tip of an iceberg' line), with no vague filler",
+        "The detail panel is well structured: serif title, italic common-name subtitle, two short paragraphs, then a tidy key-value table with right-aligned numerals",
+        "The 'Same parts, different build' homology table is a smart idea for the target audience and is typeset cleanly on mobile",
+        "Restrained single-accent palette, sensible dark canvas for 3D, and a scale bar that adds credibility",
+        "The Arousal and X-ray sliders and 'Run an orgasm' give real playful interactivity that suits the tone",
+        "Selected-label state (coral dot plus coral text) is clear and consistent across desktop and mobile"
+      ],
+      "topFixes": [
+        "Rebuild or replace the 3D model. The outside view reads as a smooth clay egg with stray translucent grey tubes. The side cut is primitive tubes and flat translucent planes, including a broken-looking grey slab at the top and muddy overlapping alphas. BioDigital-level means sculpted forms, subsurface-style shading, rim light and a proper depth of field, and the model is nowhere near that.",
+        "Fix label collision and density in Side cut. Implement leader lines to edge-anchored labels, cull labels by camera distance or priority, and show only the most important 8–10 at a time with the rest on hover. Right now 'Crura (legs)', 'G-area', 'Bulbs', 'Urethra' and 'Hood' pile onto each other, and the 5 cm scale bar sits on top of 'Perineum'.",
+        "Fix the mobile uterus state. A uterus label floating on the skin of the outside view is anatomically misleading. When an internal part is tapped, auto-switch to Side cut or ramp X-ray and fly the camera to it.",
+        "Make the mobile bottom sheet open to a useful detent of about 45% so the title, subtitle and first paragraph are visible. Currently only 'Uterus' shows, and the 'Womb' subtitle is clipped at near-zero contrast. Also raise the italic subtitle contrast everywhere.",
+        "Collapse the mobile header. The giant 'Guided tour' pill fights the title, and the segmented control runs edge to edge with 'Everything' cramped. Move the tour into the sheet or an icon, shrink the title, and put the view switcher at the bottom within thumb reach.",
+        "Kill the left icon rail's ambiguity. Use labeled buttons or tooltips that are visible on first load, merge redundant states (two orange-active icons at once in Side cut reads as a bug), and drop the rail on mobile, where it eats about 15% of the viewport width beside an already small model.",
+        "Remove one of the two guided-tour CTAs. Then give the right-hand panels a stronger identity than generic bordered cards, for example an edge-docked full-height inspector with no card chrome. Also make the Arousal and X-ray panel feel like an instrument: tick marks, live values and stage labels aligned to the thumbs, not floating.",
+        "Use the dead space better. On mobile the bottom 35% is empty below the model, so scale the model up and centre it. On desktop the model floats small with huge margins, so frame it larger with a subtle ground shadow or vignette."
+      ]
+    }
+  ]
+}

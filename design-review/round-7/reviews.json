@@ -1,0 +1,85 @@
+{
+  "round": "round-7",
+  "spentTotal": 2.742703430000006,
+  "results": [
+    {
+      "model": "google/gemini-4-argon",
+      "score": 7.6,
+      "looksLikeAISlop": false,
+      "slopTells": [],
+      "strengths": [
+        "Strong, cohesive 'owner's manual' thematic direction with high-contrast black-and-white technical typography",
+        "Excellent, punchy, zero-fluff copywriting that demystifies anatomy without being clinical or juvenile",
+        "Crisp numbered callout pins with clean leader lines that maintain readability over the 3D canvas",
+        "Well-adapted mobile UI with native-feeling bottom sheet and dock controls",
+        "Smart interactive simulation controls (Arousal slider, X-ray toggle, 'Run an orgasm' trigger)"
+      ],
+      "topFixes": [
+        "Upgrade the 3D geometry and shaders: compared to BioDigital Human, the meshes look low-poly/blobby (especially the translucent tubes in X-ray mode which look like balloon animals) and lack subsurface scattering or anatomical texture.",
+        "Consolidate the fragmented desktop HUD: having five separate floating UI islands (top-left title, left tool palette, bottom-left simulation box, bottom-center tabs, right inspector card) creates perimeter clutter; unify the left-side tools and simulation controls into a single dock.",
+        "Fix 3D camera framing and clipping on zoom: in the desktop Clitoris X-ray view, the model bleeds violently behind the top-left title, bottom-left panel, and bottom-center caption ('Fig. 1 · External view, X-ray on' is colliding with the 3D mesh).",
+        "Replace the harsh #FFFF00 yellow selection highlight and outline on selected parts (Clitoral glans, Uterus) with a more refined indicator, such as a subtle emissive glow or high-contrast white/black badge.",
+        "Fix the mobile scroll architecture: 'Drag to turn · Pinch to zoom' inside a vertically scrolling webpage (shown in screenshot 6) creates a notorious touch-scroll trap; lock the viewport to 100dvh and open the 'Manual' text as a dedicated drawer or modal.",
+        "Refine the 'Common misconception' callout box inside the right-hand card: the heavy 1px solid black border looks like a raw wireframe compared to the softer border-radius and subtle borders of the outer containers.",
+        "Improve the 5 cm scale bar on desktop: currently it floats awkwardly in dead space near the bottom-left card; anchor it cleanly next to the 'Fig. 1' caption at the bottom center.",
+        "Add active/hover states and visual hierarchy to the right-hand 'Start with the exits' list so rows clearly look like interactive triggers rather than static table text."
+      ]
+    },
+    {
+      "model": "~openai/gpt-astra-latest",
+      "score": 6.6,
+      "looksLikeAISlop": false,
+      "slopTells": [
+        "Repeated white bordered panels feel like default application chrome rather than a distinctive design system."
+      ],
+      "strengths": [
+        "A coherent illustrated-manual concept, not another gradient-heavy landing page.",
+        "Strong black-on-light contrast, readable explanations and clearly differentiated headings.",
+        "Numbered callouts connect the model to the reference material effectively.",
+        "Yellow selection highlighting is immediately legible and appropriately restrained.",
+        "Mobile gets a purposeful toolbar and detail sheet rather than a squeezed desktop sidebar.",
+        "Specific, approachable copy gives the experience more personality than its visual styling."
+      ],
+      "topFixes": [
+        "Upgrade the 3D asset and rendering first. Blurry skin shading, visibly angular cut surfaces and plastic-looking anatomy are substantially below BioDigital; improve mesh quality, material separation, lighting and cut-face treatment.",
+        "Replace the overlapping transparency soup with selective isolation. In the uterus state, 'on its own' still shows numerous competing structures; hide unrelated anatomy and retain only minimal, faint context.",
+        "Define camera framing for each view and selection. The desktop side cut is stranded in empty space, while the selected clitoris view balloons behind the interface. Fit anatomy inside the unobstructed canvas, accounting for panels.",
+        "Consolidate desktop controls into one organized tool rail with expandable settings. Navigation, simulation controls, view tabs and instructions currently occupy disconnected islands around the canvas.",
+        "Art-direct callout placement per view. Separate crowded labels, prevent leaders from crossing anatomical detail, and show only essential landmarks until users request more; the side-cut view is particularly congested.",
+        "Fix mobile selection hierarchy: preserve an identifiable active view, compress the isolation banner, and reframe the selected organ above the detail sheet. Too much of the screen is spent on stacked chrome and ghosted context.",
+        "Refine the typography beyond bold headings plus utility sans. Establish consistent caption, label and body scales; enlarge tiny desktop annotations and reduce the visual weight of secondary controls.",
+        "Turn the mobile manual into a designed learning sequence rather than a long reference dump. Add compact section navigation, small explanatory diagrams and a persistent return-to-model action; the dense comparison table needs clearer grouping and more deliberate column proportions."
+      ]
+    },
+    {
+      "model": "anthropic/claude-opus-5.5",
+      "score": 6.6,
+      "looksLikeAISlop": false,
+      "slopTells": [
+        "Four floating white card panels pinned to the corners, a stock dashboard-over-canvas layout",
+        "Segmented tab strip plus pill toggles ('Off', 'On · 86%') that feel like default component-kit pieces",
+        "Identical black numbered badges used for callouts, list rows, panel headers and the misconception box, so nothing is distinguished",
+        "Thin outlined 'Guided tour' or 'Tour' button that reads as a placeholder",
+        "The 'Showing Uterus on its own / Show all' banner is a generic toast stacked on another bar"
+      ],
+      "strengths": [
+        "Committed editorial identity: a wide heavy grotesk display face, neutral grey field and textbook leader-line callouts with figure captions and a scale bar",
+        "No glassmorphism, neon gradients, emoji or monospace eyebrows; the restraint is real",
+        "Copy is specific, factual and on-tone: the asterisk joke, 'pee / periods, sex, birth / poop', the misconception box, male equivalents, stats in a clean key/value table",
+        "The clitoris detail panel has good hierarchy: category, title, gloss, body, warning, data, comparison",
+        "The mobile pattern is correct: top view tabs, bottom tool bar, a bottom sheet with a grab handle and plain-language gesture hints",
+        "The scrolling mobile content (ordered part lists, homology table) reads like a well-set manual"
+      ],
+      "topFixes": [
+        "Raise the 3D fidelity, the biggest gap versus BioDigital: the external view is a blurry airbrushed blob with no surface detail, and the side cut is flat-shaded, low-poly and shown tiny in a sea of grey. Add proper materials, soft AO and rim light, and frame each view to fill about 70% of the viewport.",
+        "Fix X-ray mode: dozens of overlapping translucent shells turn into mud. Dim non-selected structures to about 10% desaturated grey, keep the selected system in full color, and add depth-sorted outlines.",
+        "Make the right panel follow the current view: on 'Side cut' it still says 'Start with the exits' and lists external openings. Each view needs its own intro and parts list.",
+        "Resolve collisions: 'Fig. 1 · External view, X-ray on' sits on top of the model. Callout leaders cross organs and each other ('Outer lips' points at blank skin). Add a label-layout pass (sorted columns, no crossings, anchor-occlusion checks) and pin the caption to its own clear zone.",
+        "Merge the two left panels into one structured toolbar and separate mode toggles (Callouts, Slice, Colour code, X-ray) from actions (Reset, Run). Right now selected-toggle styling and action-button styling are the same black fill.",
+        "Give the selected state some craft: the yellow highlight on mobile is a jagged polygonal outline, and 'on its own' still renders everything else. Use a smooth screen-space outline or fresnel glow, and actually isolate the part with an animated camera move.",
+        "Mobile: cut the chrome. Make the view tabs about 20% smaller, put Tour in the bottom bar or make it an icon, give the canvas the reclaimed space, and open the sheet at about 40% height so the model stays visible and interactive.",
+        "Build one accent system: yellow for selection, a single anatomical palette for 'Colour code', and fewer black badges. Reserve heavy black for the primary action so 'Run an orgasm' and the active tab stop competing with every number chip."
+      ]
+    }
+  ]
+}

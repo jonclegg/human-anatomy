@@ -1,0 +1,89 @@
+{
+  "round": "round-14",
+  "spentTotal": 5.906027793000021,
+  "results": [
+    {
+      "model": "google/gemini-4-argon",
+      "score": 7.6,
+      "looksLikeAISlop": false,
+      "slopTells": [
+        "Stock Lucide/Feather icon set in the left control panel and mobile bottom bar",
+        "Slightly generic Tailwind-style white floating cards with standard 1px gray borders"
+      ],
+      "strengths": [
+        "Strong, cohesive 'owner's manual' art direction with a refreshing light-mode editorial aesthetic",
+        "Crisp, high-contrast numbered callout pins with clean leader lines and a great yellow active highlight state",
+        "Excellent plain-English copywriting, scannable spec tables, and helpful comparison lists",
+        "Thoughtful, clutter-free mobile adaptation using a bottom sheet and docked tab bar",
+        "Restrained typography and black/white/yellow palette that completely avoids medical clichés or AI-slop gradients"
+      ],
+      "topFixes": [
+        "Upgrade the 3D shaders and lighting: the meshes look like flat plastic with harsh black toon outlines on cut surfaces; add subsurface scattering, soft ambient occlusion, and richer tissue textures to approach BioDigital's fidelity",
+        "Fix the 'Outside' view framing: the soft circular vignette over featureless beige skin looks like looking through a blurry keyhole and lacks anatomical context",
+        "Resolve the mobile scroll trap: the last screenshot shows a long-form article below the 100vh 3D canvas with no visible sticky header or 'Back to 3D' button, which creates gesture conflicts with 3D touch-orbiting",
+        "Consolidate the mobile 'Uterus' bottom sheet header: it currently stacks a drag handle, category row, close button, prev/next stepper, and 'Show all' button across two cramped rows before the title even starts",
+        "Clarify interactive affordances in the left control panel: 'Parts list' and 'Arousal & X-ray' look identical to the toggle rows above them, leaving it ambiguous whether they open drawers, modals, or modes",
+        "Differentiate clickable part rows in the right-hand summary card ('17 Uterus', '10 Clitoral glans') from static specs by adding hover states or subtle right chevrons",
+        "Refine the mobile top bar: the full-width 5-segment view switcher directly under the title feels heavy and crowds the viewport; tighten its padding and hierarchy",
+        "Polish the 3D cross-section caps: in 'Side cut', overlapping translucent meshes create muddy alpha-blending artifacts and jagged intersections"
+      ]
+    },
+    {
+      "model": "~openai/gpt-astra-latest",
+      "score": 6.6,
+      "looksLikeAISlop": false,
+      "slopTells": [
+        "Standard bordered panels and segmented controls feel off-the-shelf, but not distinctly AI-generated."
+      ],
+      "strengths": [
+        "The numbered parts, figure captions and heavy rules establish a coherent owner's-manual identity.",
+        "Restrained grayscale chrome lets anatomical color carry meaning; yellow selection is immediately legible.",
+        "Desktop hierarchy clearly separates tools, model and explanation.",
+        "Labels pair anatomical terminology with approachable language without resorting to emoji or vague marketing copy.",
+        "Mobile has deliberately rearranged navigation, labeled tools and explicit gesture instructions.",
+        "The interface looks usable and purposeful, although its 3D execution is substantially below the benchmarks."
+      ],
+      "topFixes": [
+        "Rebuild the cutaway rendering: exposed hollow shells, angular edges and intersecting surfaces look like unfinished geometry. Cap section planes, clean intersections and give tissue consistent thickness.",
+        "Choose a coherent 3D art direction. The blurred exterior skin, plastic-looking organs and translucent skeleton currently clash. Use controlled lighting, consistent material roughness and clearer depth separation.",
+        "Recompose the initial camera around the pelvis. Desktop wastes much of the lower canvas on a ghosted torso; mobile leaves large inactive areas above and below the anatomy. Enlarge the useful structures within the unobstructed viewport.",
+        "Redesign the mobile detail sheet so useful content appears immediately. Category, navigation and generous spacing consume most of its upper area while the first explanation fades out at the bottom. Put the part title first, consolidate metadata and provide clear collapsed and expanded states.",
+        "Improve annotation layout: the exterior view piles five labels into a tight right-hand stack, while side-cut labels crowd the inspector edge. Reserve label lanes, enforce minimum spacing and show fewer secondary labels until requested.",
+        "Clarify the control hierarchy. 'Slice', 'Side cut' and 'Arousal & X-ray' suggest overlapping or bundled functions. Separate camera presets from visualization settings and expose an explicitly labeled X-ray control.",
+        "Make selection behavior predictable across views. The mobile uterus selection lands in 'Side cut' and nearly erases surrounding anatomy. Explain automatic view changes, retain enough context for orientation and provide an obvious way back.",
+        "Extend the manual identity into the reading experience. The long mobile section becomes a monotonous gray table; add compact anatomical comparison diagrams, stronger section pacing and links that visibly reconnect each entry to the model."
+      ]
+    },
+    {
+      "model": "anthropic/claude-opus-5.5",
+      "score": 7.2,
+      "looksLikeAISlop": false,
+      "slopTells": [
+        "Floating white bordered card panels on both sides, a default dashboard layout rather than a designed composition",
+        "Row of pill-style view chips in a bordered container",
+        "Generic settings-style toggle list (Callouts / Slice across / Colour code) with stock line icons",
+        "Dot-separated breadcrumb eyebrow ('Wooten Labs · Owner's manual · 33 parts') above the title",
+        "Interaction instructions written as a body paragraph inside the info card"
+      ],
+      "strengths": [
+        "Distinct editorial voice: the asterisked title with the 'Technically the vulva' footnote, 'Three tubes, three exits', 'pee' and 'poop'. Plain, specific and funny without being crass, and right for the audience",
+        "Real typographic point of view: a wide heavy grotesk display face against a neutral sans, which reads more like a printed manual than a template",
+        "Numbered black tag callouts with leader lines and 'Fig. N' captions commit to the owner's-manual conceit consistently",
+        "Restrained palette: off-white, ink black, anatomical reds and a single yellow selection accent. No neon gradients",
+        "Information density in the detail panel is well judged: name, alias, two short paragraphs, a misconception box and a spec table with a male equivalent",
+        "Mobile structure is sound: views on top, five-item tab bar at the bottom, and a draggable sheet with prev/next and a part counter",
+        "The 'Same parts, different build' homology table is a strong, clean long-form section"
+      ],
+      "topFixes": [
+        "Fix the Outside view render. The blurry brown radial blob behind a glossy pink plastic vulva looks unfinished and is the weakest frame on the site. Model and texture real surrounding skin, or isolate the vulva cleanly on the neutral ground with proper subsurface shading",
+        "Make the model the hero. In the Body view on both desktop and mobile, the pelvis fills about 25% of the screen with huge dead space below. Frame the camera tighter, scale the model up and let the ghost body silhouette bleed off-frame on purpose",
+        "Untangle the callouts. Leader lines cross each other (Outer lips) and run long horizontal distances across the Side cut. Use collision-aware label placement, shorter leaders and fewer default-visible labels, with the rest revealed on hover",
+        "Remove the redundancy between 'Guided tour', 'Step through the parts', the prev/next counter and 'Show all'. Pick one sequential-navigation model and give it one clearly owned location",
+        "Move the drag/scroll/pan instructions out of the info card into a dismissible on-canvas hint that fades after the first interaction, as the mobile version nearly does",
+        "Break the two-floating-cards dashboard look on desktop. Anchor the info panel as a full-height docked column with a hairline divider, and fold the left toggle panel into a compact icon rail like BioDigital's",
+        "On mobile, avoid ghosting the whole model to a single flat red cutout with a heavy black outline when a part is selected. Keep context at around 40% opacity with shaded geometry, and raise the sheet's default height so body text isn't cut mid-sentence behind a fade",
+        "Push the 3D craft toward benchmark level with soft contact shadows, a subtle environment light, eased camera transitions between views and hover highlights on meshes. Right now the shading reads as flat low-poly Three.js defaults next to BioDigital"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,89 @@
+{
+  "round": "round-8",
+  "spentTotal": 3.1243489299999965,
+  "results": [
+    {
+      "model": "google/gemini-4-argon",
+      "score": 7.6,
+      "looksLikeAISlop": false,
+      "slopTells": [
+        "Low-poly procedural 3D meshes with basic Gouraud/Phong shading and lack of anatomical surface texture"
+      ],
+      "strengths": [
+        "Strong, cohesive 'Haynes manual / Swiss technical diagram' graphic identity",
+        "Excellent copywriting: direct, informative, witty without being juvenile",
+        "Very clear numbered callout pins with crisp leader lines and high-contrast active states",
+        "Thoughtful mobile adaptation using a native-feeling bottom sheet and dock",
+        "High-utility interactive controls (Arousal slider, X-ray opacity, cutaway views) that directly serve the educational goal"
+      ],
+      "topFixes": [
+        "Upgrade the 3D model geometry and shaders: the current meshes look like primitive metaballs/tubes with harsh faceted edges (especially visible on the uterus outline and side-cut planes); add subsurface scattering and finer anatomical sculpting comparable to BioDigital Human.",
+        "Fix the X-ray transparency sorting and overlapping alpha artifacts: in the X-ray and isolated Uterus views, semi-transparent tubular meshes create muddy, confusing grey overlaps.",
+        "Fix text collision on the bottom center canvas caption: 'Fig. 1 · External view, X-ray on' sits directly over the 3D model's lower geometry, hurting legibility.",
+        "Refine the left-hand desktop control stack: having two separate floating white cards (tools at top-left, simulation controls at bottom-left) fragments the UI; unify or anchor them more cleanly to the viewport grid.",
+        "Improve the visual design of the 'Arousal' and 'X-ray' sliders: the raw 1px black track and basic circular thumb look like unstyled HTML inputs compared to the polished segmented controls.",
+        "Clarify mobile scroll architecture: transitioning from a full-viewport 3D canvas with a fixed bottom dock into a long-form text page ('Same parts, different build') feels jarring; make the manual a dedicated drawer or clearly delineate the scroll boundary.",
+        "Polish the 'Common misconception' callout box inside the right-hand detail card: the sharp 1px black border clashes with the soft rounded corners of the parent card.",
+        "Add subtle micro-hierarchy to the parts list rows on the right card: the right-aligned grey descriptors ('pee', 'periods, sex, birth', 'poop') could use pill badges or tabular alignment to feel more like a precision spec sheet."
+      ]
+    },
+    {
+      "model": "~openai/gpt-astra-latest",
+      "score": 6.3,
+      "looksLikeAISlop": false,
+      "slopTells": [
+        "Generic bordered panels and segmented controls give parts of the interface a stock-toolkit feel.",
+        "Repeated white boxes substitute for a more distinctive visual system."
+      ],
+      "strengths": [
+        "A coherent owner's-manual concept, with numbered parts, figure captions and direct explanations.",
+        "Restrained grayscale chrome and yellow selection accents avoid the usual anatomy-site pink-gradient clichés.",
+        "Strong heading hierarchy and generally readable explanatory text.",
+        "Labeled tools, explicit gesture instructions and a visible tour make exploration approachable.",
+        "Mobile is genuinely recomposed with a bottom toolbar and detail sheet, not merely a squeezed desktop.",
+        "The anatomy remains the main event rather than being buried beneath promotional content."
+      ],
+      "topFixes": [
+        "Rebuild the 3D presentation before polishing the UI. Blurry skin shading, plastic-looking organs, visibly faceted silhouettes and raw-looking section edges fall far below BioDigital. Use cleaner geometry, deliberate tissue materials, controlled lighting and properly capped cut surfaces.",
+        "Replace blanket X-ray transparency with selective context. The selected clitoris disappears into overlapping organs and bones; the supposedly isolated uterus still has distracting structures drawn across it. Keep the target opaque, hide foreground occluders and reduce surrounding anatomy to sparse context.",
+        "Art-direct the mobile camera framing. First load spends a large stretch of the viewport on featureless upper skin while the relevant anatomy sits low. Center the teaching area within the space between navigation and toolbar, and refit it when the detail sheet opens.",
+        "Unify the desktop layout into a deliberate viewer workspace. The title, left tools, lower-left simulation panel, bottom view switcher and upper-right explanation currently feel independently parked. Establish consistent rails and reserve a clear, unobstructed model area.",
+        "Make callouts adaptive rather than showing a diagram's worth at once. Prioritize a few landmarks, reveal secondary labels on selection, prevent leader-line crossings and enlarge the tiny desktop label text. Preserve the useful numbered-part convention.",
+        "Clarify control hierarchy and state. Separate camera views, display settings and physiological simulation; explain how 'Slice across' differs from 'Side cut.' Preserve a visible parent-view selection when an organ is isolated instead of leaving every mobile view tab inactive.",
+        "Reduce the mobile detail sheet's introductory whitespace and oversized heading treatment. Bring the first useful explanation higher, keep the selected organ fully visible above the sheet, and provide obvious compact and expanded reading states.",
+        "Extend the manual identity beyond bold headings and bordered boxes. Use a disciplined type scale, consistent rules and spacing, and small anatomical diagrams within the long-form sections. The mobile comparison table is readable but visually resembles an unstyled reference document."
+      ]
+    },
+    {
+      "model": "anthropic/claude-opus-5.5",
+      "score": 6.6,
+      "looksLikeAISlop": false,
+      "slopTells": [
+        "Four floating white card panels pinned to the corners, the standard 'dashboard over canvas' template",
+        "Segmented pill tab bar duplicated as chrome on mobile alongside a five-icon bottom toolbar",
+        "Generic outline icon set (list, tag, reset) with no custom drawing",
+        "Key/value spec rows (Size / Nerve fibres / Whole organ) that read like a templated info card",
+        "Small text lockup of 'Wooten Labs · Owner's manual · 32 parts' working as a filler eyebrow"
+      ],
+      "strengths": [
+        "Editorial voice with real personality: 'Start with the exits', 'Three tubes, three exits', 'pee / poop'. The copy is specific and funny without being crude, which is exactly the brief.",
+        "Wide heavy grotesque headline plus a neutral grotesque body gives a confident owner's-manual identity. It avoids the usual Inter-on-dark look.",
+        "Numbered black-tab callouts with hairline leaders and 'Fig. 3 · Midline section' captions commit to a technical-drawing metaphor that fits the joke.",
+        "Restrained palette: grey field, black UI, one yellow selection accent. No pink-on-dark gradient trap, which this topic practically begs for.",
+        "Selection state is clear. The yellow callout, the outlined mesh, the 'Showing Uterus on its own / Show all' isolation banner and the misconception box are all good teaching UX.",
+        "The mobile bottom sheet with a grab handle is the right pattern, and the homology table ('Same parts, different build') is a genuinely smart content idea.",
+        "Side cut view is the strongest frame: readable silhouette, labels split cleanly left and right."
+      ],
+      "topFixes": [
+        "Rebuild or retexture the external model. The 'Outside' hero is an airbrushed beige blob with a pink pill-shaped vulva. Next to BioDigital it reads as placeholder art and undermines every label on top of it. Use proper geometry, subsurface-scattered skin, a soft contact shadow and a real lighting rig, or lean fully into a stylised flat-shaded illustration look. The current middle ground is the worst option.",
+        "Fix X-ray mode, which is visual soup. Every translucent layer stacks into milky noise. Dim non-selected structures to a single desaturated ghost tone, keep only the selected system at full opacity, and add depth-based fading so the clitoral body and crura actually read as the 'iceberg' the copy promises.",
+        "Kill the four-corner card layout on desktop. Merge view tabs, tools and the arousal control into one docked rail or a single bottom toolbar. Let the right panel be the only surface, so the model owns the canvas the way NASA Eyes and BioDigital do.",
+        "Separate modes from actions in the left menu. 'Callouts' looks like a selected nav item, not a toggle. Show it as an on/off switch, group Slice and Colour code as view modes, and demote Reset to an icon button near the model.",
+        "Stop the figure caption colliding with the model. 'Fig. 2 · External view, X-ray on' is overprinted by geometry. Reserve a safe zone or attach the caption to the tab bar.",
+        "Improve callout layout. Leaders cross and labels stack in a right-hand ladder (Vestibule, Outer lips, Inner lips, Vaginal opening, Hymen) that is hard to map. Use a collision-aware placement algorithm. Also show far fewer labels by default (5–6), revealing the rest on hover or zoom.",
+        "Mobile: reclaim the dead space. About 20% of the first viewport is empty skin above the anatomy, and the 'Urethral opening (pee)' label kisses the screen edge. Auto-frame the model to its bounding box with safe-area padding. Shrink the redundant tab bar into the bottom toolbar so there is one control surface, not two.",
+        "Mobile sheet: open it at a half-height detent so the selected organ stays visible above it. Drop the gradient text fade in favour of a clear 'more' affordance. Make 'Run an orgasm' and the arousal slider a first-class, well-designed moment instead of a utility button in a card; it is the site's signature interaction and currently looks like a form submit."
+      ]
+    }
+  ]
+}

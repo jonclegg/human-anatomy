@@ -1,0 +1,84 @@
+{
+  "round": "round-10",
+  "spentTotal": 4.3400757930000395,
+  "results": [
+    {
+      "model": "google/gemini-4-argon",
+      "score": 7.6,
+      "looksLikeAISlop": false,
+      "slopTells": [],
+      "strengths": [
+        "Crisp, editorial Dieter Rams / Haynes-manual visual language that avoids every dark-mode WebGL cliché",
+        "Numbered callout pins with orthogonal leader lines, scale bars, and yellow active states are genuinely readable and distinctive",
+        "Clear, unpretentious, sharp copywriting with strong typographic hierarchy and scannable data tables",
+        "Thoughtful mobile adaptation with a dedicated bottom toolbar, bottom-sheet detail drawer, and isolated-organ toast banner"
+      ],
+      "topFixes": [
+        "Upgrade the 3D shaders and lighting: the meshes look like flat, untextured Three.js Phong primitives; add subsurface scattering, soft ambient occlusion, and anatomical surface detail closer to the BioDigital benchmark",
+        "Fix the jagged, pixelated black outline shader on isolated mobile parts (Uterus view) and replace the muddy grey ghosting of surrounding organs with clean depth-faded wireframe or fresnel transparency",
+        "Consolidate the four floating white card islands on desktop (top-left menu, bottom-left sliders, bottom tabs, right inspector) into a more unified chrome so the viewport doesn't feel boxed in by separate widgets",
+        "Fix the mobile scrolling architecture: scrolling down into the long-form 'Manual' article abruptly loses all top/bottom navigation chrome, stranding the user in a plain text page",
+        "Change the default 'Body' load state: the full-body mannequin at 40% opacity wastes 85% of the canvas on featureless white limbs while cramming 9 callout labels into a tiny pelvic cluster",
+        "Replace the generic default UI sans-serif in control panels and data readouts with a tabular grotesque or technical monospace to match the authentic 'owner's manual' aesthetic",
+        "Redesign the bottom-left Arousal/X-ray/Body panel: stacked range sliders with floating black pill badges ('On · 88%') feel cramped and clunky compared to the cleaner top-left menu",
+        "Resolve the mobile bottom-sheet collision where the draggable card sits directly on top of the persistent 5-icon bottom tab bar with an awkward double border and clipped text fade"
+      ]
+    },
+    {
+      "model": "~openai/gpt-astra-latest",
+      "score": 6.3,
+      "looksLikeAISlop": false,
+      "slopTells": [
+        "Repeated white bordered panels feel like default application chrome.",
+        "The gray gradient stage and generic control styling lack a distinctive art direction."
+      ],
+      "strengths": [
+        "The owner's-manual concept has a coherent visual language: numbered parts, leader lines, figure captions and ruled tables.",
+        "Restrained neutral colors avoid the predictable pink, glass and gradient treatment.",
+        "Bold headings and readable explanations establish a clear editorial hierarchy.",
+        "Yellow selection states are conspicuous and functional.",
+        "Labeled mobile tools and explicit gesture instructions make interaction reasonably discoverable.",
+        "The mobile detail sheet is a sensible adaptation rather than a squeezed desktop sidebar."
+      ],
+      "topFixes": [
+        "Rebuild the 3D presentation before polishing the UI. Faceted silhouettes, flat cut surfaces, muddy transparency and plastic tube-like organs look like a technical prototype beside BioDigital. Improve mesh quality, section geometry, material separation and depth lighting.",
+        "Make camera framing selection-aware and panel-aware. The desktop clitoris selection enlarges surrounding anatomy beyond the viewport while leaving the actual target tiny and substantial empty space below. Fit the selected structure inside the unobstructed canvas, with only useful anatomical context.",
+        "Start closer to the pelvis. On both desktop and phone, the pale full-body mannequin dominates while the subject becomes a tiny cluster of overlapping markers. Keep whole-body orientation as an optional overview, not the primary first impression.",
+        "Introduce zoom-dependent callouts: show a few landmarks at overview scale, reveal detail when zoomed in, and prevent leader-line crossings and marker collisions. Increase desktop label legibility without letting labels overwhelm the anatomy.",
+        "Consolidate desktop controls into a deliberately organized inspector. The upper-left tools, lower-left sliders, bottom view switcher and upper-right tour scatter attention across four corners. Separate view controls from physiological simulation, and demote 'Run an orgasm' until that mode is relevant.",
+        "Rebalance the mobile selected state. Header, view tabs, isolation banner, detail sheet and bottom toolbar compete with the model. Fold isolation status into the sheet and provide compact and expanded sheet positions that preserve a useful anatomy viewport.",
+        "Clarify control state and meaning. 'Body 40%' should read 'Body opacity'; 'Slice across' and 'Side cut' need a clearer relationship. Preserve an identifiable current view when a part is isolated—the selected mobile screenshot leaves every view tab looking inactive.",
+        "Push the manual identity beyond bold sans-serif headings. Establish a tighter type and spacing system, consistent annotation styling and more intentional panel borders. Break up the mobile reference tables with small anatomical diagrams and tap-to-highlight links; currently that section reads like an ordinary documentation page."
+      ]
+    },
+    {
+      "model": "anthropic/claude-opus-5.5",
+      "score": 7,
+      "looksLikeAISlop": false,
+      "slopTells": [
+        "Four floating white bordered card panels parked in every corner, the default HUD-around-a-canvas layout",
+        "Segmented view switcher plus a stack of toggle rows reads like a stock component kit",
+        "Black pill numeric badges repeated on every label, list row and panel header until they become noise",
+        "Minor: the 'Run an orgasm' joke button uses the same black fill as real primary actions, so the gag reads as template rather than voice"
+      ],
+      "strengths": [
+        "Committed editorial monochrome: extended grotesk display face, near-black on cool grey, and one yellow accent used only for selection. No gradients, glass or emoji.",
+        "The asterisk subtitle ('Technically the vulva') is real voice. Copy is short and concrete throughout ('size of a pear', 'Three tubes, three exits', 'poop'), which suits the tongue-in-cheek brief.",
+        "The side cut view is the best screen: numbered leader-line callouts split cleanly into left and right columns, and it reads like a proper medical plate.",
+        "The part detail panel has strong hierarchy: index, category, prev/next with '10 of 33', big title, plain subtitle, body text, a boxed misconception, and a ruled spec table with a male equivalent.",
+        "The 5 cm scale bar on the clitoris view is a lovely, credible touch.",
+        "Mobile follows sound patterns: a bottom tab bar, a draggable sheet, a 'Showing Uterus on its own / Show all' state banner, and a scrolling long-form manual with a homology table that works as standalone content."
+      ],
+      "topFixes": [
+        "Fix the first-load framing. The full-body ghost fills about 10% of the viewport and all eight callouts bunch onto a postage-stamp pelvis with overlapping anchors, on both desktop and phone. Open on the pelvis at hero scale like BioDigital, or animate a camera push from body to pelvis within the first second.",
+        "Raise the 3D fidelity. Surfaces look like flat, low-poly primitives next to BioDigital: blob uterus, tube rectum, a crude cut cap on the side cut. Add tissue-specific materials, subsurface-ish shading, ambient occlusion, and a proper cross-section cap with an internal texture. On the isolated uterus, replace the thick black cartoon outline with a soft rim light or halo.",
+        "Cut the HUD from four corner cards to one coherent system. Merge 'Parts list', 'Callouts', 'Slice', 'Colour code' and the sliders into a single left rail or a collapsible inspector. Dock 'Guided tour' into the right panel header instead of floating it above and misaligned with the panel's right edge.",
+        "Keep the model clear of the UI. When zoomed, the clitoris and side cut models run under the title, the left toolbar and the right panel, and the ghost hand is clipped behind the sliders. Compute the camera fit against the safe area between panels, and give the title a solid band or fade it on zoom.",
+        "Fix stale state. With the clitoral glans selected, the caption still says 'Fig. 0 · The pelvis in the body' and the 'Body' tab stays active. The caption and the tab must reflect the current view and part.",
+        "Tidy the controls panel. Arousal tick labels don't sit under their ticks, and 'Baseline · vagina 8.0 cm' is cramped. The X-ray control is a pill toggle with a slider while Body is a bare slider, so the patterns are inconsistent. Demote 'Run an orgasm' to a secondary or playful style, because it currently outranks 'Step through the parts'.",
+        "On mobile, the five-option view switcher overflows: 'All organs' touches the edge with no padding. Make it a horizontally scrollable strip with an edge fade, or drop to icons plus shorter labels. Shrink the oversized 'Tour' button so it doesn't outweigh the title.",
+        "Tame the numbering. Show number badges only in the parts list and on the selected label, and use plain text labels with a dot elsewhere. Spread leader lines with a collision-avoidance pass so anchors never stack, as they do at mons pubis, inner lips and outer lips."
+      ]
+    }
+  ]
+}

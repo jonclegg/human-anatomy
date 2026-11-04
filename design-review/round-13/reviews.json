@@ -1,0 +1,86 @@
+{
+  "round": "round-13",
+  "spentTotal": 5.516152293000005,
+  "results": [
+    {
+      "model": "google/gemini-4-argon",
+      "score": 7.6,
+      "looksLikeAISlop": false,
+      "slopTells": [],
+      "strengths": [
+        "Strong, cohesive 'owner's manual' art direction (numbered callout tags, Fig. captions, scale bar, Swiss-inspired editorial tables)",
+        "Copywriting is sharp, matter-of-fact, and genuinely human—zero AI fluff",
+        "Clean information architecture on the right-hand inspect card with crisp key-value spec tables and yellow active-tag highlighting",
+        "Clear, unambiguous view-switching segmented control that adapts sensibly to mobile"
+      ],
+      "topFixes": [
+        "Upgrade the 3D shaders, lighting, and geometry: compared to BioDigital or Lusion, the meshes look low-poly and flat-shaded, the 'Outside' flesh vignette looks like a muddy airbrushed blur, and the mobile 'Uterus' isolation uses a jarring jagged black toon outline that clashes with the rest of the rendering.",
+        "Fix the mobile bottom sheet header layout (iPhone uterus view): '17 Reproductive [<] 17 of 33 [>] [Show all] [x]' is severely cramped, causing '17 of 33' to wrap onto two lines; move the category label to an eyebrow or combine the pagination cleanly.",
+        "Differentiate interactive behaviors in the left control panel: 'Parts list' and 'Arousal & X-ray' sit in a list with toggle switches ('Callouts', 'Slice across', 'Colour code') and an action ('Reset view') without visual affordances (like chevrons or sliders) to show whether they open drawers, modals, or sub-controls.",
+        "Give the primary CTA ('Step through the parts ->') stronger visual hierarchy: right now it looks like a disabled secondary outline button and gets outcompeted by the solid black number badges above it.",
+        "Prevent the mobile bottom sheet from colliding with the bottom tab bar: either have the sheet slide over and conceal the bottom bar when a part is active, or dock it cleanly without a sliver of background peeking between two rounded white cards.",
+        "Refine 3D callout leader lines on the 'Outside' and 'Side cut' views: rigid horizontal lines cross awkwardly over anatomy and stack densely; introduce subtle 45-degree elbows or smart anchor routing so lines don't occlude the central geometry.",
+        "Tighten typographic hierarchy in the editorial scroll view (6th image): the body copy at the top is nearly the same size and visual weight as the numbered part rows and comparison table below it.",
+        "Anchor the top-right 'Guided tour' button into a unified top bar grid on desktop; currently it floats in the corner disconnected from the left-hand title block and below-aligned right card."
+      ]
+    },
+    {
+      "model": "~openai/gpt-astra-latest",
+      "score": 6.4,
+      "looksLikeAISlop": false,
+      "slopTells": [
+        "Generic bordered white panels and stock-looking outline icons",
+        "Repeated segmented controls and boxed actions feel assembled rather than art-directed"
+      ],
+      "strengths": [
+        "A coherent owner's-manual concept: numbered parts, figure captions and leader lines give the interface purpose",
+        "Restrained monochrome chrome lets anatomical color carry information; no gratuitous pink gradients or glass",
+        "Strong headline hierarchy and mostly readable, direct explanatory copy",
+        "Yellow selection labels are immediately distinguishable from ordinary callouts",
+        "Visible view names, labeled mobile tools and gesture instructions make exploration approachable",
+        "Mobile genuinely adapts with fewer callouts and a bottom sheet rather than merely shrinking desktop"
+      ],
+      "topFixes": [
+        "Prioritize the 3D asset and rendering pipeline. The side cut exposes angular shells, abrupt intersections and ribbon-like structures; the exterior view looks airbrushed and plastic. Refine geometry, section caps, material roughness and lighting. This is the largest gap versus BioDigital and the 3D benchmarks.",
+        "Recompose each camera preset around the usable canvas. Desktop first load leaves substantial empty space below a relatively small pelvis; mobile spends too much height on translucent torso. Enlarge the relevant anatomy and fit it between the actual UI boundaries, including the open detail sheet.",
+        "Redesign the mobile detail-sheet header. '17 of 33' wraps awkwardly while category, arrows, Show all and close compete in one row. Put category and count on a compact metadata line, group navigation separately, and provide clear collapsed, half-height and expanded states with an obvious reading affordance.",
+        "Make selection highlight anatomy without erasing its context. The selected mobile uterus becomes a flat, heavily outlined red shape against almost invisible surroundings. Preserve its depth shading, use a restrained contour highlight and retain enough neighboring-organ contrast to explain position.",
+        "Reduce competing control surfaces. Desktop separates tools, tour, explanatory panel and view tabs across four areas; mobile gives Reset the same prominence as Parts. Group tools by task, move Reset into secondary controls, and distinguish 'Slice' from 'Side cut' explicitly.",
+        "Refine callout layout at every camera angle. The side-cut labels crowd the right panel and several leader lines traverse complex anatomy. Use collision-aware label rails, more consistent spacing and progressive disclosure of nearby labels after selection.",
+        "Develop the manual identity beyond heavy sans headings and default panels. Establish a tighter spacing and type scale, unify badge shapes and border weights, and replace some enclosing boxes with editorial rules. Aim for a designed field guide, not a utility dashboard.",
+        "Art-direct the mobile reading section. The long gray text-and-table treatment is serviceable but monotonous. Add small anatomical comparison diagrams, stronger subsection rhythm and direct 'Locate in model' actions so the manual remains connected to the explorer."
+      ]
+    },
+    {
+      "model": "anthropic/claude-opus-5.5",
+      "score": 6.6,
+      "looksLikeAISlop": false,
+      "slopTells": [
+        "Three floating white rounded card panels (settings, info, view switcher) framing the canvas, a generic dashboard layout",
+        "Settings-style toggle list (Callouts / Slice across / Colour code) that reads as a dev debug panel, not a designed control",
+        "Numbered black pill badges repeated on every row, callout and header until they become visual noise",
+        "Small grey breadcrumb eyebrow line above the title ('Wooten Labs · Owner's manual · 33 parts')",
+        "Segmented control plus bottom tab bar on mobile, the stock two-nav-bars pattern"
+      ],
+      "strengths": [
+        "A real point of view: textbook figure language with numbered leader-line callouts, 'Fig. 3 · Midline section' captions and a 5 cm scale bar. It feels like a field manual, not a template",
+        "Copy is specific, funny and useful ('Three tubes, three exits', 'poop', 'size of a pear', the misconception box, the male-equivalent line). It lands the tongue-in-cheek brief without emoji or vague filler",
+        "Restrained, mostly monochrome palette. Tissue colours carry the colour and the single yellow selection state is clear and accessible",
+        "The wide grotesk display face gives the title and panel headings character and strong hierarchy against neutral body text",
+        "The side-cut view is the best screen: legible schematic modelling, good label density, clear anatomy",
+        "The mobile bottom sheet with a drag handle and prev/next stepping is the right pattern",
+        "The scrolled homology table is clean, editorial and well spaced"
+      ],
+      "topFixes": [
+        "Fix the Outside view's 3D first. The vulva is a blurry brown radial-gradient blob with a flat pink cutout, far below BioDigital fidelity and the weakest image in the product. Model real surface form and lighting, or commit to a clean illustrative shader matching the side cut.",
+        "Make the model the hero. In Body view the pelvis fills about 25% of the viewport inside a low-fi ghost silhouette. Frame the camera tighter, drop or heavily simplify the full-body ghost, and let the panels recede or collapse.",
+        "Replace the left toggle card with a slim vertical icon rail like BioDigital or NASA Eyes: icons with tooltips and active states. Move 'Reset view' next to the canvas zoom affordance. Kill the iOS-settings switches.",
+        "Fix mobile chrome overload. The 5-item segmented control plus the 5-item floating tab bar eat roughly 30% of the screen. Merge views into one scrollable chip row or a single 'View' sheet, and make the bottom bar edge-to-edge and native-height.",
+        "Repair the mobile sheet header. '17 of 33' wraps onto two lines and the badge, category, arrows, 'Show all' and close are jammed into one row. Put the counter and arrows on their own row (or by the title), and drop 'Show all' into the overflow.",
+        "Clean up callout layout. Leader lines cross and fan unevenly (Outside: Vestibule/Outer lips; Side cut: the long right-hand rules). Align labels to two columns with consistent elbow leaders and avoid crossings, or show labels on hover beyond a density threshold.",
+        "Loosen the top-left stack. The eyebrow, title, footnote and control card sit with almost no gap. Give the title real breathing room, or move the footnote asterisk joke into a hover tooltip.",
+        "Reduce badge repetition. Show part numbers on callouts only and drop the black pills in list rows and panel headers. Promote the right panel's 'Step through the parts' to a primary CTA, since it currently ties with the Guided tour button."
+      ]
+    }
+  ]
+}

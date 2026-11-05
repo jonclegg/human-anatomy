@@ -44,7 +44,16 @@ class TurntableControls extends THREE.EventDispatcher {
     element.addEventListener('pointerup', event => this.pointerUp(event));
     element.addEventListener('pointercancel', event => this.pointerUp(event));
     element.addEventListener('contextmenu', event => event.preventDefault());
-    element.addEventListener('wheel', event => { event.preventDefault(); this.zoom(Math.exp(event.deltaY * 0.0015)); }, { passive: false });
+    /* a pinch (which arrives as a wheel event with ctrl held) and a mouse wheel zoom toward the pointer; a two-finger swipe on
+       a trackpad moves the view, up and down the body or across it. A trackpad's wheel events report wheelDeltaY as -3
+       times deltaY; a mouse wheel's do not (Firefox, which has no wheelDeltaY, reports a mouse wheel in lines). */
+    element.addEventListener('wheel', event => {
+      event.preventDefault();
+      const trackpad = event.wheelDeltaY !== undefined ? event.wheelDeltaY === -3 * event.deltaY && event.deltaY !== 0 || event.deltaX !== 0 : event.deltaMode === 0;
+      if (trackpad && !event.ctrlKey) this.pan(-event.deltaX, -event.deltaY);
+      else this.zoomAt(Math.exp(event.deltaY * (event.ctrlKey ? 0.01 : 0.0015)), event.clientX, event.clientY);
+      this.dispatchEvent({ type: 'start' });
+    }, { passive: false });
   }
   pointerDown(event) {
     if (this.pointers.size === 0) {
@@ -98,6 +107,21 @@ class TurntableControls extends THREE.EventDispatcher {
     eye.setLength(THREE.MathUtils.clamp(eye.length() * factor, this.minDistance, this.maxDistance));
     this.camera.position.copy(this.target).add(eye);
   }
+  /* zoom about the point under the pointer, at the target's depth, so what is under the pointer stays there */
+  zoomAt(factor, clientX, clientY) {
+    const distance = this.camera.position.distanceTo(this.target);
+    factor = THREE.MathUtils.clamp(distance * factor, this.minDistance, this.maxDistance) / distance;
+    const rect = this.element.getBoundingClientRect();
+    const ray = new THREE.Raycaster();
+    ray.setFromCamera(new THREE.Vector2((clientX - rect.left) / rect.width * 2 - 1, -((clientY - rect.top) / rect.height) * 2 + 1), this.camera);
+    const plane = new THREE.Plane().setFromNormalAndCoplanarPoint(this.camera.getWorldDirection(new THREE.Vector3()), this.target);
+    const point = ray.ray.intersectPlane(plane, new THREE.Vector3());
+    if (!point) { this.zoom(factor); return; }
+    this.target.sub(point).multiplyScalar(factor).add(point);
+    this.camera.position.sub(point).multiplyScalar(factor).add(point);
+  }
+  /* move the view straight up or down the body, by cm */
+  lift(cm) { this.target.y += cm; this.camera.position.y += cm; }
   update() {
     this.camera.lookAt(this.target);
     const { last } = this;
@@ -213,6 +237,7 @@ const MATERIALS = { solid: partMaterial(0), ghost: partMaterial(1), outline: out
 const pickScene = new THREE.Scene();
 
 /* ---------- Data: parts lists and layers, per sex, loaded on demand ---------- */
+const SHEET = /mesentery|mesocolon|mesoappendix|omentum|peritone|pleura|pericardi|membrane|fascia|aponeuros|sheath|retinacul|capsule|ligament|septum|tendon|tract\b|meninge|dura|arachnoid|pia mater|falx|tentorium|mesovarium|mesosalpinx|mesometrium|broad ligament|bursa/i;
 const loader = new GLTFLoader().setMeshoptDecoder(MeshoptDecoder);
 const bodies = {};        // sex -> { parts, entries, layers: { name -> { promise, group, pick } } }
 async function loadBody(sex) {
@@ -225,7 +250,11 @@ async function loadBody(sex) {
   const keys = Object.keys(ENTRIES);
   data.parts.forEach((part, index) => {
     part.index = index;
-    const at = keys.findIndex(key => (ENTRIES[key].layer ? ENTRIES[key].layer === part.layer : true) && ENTRIES[key].pattern.test(part.name) && (!ENTRIES[key].sex || ENTRIES[key].sex === sex));
+    /* a thin sheet (a membrane, mesentery, fascia, capsule or ligament): drawn without an ink outline, which is drawn
+       on the back faces and would fill a sheet in dark */
+    part.sheet = SHEET.test(part.name);
+    const at = keys.findIndex(key => (ENTRIES[key].layer ? ENTRIES[key].layer === part.layer : true) && ENTRIES[key].pattern.test(part.name) && (!ENTRIES[key].sex || ENTRIES[key].sex === sex)
+      && (!ENTRIES[key].where || ENTRIES[key].where(part, data.height)));   // where: a test of place, for names shared by distant parts
     if (at >= 0) { body.entryOf[index] = at; (body.entries[keys[at]] ||= []).push(index); }
   });
   body.order = keys.filter(key => body.entries[key]);
@@ -268,6 +297,32 @@ function loadLayer(body, layer) {
   });
   return record.promise;
 }
+/* plain underwear (data/<sex>/clothing.glb), its colours in the file; not a part, so it is neither listed nor picked */
+const CLOTH = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.85, metalness: 0, side: THREE.DoubleSide });
+function loadClothing(body) {
+  if (body.clothing) return body.clothing.promise;
+  const record = body.clothing = { group: null };
+  record.promise = loader.loadAsync(`data/${body.sex}/clothing.glb`).then(gltf => {
+    gltf.scene.traverse(object => { if (object.isMesh) { object.material = CLOTH; object.renderOrder = 3; object.raycast = () => {}; } });
+    gltf.scene.name = `${body.sex}-clothing`;
+    record.group = gltf.scene;
+    root.add(gltf.scene);
+    applyVisibility();
+    return record;
+  });
+  return record.promise;
+}
+/* how solid the clothing is: solid on an opaque body; as the body fades, the clothing fades less, so it still covers */
+/* The page opens covered and stays covered as you look around; what you deliberately choose is shown: the Clothing
+   switch, or picking a reproductive or genital part (the cover comes off while it is selected). */
+const UNDER_COVER = /penis|scrot|testi|epididym|vagin|vulva|clitor|labi(a|um) (majora|minora|majus|minus)|uterus|ovar|perine|pubic hair/i;
+const revealed = () => selectedParts().some(index => body.parts[index].group === 'reproductive' || UNDER_COVER.test(body.parts[index].name));
+function clothingOpacity() {
+  if (!state.clothed || state.layers.skin === 'off' || revealed()) return 0;
+  if (isolating()) return 0.12;
+  return state.body >= 0.999 ? 1 : Math.min(0.9, 0.35 + 1.5 * state.body);
+}
+
 /* a label's dot sits on a vertex of its part: the one nearest the middle of the part's box */
 function measureAnchors(body, geometry) {
   const position = geometry.attributes.position, part = geometry.attributes._part;
@@ -280,7 +335,7 @@ function measureAnchors(body, geometry) {
 
 /* ---------- State ---------- */
 const state = {
-  sex: 'male', view: 'body', layers: {}, xray: 0, body: 0.25, labels: true, tone: 1,
+  sex: 'male', view: 'body', layers: {}, xray: 0, body: 0.25, labels: true, clothed: true, tone: 1,
   selection: null, hovered: -1, drawer: false, dock: false, inspectorOpen: true, sheet: 'peek', tour: null, touched: false, search: '',
 };
 try { const saved = JSON.parse(localStorage.getItem('wl-body') || '{}'); if (Number.isInteger(saved.tone)) state.tone = saved.tone; if (saved.sex === 'female' || saved.sex === 'male') state.sex = saved.sex; } catch (error) { /* storage unavailable */ }
@@ -300,12 +355,17 @@ function applyVisibility() {
   for (const layer of LAYERS) { const record = body.layers[layer]; if (record?.group) record.group.visible = state.layers[layer] !== 'off'; }
   for (const [sex, other] of Object.entries(bodies)) if (other !== body) for (const record of Object.values(other.layers)) if (record.group) { record.group.visible = false; if (record.pick) record.pick.visible = false; }
   for (const record of Object.values(body.layers)) if (record.pick) record.pick.visible = record.group?.visible;
+  for (const other of Object.values(bodies)) if (other.clothing?.group) other.clothing.group.visible = other === body && clothingOpacity() > 0;
+  {
+    const opacity = clothingOpacity();
+    CLOTH.opacity = opacity; CLOTH.transparent = opacity < 1; CLOTH.depthWrite = opacity >= 1;
+  }
   const colours = stateTexture.colour.image.data, flags = stateTexture.flags.image.data;
   const chosen = new Set(selectedParts()), isolate = isolating(), colour = new THREE.Color();
   body.parts.forEach((part, index) => {
     const mode = state.layers[part.layer];
     let opacity = mode === 'solid' ? 1 : mode === 'ghost' ? GHOST : 0;
-    if (part.layer === 'skin') opacity = mode === 'off' ? 0 : state.body;
+    if (part.layer === 'skin') opacity = mode === 'off' || (state.clothed && !revealed() && /pubic hair/i.test(part.name)) ? 0 : state.body;
     if (mode === 'solid' && view.xray.includes(part.layer)) opacity = 1 - (1 - GHOST) * state.xray;
     if (isolate) opacity = chosen.has(index) ? 1 : Math.min(opacity, part.layer === 'skin' ? 0.05 : 0.12);
     if (chosen.has(index) && !isolate) opacity = Math.max(opacity, 1);
@@ -315,7 +375,7 @@ function applyVisibility() {
     colours[k + 3] = Math.round(THREE.MathUtils.clamp(opacity, 0, 1) * 255);
     flags[k] = chosen.has(index) ? 255 : 0;
     flags[k + 1] = isolate && !chosen.has(index) ? 255 : 0;
-    flags[k + 2] = part.layer === 'skin' || part.layer === 'vessels' || part.group === 'nerves' ? 255 : 0;   // the skin, and thin tubes that a line would darken
+    flags[k + 2] = part.layer === 'skin' || part.layer === 'vessels' || part.group === 'nerves' || part.sheet ? 255 : 0;   // the skin, thin tubes and thin sheets, which a line would darken
     flags[k + 3] = chosen.has(index) && !isolate ? 255 : 0;
   });
   stateTexture.colour.needsUpdate = true; stateTexture.flags.needsUpdate = true;
@@ -444,11 +504,13 @@ function sourceNote(parts) {
   const source = body.parts[parts[0]].source;
   return fitted
     ? `<div class="source"><em class="fitted">Fitted</em><span>Male ${escapeHtml(source)} shape, warped to fit the NIH Visible Human Female. No free female model of this part exists.</span></div>`
-    : `<div class="source"><em>Scanned</em><span>${escapeHtml(SOURCE_TEXT[source] || source)}</span></div>`;
+    : `<div class="source"><em>${source === 'MakeHuman' ? 'Modelled' : 'Scanned'}</em><span>${escapeHtml(SOURCE_TEXT[source] || source)}</span></div>`;
 }
 const SOURCE_TEXT = {
   BodyParts3D: 'BodyParts3D: an adult Japanese man, built from CT and MRI.',
-  'NIH female': 'NIH Visible Human Female: a 59-year-old woman, from cryosection images.',
+  'NIH female': 'NIH Visible Human Female: a 59-year-old woman, from cryosection images. Drawn in to fit the slimmer body here.',
+  'Allen brain': 'Human Reference Atlas female brain, from the Allen Institute (CC BY 4.0). Placed in this body.',
+  MakeHuman: 'MakeHuman base mesh with young-female shape targets (CC0), posed to this skeleton.',
   'NIH male': 'NIH Visible Human Male: a 38-year-old man, from cryosection images. Aligned to the BodyParts3D body.',
   'Z-Anatomy': 'Z-Anatomy, an open atlas built on BodyParts3D (CC BY-SA 4.0). Aligned to the BodyParts3D body.',
 };
@@ -480,7 +542,7 @@ function renderInspector() {
         <button type="button" data-entry="${key}"><i>${entryNumber(key)}</i><b>${escapeHtml(ENTRIES[key].name)}</b><span>${escapeHtml(note)}</span></button>`).join('')}
       </div>
       <button type="button" class="btn primary step-start" data-step="1">Step through the parts →</button>
-      <p class="small">Drag to turn. Scroll or pinch to zoom. Right-drag or two fingers to pan. Arrow keys step from part to part.</p>`;
+      <p class="small">Drag to turn. Pinch or the mouse wheel zooms; a two-finger swipe, right-drag or the ruler on the left moves up and down the body (so do the ↑ ↓ keys). ← → step from part to part.</p>`;
     return;
   }
   const key = selection.entry, entry = key ? ENTRIES[key] : null, part = body.parts[selection.part ?? selection.parts[0]];
@@ -601,7 +663,7 @@ function ensureLayers() {
   if (pending.length) {
     $('fetching').hidden = false; $('fetching').textContent = `Loading ${pending.map(layer => LAYER_INFO[layer].name.toLowerCase()).join(', ')}…`;
   }
-  return Promise.all(wanted.map(layer => loadLayer(body, layer))).then(() => { if (body.sex === sex) $('fetching').hidden = true; });
+  return Promise.all([...wanted.map(layer => loadLayer(body, layer)), loadClothing(body)]).then(() => { if (body.sex === sex) $('fetching').hidden = true; });
 }
 function applyView(name) {
   if (isolating() && !state.tour) state.selection = null;
@@ -677,13 +739,14 @@ for (const button of $('views').children) button.addEventListener('click', () =>
 $('resetBtn').addEventListener('click', () => { stopTour(); setView(state.view); });
 $('isolateChip').addEventListener('click', () => { select(null); setView(state.view); });
 $('manualBtn').addEventListener('click', () => document.querySelector('.manual-wrap').scrollIntoView({ behavior: reducedMotion() ? 'auto' : 'smooth' }));
-for (const button of document.querySelectorAll('[data-toggle]')) button.addEventListener('click', () => { const key = button.dataset.toggle; state[key] = !state[key]; syncUI(); });
+for (const button of document.querySelectorAll('[data-toggle]')) button.addEventListener('click', () => { const key = button.dataset.toggle; state[key] = !state[key]; applyVisibility(); syncUI(); });
 $('xraySwitch').addEventListener('click', () => { state.xray = state.xray < 0.02 ? 0.85 : 0; applyVisibility(); syncUI(); });
 $('xray').addEventListener('input', event => { state.xray = event.target.value / 100; applyVisibility(); syncUI(); });
 $('body').addEventListener('input', event => { state.body = event.target.value / 100; if (state.body > 0 && state.layers.skin === 'off') { state.layers.skin = 'ghost'; ensureLayers(); } applyVisibility(); syncUI(); });
 document.addEventListener('keydown', event => {   // arrow keys step from part to part, unless a control has the keys
   if (event.altKey || event.ctrlKey || event.metaKey || event.target.closest('input, textarea, select')) return;
   if (event.key === 'ArrowRight' || event.key === 'ArrowLeft') { event.preventDefault(); stepPart(event.key === 'ArrowRight' ? 1 : -1); }
+  if (event.key === 'ArrowUp' || event.key === 'ArrowDown') { event.preventDefault(); flight = null; controls.lift((event.key === 'ArrowUp' ? 1 : -1) * Math.max(3, visibleHeight() * 0.08)); clampLift(); invalidate(); }
   if (event.key === 'Escape' && state.selection) { select(null); }
 });
 for (const button of $('sexSwitch').children) button.addEventListener('click', () => switchSex(button.dataset.sex));
@@ -698,7 +761,7 @@ async function switchSex(sex) {
   body = await loadBody(sex);
   makeStateTextures(body.parts.length);
   state.selection = null; state.search = ''; $('search').value = '';
-  buildPartsList(); buildTags();
+  buildPartsList(); buildTags(); buildHeightRuler();
   applyView(state.view);
   await ensureLayers();
   const swap = previous && (body.entries[previous] ? previous : ENTRIES[previous]?.swap);
@@ -812,7 +875,7 @@ function ruler(width, height, placed) {
   const ends = [V(x, y, 0), V(x, y + 10, 0)].map(point => { projected.copy(point).project(camera); return [(projected.x + 1) / 2 * width, (1 - projected.y) / 2 * height, projected.z]; });
   const [[x0, y0, z0], [x1, y1, z1]] = ends, length = Math.hypot(x1 - x0, y1 - y0);
   const rulerBox = [Math.min(x0, x1) - 8, Math.min(y0, y1) - 4, Math.max(x0, x1) + 44, Math.max(y0, y1) + 4];
-  if (z0 >= 1 || z1 >= 1 || length < 40 || placed.some(b => overlaps(rulerBox, b))) return '';
+  if (!Number.isFinite(length) || z0 >= 1 || z1 >= 1 || length < 40 || placed.some(b => overlaps(rulerBox, b))) return '';   // no size yet (a hidden tab), behind, too small or crowded
   const nx = (y1 - y0) / length * 5, ny = -(x1 - x0) / length * 5;
   const ticks = Array.from({ length: 11 }, (_, k) => { const tx = x0 + (x1 - x0) * k / 10, ty = y0 + (y1 - y0) * k / 10, n = k % 5 ? 0.6 : 1; return `<line x1="${tx.toFixed(1)}" y1="${ty.toFixed(1)}" x2="${(tx + nx * n).toFixed(1)}" y2="${(ty + ny * n).toFixed(1)}"/>`; }).join('');
   return `<g class="ruler"><line x1="${x0.toFixed(1)}" y1="${y0.toFixed(1)}" x2="${x1.toFixed(1)}" y2="${y1.toFixed(1)}"/>${ticks}<text x="${((x0 + x1) / 2 + 26).toFixed(1)}" y="${((y0 + y1) / 2 + 4).toFixed(1)}">10 cm</text></g>`;
@@ -856,7 +919,7 @@ function refreshVisibility() {
   visibility.width = width; visibility.height = height; visibility.stamp = renderCount;
 }
 function visibleAt(point, parts) {
-  if (!visibility.data) return true;
+  if (!visibility.data) return false;   // no map yet (the first frames): no callouts rather than every callout
   projected.copy(point).project(camera);
   const cx = Math.round((projected.x + 1) / 2 * visibility.width), cy = Math.round((projected.y + 1) / 2 * visibility.height);
   const wanted = new Set(parts);
@@ -887,6 +950,51 @@ canvas.addEventListener('pointerup', event => {
 canvas.addEventListener('pointermove', event => { if (event.pointerType === 'mouse') hoverEvent = event; });
 canvas.addEventListener('pointerleave', () => { hoverEvent = null; state.hovered = -1; tip.hidden = true; canvas.classList.remove('pointing'); invalidate(); });
 
+/* ---------- Height ruler: where on the body the view is, and a way to move up and down it ---------- */
+const heightRuler = $('heightRuler'), heightScale = heightRuler.querySelector('.scale'), heightWindow = heightRuler.querySelector('.window');
+/* how much of the body's height the screen shows at the target's depth, cm */
+const visibleHeight = () => 2 * camera.position.distanceTo(controls.target) * Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2);
+/* the view's middle stays on the body, from the feet to the crown */
+function clampLift() {
+  if (!body) return;
+  const y = THREE.MathUtils.clamp(controls.target.y, 0, body.height);
+  if (y !== controls.target.y) controls.lift(y - controls.target.y);
+}
+function buildHeightRuler() {
+  heightScale.querySelectorAll('.tick').forEach(tick => tick.remove());
+  for (let cm = 0; cm <= body.height; cm += 10) {
+    const tick = document.createElement('span');
+    tick.className = cm % 50 ? 'tick' : 'tick major';
+    tick.style.bottom = `${cm / body.height * 100}%`;
+    if (!(cm % 50)) tick.dataset.cm = cm;
+    heightScale.append(tick);
+  }
+  heightRuler.setAttribute('aria-valuemax', String(Math.round(body.height)));
+  updateHeightRuler();
+}
+function updateHeightRuler() {
+  if (!body) return;
+  const half = visibleHeight() / 2, y = controls.target.y, height = body.height;
+  const low = THREE.MathUtils.clamp(y - half, 0, height), high = THREE.MathUtils.clamp(y + half, 0, height);
+  heightWindow.style.bottom = `${low / height * 100}%`;
+  heightWindow.style.height = `${Math.max(2, (high - low) / height * 100)}%`;
+  heightRuler.setAttribute('aria-valuenow', String(Math.round(y)));
+  heightRuler.setAttribute('aria-valuetext', `${Math.round(y)} cm up the body`);
+}
+function heightTo(clientY) {
+  const box = heightScale.getBoundingClientRect();
+  const cm = THREE.MathUtils.clamp((box.bottom - clientY) / box.height, 0, 1) * body.height;
+  flight = null; controls.lift(cm - controls.target.y); invalidate();
+}
+heightRuler.addEventListener('pointerdown', event => { heightRuler.setPointerCapture(event.pointerId); heightTo(event.clientY); });
+heightRuler.addEventListener('pointermove', event => { if (heightRuler.hasPointerCapture(event.pointerId)) heightTo(event.clientY); });
+heightRuler.addEventListener('keydown', event => {
+  if (event.key !== 'ArrowUp' && event.key !== 'ArrowDown') return;
+  event.preventDefault(); event.stopPropagation();
+  flight = null; controls.lift(event.key === 'ArrowUp' ? 5 : -5); clampLift(); invalidate();
+});
+controls.addEventListener('change', updateHeightRuler);
+
 /* ---------- Loop ---------- */
 /* centre the model in the space the floating panels leave free, and keep the horizontal field of view on tall screens */
 function resize() {
@@ -904,6 +1012,8 @@ function resize() {
   camera.aspect = (width + 2 * Math.abs(shiftX)) / (height + 2 * Math.abs(shiftY));
   camera.fov = width / height < 1.2 ? 2 * Math.atan(Math.tan(THREE.MathUtils.degToRad(16)) * 1.2 * (height + 2 * Math.abs(shiftY)) / width) * 180 / Math.PI : 32;
   camera.setViewOffset(width + 2 * Math.abs(shiftX), height + 2 * Math.abs(shiftY), shiftX > 0 ? 2 * shiftX : 0, shiftY < 0 ? -2 * shiftY : 0, width, height);
+  if (!phone.matches) { const rail = document.querySelector('.rail'); heightRuler.style.top = `${rail.offsetTop + rail.offsetHeight + 12}px`; }
+  updateHeightRuler();
   invalidate();
 }
 let fitWhenShown = false;
@@ -958,6 +1068,7 @@ window.bodyModel = {
   part: index => body.parts[index], findPart: name => body.parts.find(part => part.name === name)?.index ?? -1,
   ready: () => Promise.all(LAYERS.filter(layer => state.layers[layer] !== 'off').map(layer => body.layers[layer]?.promise)),
   loaded: () => LAYERS.filter(layer => body.layers[layer]?.group),
+  clothing: () => ({ shown: !!body.clothing?.group?.visible, opacity: clothingOpacity(), triangles: body.clothing?.group ? (() => { let n = 0; body.clothing.group.traverse(o => { if (o.isMesh) n += o.geometry.index.count / 3; }); return n; })() : 0 }),
   busy: () => !!flight || !$('fetching').hidden,
   renders: () => renderCount,
   opacityOf: index => stateTexture.colour.image.data[index * 4 + 3] / 255,
@@ -996,7 +1107,9 @@ window.bodyModel = {
   },
   /* share of a set of parts' points that lie inside any of another set of (closed) parts: a ray from each point counts
      crossings of the other parts' surfaces, odd meaning inside. Both layers must be loaded. */
-  inside(indices, solids, sample = 600) {
+  /* enclosed: inside when surfaces lie both ways along the ray, rather than an odd number of crossings (right for a skin
+     modelled as two close surfaces, as BodyParts3D's is) */
+  inside(indices, solids, sample = 600, enclosed = false) {
     const meshes = solids.map(index => {
       const part = body.parts[index], record = body.layers[part.layer];
       const geometry = record.pick.geometry, ids = geometry.attributes._part, source = geometry.index.array, kept = [];
@@ -1014,7 +1127,9 @@ window.bodyModel = {
       for (const mesh of meshes) {
         if (!mesh.geometry.boundingBox.containsPoint(origin)) continue;
         caster.set(origin, direction);
-        if (caster.intersectObject(mesh, false).length % 2 === 1) { inside++; break; }
+        const hits = caster.intersectObject(mesh, false).length;
+        if (enclosed) { caster.set(origin, direction.clone().negate()); if (hits && caster.intersectObject(mesh, false).length) { inside++; break; } continue; }
+        if (hits % 2 === 1) { inside++; break; }
       }
     }
     return tested ? inside / tested : 0;
@@ -1041,7 +1156,7 @@ $('systemRoute').innerHTML = Object.entries(VIEW_INFO).filter(([view]) => view !
 }).join('');
 body = await loadBody(state.sex);
 makeStateTextures(body.parts.length);
-buildPartsList(); buildTags();
+buildPartsList(); buildTags(); buildHeightRuler();
 Object.assign(state.layers, VIEW_INFO[state.view].layers); state.body = VIEW_INFO[state.view].body;
 renderInspector(); syncUI(); resize();
 loading.textContent = 'Loading the 3D model…';

@@ -1,10 +1,12 @@
 // Builds the female body.
-// Scanned: her skin, organs, vessels of the trunk and head, brain, spinal cord, bony pelvis, thigh and leg bones,
-// kneecaps, breastbone and intervertebral discs, from the NIH Visible Human Female (Human Reference Atlas, CC BY 4.0).
+// Scanned: her organs, vessels of the trunk and head, brain, spinal cord, bony pelvis, thigh and leg bones, kneecaps,
+// breastbone and intervertebral discs, from the NIH Visible Human Female (Human Reference Atlas, CC BY 4.0).
 // Fitted: no free female skeleton or muscle model exists, so her other bones and all her muscles (and the few organs
 // the NIH set lacks, such as the stomach) are the BodyParts3D male ones, warped to her body. The warp is pinned to her
 // scanned bones and organs, her spine disc by disc, and her skin (register.mjs). Fitted parts are marked as such.
-// Usage: node scripts/body/build-female.mjs <"Human Anatomy 3D Models" folder> <female-reproductive-3d-models folder>
+// Slimmed: the NIH woman was heavy and in her late fifties, so her skin is replaced by a slim young woman's from
+// MakeHuman, and everything inside her is drawn in to fit it (slim.mjs).
+// Usage: node scripts/body/build-female.mjs <"Human Anatomy 3D Models" folder> <female-reproductive-3d-models folder> <MakeHuman folder>
 import { listStructures, readMesh } from './bodyparts3d.mjs';
 import { classify } from './systems.mjs';
 import { weld, simplify } from './mesh.mjs';
@@ -13,10 +15,11 @@ import { register, warpMesh, meanGap, startMap } from './register.mjs';
 import { PointGrid, spread, icpSimilarity, applyAffine } from './fit.mjs';
 import { Assembly, ERROR, MINIMUM_SHARE } from './assemble.mjs';
 import { zanatomyAdditions } from './zanatomy.mjs';
+import { slimFemale } from './slim.mjs';
 import { pushOutOf, obstacleOf, outerSurface, centreOf } from './clearance.mjs';
 
-const [root, reproductive] = process.argv.slice(2);
-if (!root || !reproductive) throw new Error('usage: node scripts/body/build-female.mjs <"Human Anatomy 3D Models" folder> <female-reproductive-3d-models folder>');
+const [root, reproductive, makehuman] = process.argv.slice(2);
+if (!root || !reproductive || !makehuman) throw new Error('usage: node scripts/body/build-female.mjs <"Human Anatomy 3D Models" folder> <female-reproductive-3d-models folder> <MakeHuman folder>');
 const hra = (folder, file) => `${root}/${folder}/Human Reference Atlas (GLB)/${file}`;
 
 /* ---------- Her scanned parts: file, layer, group, and which meshes to keep ---------- */
@@ -70,7 +73,9 @@ const nih = [];   // { name, raw, file, layer, group, positions, indices }
 for (const [path, layer, group, keep] of NIH) {
   for (const mesh of await readOrgan(path, FRAMES.female)) {
     if (keep && !keep(mesh.raw)) continue;
-    nih.push({ ...mesh, file: path.split('/').pop(), layer, group: group || (/vein|sinus|vena/i.test(mesh.raw) ? 'veins' : 'arteries') });
+    /* her teeth are shown with the skull, as his are */
+    const teeth = /teeth|tooth/i.test(mesh.name);
+    nih.push({ ...mesh, file: path.split('/').pop(), layer: teeth ? 'skeleton' : layer, group: teeth ? 'skull' : group || (/vein|sinus|vena/i.test(mesh.raw) ? 'veins' : 'arteries') });
   }
 }
 /* the same organ appears in more than one file (the bladder sits in two): keep the first */
@@ -216,8 +221,16 @@ const REPLACED = [
   /sclera|cornea|iris|lens|choroid|retina|vitreous|anterior chamber|corona ciliaris/i,
   /spinal cord|central canal/i,
 ];
+/* what she has scanned, by name, so the fitted copy of it is not drawn on top (the parotid, the tonsils, the
+   pulmonary trunk, some named vessels) */
+const plainName = name => name.toLowerCase().replace(/\s*\(part \d+\)/g, '').trim();
+const herNames = new Set(nih.map(mesh => plainName(mesh.name)));
+/* her scan has her own coronary vessels, bronchial tree and pineal body under other names */
+const HERS_ALREADY = /coronary|cardiac vein|vein of left ventricle|marginal (vein|branch)|interventricular (branch|artery)|circumflex branch|conus (artery|branch)|sinu-?atrial|atrial branch|ventricular branch|septal branch of|diagonal branch|bronch|pineal/i;
 function keepsHis(structure) {
   if (structure.layer === 'skin') return false;
+  if (herNames.has(plainName(structure.name))) return false;
+  if (HERS_ALREADY.test(structure.name) && !/of colon|of drummond/i.test(structure.name)) return false;
   if (structure.layer === 'organs' && (structure.group === 'heart' || structure.group === 'reproductive')) return false;
   if (structure.layer === 'nerves' && structure.group === 'brain') return false;
   if (structure.layer === 'vessels' && /penis|penile|testicular|scrotal|cremaster|prostat|vesicular|deferent/i.test(structure.name)) return false;
@@ -234,18 +247,29 @@ const OBSTACLES = [/segment of left lung$/, /segment of right lung$/, /heart_fem
   .map(pattern => nih.filter(mesh => pattern.test(mesh.name) || pattern.test(mesh.file)))
   .filter(meshes => meshes.length).map(meshes => ({ grid: meshes.length > 1 ? outerSurface(meshes) : obstacleOf(meshes), centre: centreOf(meshes) }));
 let cleared = 0;
+const structures = [];   // { info for the assembly, name, layer, group, positions, indices }, all simplified
 for (const structure of his) {
   if (!keepsHis(structure)) { dropped++; continue; }
   const mesh = warpMesh(structure.mesh, warp);
   /* twice over: a point pushed out of one organ can land in its neighbour */
   if (['skeleton', 'muscles', 'organs'].includes(structure.layer)) for (let pass = 0; pass < 2; pass++) for (const { grid, centre } of OBSTACLES) cleared += pushOutOf(mesh, grid, centre, { gap: 0.5 });
   if (structure.layer === 'vessels' && duplicatesHers(mesh)) { dropped++; continue; }
-  assembly.add({ name: structure.name, layer: structure.layer, group: structure.group, source: structure.source || 'BodyParts3D', fitted: true, id: structure.id, concept: structure.concept }, mesh, { prepared: true });
+  structures.push({ info: { name: structure.name, layer: structure.layer, group: structure.group, source: structure.source || 'BodyParts3D', fitted: true, id: structure.id, concept: structure.concept }, name: structure.name, layer: structure.layer, group: structure.group, ...mesh });
   fitted++;
 }
-for (const mesh of nih) assembly.add({ name: mesh.name, layer: mesh.layer, group: mesh.group, source: 'NIH female' }, mesh);
+for (const mesh of nih) {
+  const prepared = simplify(weld(mesh), ERROR[mesh.layer], MINIMUM_SHARE[mesh.layer]);
+  if (prepared.indices.length === 0) throw new Error(`${mesh.name} simplified to nothing`);
+  const source = /brain_female_allen/.test(mesh.file) ? 'Allen brain' : 'NIH female';   // the atlas's female brain is the Allen Institute's
+  structures.push({ info: { name: mesh.name, layer: mesh.layer, group: mesh.group, source }, name: mesh.name, layer: mesh.layer, group: mesh.group, ...prepared });
+}
 console.log(`  fitted parts kept clear of her organs: ${cleared} points moved`);
 console.log(`female: ${fitted} fitted from the male, ${dropped} of his replaced by hers, ${nih.length} scanned`);
+slimFemale(structures, makehuman);
+for (const structure of structures) {
+  const info = structure.layer === 'skin' && structure.name === 'Skin' ? { ...structure.info, source: 'MakeHuman' } : structure.info;
+  assembly.add(info, structure, { prepared: true });
+}
 await assembly.write(new URL('../../site/body/data/female/', import.meta.url));
 
 function centreY(mesh) { let sum = 0; for (let k = 1; k < mesh.positions.length; k += 3) sum += mesh.positions[k]; return sum / (mesh.positions.length / 3); }

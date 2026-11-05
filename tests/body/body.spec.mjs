@@ -25,7 +25,7 @@ test.describe('loading', () => {
     await expect(page.locator('#loading')).toHaveCount(0);
     expect(await page.evaluate(() => performance.getEntriesByName('body:first-frame')[0].startTime)).toBeLessThan(10_000);
     expect(await model(page, () => window.bodyModel.coverage())).toBeGreaterThan(0.03);
-    expect(requested.sort()).toEqual(['male/nerves.glb', 'male/organs.glb', 'male/skeleton.glb', 'male/skin.glb']);   // not muscles or vessels until asked
+    expect(requested.sort()).toEqual(['male/clothing.glb', 'male/nerves.glb', 'male/organs.glb', 'male/skeleton.glb', 'male/skin.glb']);   // not muscles or vessels until asked
     expect(errors).toEqual([]);
   });
 
@@ -92,6 +92,65 @@ test.describe('both bodies', () => {
   });
 });
 
+test.describe('moving', () => {
+  test.use({ reducedMotion: 'reduce' });
+  test('the height ruler and the up and down keys move the view up and down the body', async ({ page }, testInfo) => {
+    desktopOnly(testInfo);
+    await open(page);
+    const y = () => model(page, () => window.bodyModel.controls.target.y);
+    const box = await page.locator('#heightRuler .scale').boundingBox();
+    await page.mouse.click(box.x + box.width / 2, box.y + box.height * 0.1);
+    expect(await y()).toBeGreaterThan(140);
+    await page.mouse.click(box.x + box.width / 2, box.y + box.height * 0.9);
+    expect(await y()).toBeLessThan(30);
+    const before = await y();
+    await page.locator('#scene').click({ position: { x: 5, y: 5 } });
+    await page.keyboard.press('ArrowUp');
+    expect(await y()).toBeGreaterThan(before);
+  });
+});
+
+test.describe('clothing', () => {
+  test.use({ reducedMotion: 'reduce' });
+  for (const sex of ['male', 'female']) {
+    test(`${sex}: the body opens clothed, solid, and the Clothing switch takes it off`, async ({ page }) => {
+      await open(page, { sex });
+      const skin = await model(page, () => window.bodyModel.findPart('Skin'));
+      expect(await model(page, index => window.bodyModel.opacityOf(index), skin)).toBe(1);
+      expect(await model(page, () => window.bodyModel.clothing())).toMatchObject({ shown: true, opacity: 1 });
+      expect((await model(page, () => window.bodyModel.clothing())).triangles).toBeGreaterThan(5000);
+      if (sex === 'male') expect(await model(page, index => window.bodyModel.opacityOf(index), await model(page, () => window.bodyModel.findPart('Pubic hair')))).toBe(0);
+      await page.locator(isPhone(page) ? '#partsBtn' : '#clothedBtn').click();
+      if (isPhone(page)) await page.locator('#drawer [data-toggle="clothed"]').click();
+      expect((await model(page, () => window.bodyModel.clothing())).shown).toBe(false);
+    });
+  }
+
+  for (const [sex, entry] of [['male', 'penis'], ['female', 'uterus']]) {
+    test(`${sex}: covered on first load, uncovered only by choosing a reproductive part`, async ({ page }) => {
+      await open(page, { sex });
+      expect(await model(page, () => window.bodyModel.clothing())).toMatchObject({ shown: true, opacity: 1 });
+      for (const view of ['skeleton', 'organs', 'body']) {   // looking around keeps it covered
+        await page.locator(`#views [data-view="${view}"]`).click();
+        await settle(page);
+        expect((await model(page, () => window.bodyModel.clothing())).shown, view).toBe(true);
+      }
+      await model(page, key => window.bodyModel.selectEntry(key), entry);
+      expect((await model(page, () => window.bodyModel.clothing())).shown, `choosing ${entry}`).toBe(false);
+      await model(page, () => window.bodyModel.selectEntry('heart'));
+      expect((await model(page, () => window.bodyModel.clothing())).shown, 'choosing another part covers it again').toBe(true);
+    });
+  }
+
+  test('inside views the clothing fades with the skin but still covers', async ({ page }) => {
+    await open(page, { view: 'skeleton' });
+    const { shown, opacity } = await model(page, () => window.bodyModel.clothing());
+    expect(shown).toBe(true);
+    expect(opacity).toBeGreaterThan(0.3);
+    expect(opacity).toBeLessThan(1);
+  });
+});
+
 test.describe('parts', () => {
   test('every main part has a description, a misconception, measurements and an equivalent', () => {
     for (const [key, entry] of Object.entries(ENTRIES)) {
@@ -126,6 +185,36 @@ test.describe('parts', () => {
     await model(page, () => window.bodyModel.selectEntry('thyroid'));
     await expect(page.locator('#inspector .source')).toContainText('Z-Anatomy');
   });
+
+  for (const sex of ['male', 'female']) {
+    test(`${sex}: structures the audit found misfiled sit under the right main part, on their named side`, async ({ page }, testInfo) => {
+      test.skip(testInfo.project.name !== 'chromium', 'data, checked once');
+      await open(page, { sex });
+      const result = await model(page, () => {
+        const m = window.bodyModel, b = m.body(), keys = Object.keys(b.entries);
+        const entryOf = name => { const part = b.parts.find(p => p.name === name); if (!part) return null; return keys.find(key => b.entries[key].includes(part.index)) || 'none'; };
+        /* a structure named for one side lies wholly on the other only where the name is not a side of the body */
+        const misplaced = b.parts.filter(p => /^(left|right)\b/i.test(p.name) && !/ventricle|atri|valve|cusp|papillary|chorda|conus|coronary|cardiac|marginal (branch|artery|vein)|interventricular|hepatic|liver|portal|gastr|colic|epiploic|lobe|segment|bronch|lung|pulmonary|vagus|crus of|bundle|brachiocephalic|subclavian|carotid|duct/i.test(p.name)
+          && (/^left/i.test(p.name) ? p.max[0] < -0.5 : p.min[0] > 0.5)).map(p => p.name);
+        return {
+          colon: (b.entries.colon || []).map(i => b.parts[i].name).filter(name => /mesocolon|mesentery/i.test(name)),
+          maxillary: entryOf('Left maxillary nerve') || entryOf('Maxillary nerve'),
+          teeth: b.parts.filter(p => /teeth|tooth/i.test(p.name)).map(p => p.layer),
+          lips: b.parts.filter(p => /^lips?$/i.test(p.name)).map(p => p.layer),
+          coronary: (b.entries.coronaryArteries || []).map(i => b.parts[i].name).filter(name => /femoral|humeral|callosomarginal|colon|scapular/i.test(name)),
+          valves: (b.entries.heartValves || []).map(i => b.parts[i].name).filter(name => /ileocecal/i.test(name)),
+          misplaced,
+        };
+      });
+      expect(result.colon, 'mesocolon is not colon').toEqual([]);
+      if (result.maxillary) expect(result.maxillary).toBe('cranialNerves');
+      expect(new Set(result.teeth)).toEqual(new Set(['skeleton']));
+      for (const layer of result.lips) expect(layer).toBe('skin');
+      expect(result.coronary, 'only the heart\'s own arteries are coronary').toEqual([]);
+      expect(result.valves).toEqual([]);
+      expect(result.misplaced, 'left and right names match the side').toEqual([]);
+    });
+  }
 
   test('almost every structure falls under a main part\'s notes', async ({ page }) => {
     for (const sex of ['male', 'female']) {
@@ -219,6 +308,27 @@ test.describe('layout', () => {
 /* Sizes from the models themselves, against published adult ranges. Lengths are along each structure's long axis. */
 test.describe('anatomy', () => {
   test.describe.configure({ timeout: 180_000 });
+  test('female: a slim young body, not the NIH scan\'s outline', async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name !== 'chromium', 'geometry, checked once');
+    await open(page, { sex: 'female' });
+    const waist = await model(page, () => {
+      const m = window.bodyModel, skin = m.findPart('Skin'), points = m.points(skin), height = m.size('skin').y;
+      /* the narrowest trunk width between the hips and the ribs, and the depth there; the arms hang well clear */
+      let best = null;
+      for (let y = 0.56 * height; y <= 0.66 * height; y += 0.5) {
+        const row = points.filter(p => Math.abs(p[1] - y) < 1.5 && Math.abs(p[0]) < 20);   // the hook samples about 2,000 of the skin's points
+        if (row.length < 8) continue;
+        const width = Math.max(...row.map(p => p[0])) - Math.min(...row.map(p => p[0])), depth = Math.max(...row.map(p => p[2])) - Math.min(...row.map(p => p[2]));
+        if (!best || width < best.width) best = { width, depth };
+      }
+      return { ...best, source: m.part(skin).source };
+    });
+    expect(waist.source).toBe('MakeHuman');
+    expect(waist.width, 'a waist was measured').toBeDefined();
+    expect(waist.width, 'waist width').toBeLessThan(28);
+    expect(waist.depth, 'waist depth').toBeLessThan(21);
+  });
+
   const RANGES = {
     male: { height: [160, 190], femur: [42, 52], humerus: [28, 37], tibia: [33, 43], kidney: [9, 13.5], heart: [10, 15], spleen: [8, 14], trachea: [9, 15], spinalCord: [38, 50], pelvisWidth: [24, 32] },
     /* her scanned heart is about 15.5 cm long, above the usual 12–14 cm; the Visible Human Female was 59 and died of a heart
@@ -247,12 +357,24 @@ test.describe('anatomy', () => {
       expect(measured.femur / measured.height, 'femur share of height').toBeLessThan(0.29);
     });
 
+    test(`${sex}: bone and muscle stay inside the skin`, async ({ page }, testInfo) => {
+      test.skip(testInfo.project.name !== 'chromium', 'geometry, checked once');
+      await open(page, { sex, view: 'muscles' });
+      const share = await model(page, () => {
+        const m = window.bodyModel, parts = m.body().parts, skin = [m.findPart('Skin')];
+        const pick = layer => parts.filter(part => part.layer === layer).map(part => part.index);
+        return { skeleton: m.inside(pick('skeleton'), skin, 3000, true), muscles: m.inside(pick('muscles'), skin, 3000, true) };
+      });
+      expect(share.skeleton, `${sex} bone inside the skin`).toBeGreaterThan(0.97);
+      expect(share.muscles, `${sex} muscle inside the skin`).toBeGreaterThan(0.98);
+    });
+
     test(`${sex}: no organ passes through bone`, async ({ page }, testInfo) => {
       test.skip(testInfo.project.name !== 'chromium', 'geometry, checked once');
       await open(page, { sex, view: 'organs' });   // the organs view loads the skeleton too, as faint context
       const results = await model(page, () => {
         const m = window.bodyModel, parts = m.body().parts;
-        const solid = part => part.layer === 'skeleton' && !/cartilage|disk|ligament|membrane|meniscus|symphysis/i.test(part.name);
+        const solid = part => part.layer === 'skeleton' && !/cartilage|dis[ck]|ligament|membrane|meniscus|symphysis/i.test(part.name);
         const fittedBones = parts.filter(part => solid(part) && (part.fitted || part.source === 'BodyParts3D')).map(part => part.index);
         const scannedBones = parts.filter(part => solid(part) && !part.fitted && part.source !== 'BodyParts3D').map(part => part.index);
         const out = {};

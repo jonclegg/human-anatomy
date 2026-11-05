@@ -3,6 +3,11 @@
 // organ (a lung's segments) move together and their shared edges stay shared.
 import { PointGrid } from './fit.mjs';
 
+const sub = (a, b) => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
+const scale = (a, s) => [a[0] * s, a[1] * s, a[2] * s];
+const dot = (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+const cross = (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
+const norm = a => Math.hypot(...a);
 const smoothstep = (edge0, edge1, x) => { const t = Math.min(1, Math.max(0, (x - edge0) / (edge1 - edge0))); return t * t * (3 - 2 * t); };
 
 /**
@@ -64,4 +69,235 @@ export function outerSurface(meshes, tolerance = 0.35) {
     }
   });
   return new PointGrid(Float32Array.from(out), 1.5);
+}
+
+/* Inside or outside a closed skin: for each column of a grid across x and y, where the skin crosses it along z; a point is
+   inside when it lies between the first and last crossing. MakeHuman's skin is open at the eyes and mouth, so a column
+   there may have an odd count; there, and beside such columns, the test does not answer (null). */
+export class InsideTest {
+  constructor({ positions, indices }, cell = 0.4) {
+    this.cell = cell; this.columns = new Map();
+    for (let t = 0; t < indices.length; t += 3) {
+      const a = 3 * indices[t], b = 3 * indices[t + 1], c = 3 * indices[t + 2];
+      const ax = positions[a], ay = positions[a + 1], bx = positions[b], by = positions[b + 1], cx = positions[c], cy = positions[c + 1];
+      const area = (bx - ax) * (cy - ay) - (cx - ax) * (by - ay);
+      if (Math.abs(area) < 1e-12) continue;
+      for (let i = Math.ceil(Math.min(ax, bx, cx) / cell - 0.5); (i + 0.5) * cell <= Math.max(ax, bx, cx); i++) {
+        for (let j = Math.ceil(Math.min(ay, by, cy) / cell - 0.5); (j + 0.5) * cell <= Math.max(ay, by, cy); j++) {
+          const x = (i + 0.5) * cell, y = (j + 0.5) * cell;
+          const u = ((bx - x) * (cy - y) - (cx - x) * (by - y)) / area, v = ((cx - x) * (ay - y) - (ax - x) * (cy - y)) / area, w = 1 - u - v;
+          if (u < 0 || v < 0 || w < 0) continue;
+          const z = u * positions[a + 2] + v * positions[b + 2] + w * positions[c + 2];
+          const key = `${i},${j}`;
+          let list = this.columns.get(key); if (!list) this.columns.set(key, list = []);
+          list.push(z);
+        }
+      }
+    }
+    for (const list of this.columns.values()) list.sort((p, q) => p - q);
+  }
+  /* true inside, false outside, null where the column (or one beside it) is not closed */
+  inside(x, y, z) {
+    const i = Math.floor(x / this.cell), j = Math.floor(y / this.cell);
+    const list = this.columns.get(`${i},${j}`);
+    if (!list) return false;
+    for (const [di, dj] of [[0, 0], [1, 0], [-1, 0], [0, 1], [0, -1]]) if ((this.columns.get(`${i + di},${j + dj}`)?.length ?? 0) % 2) return null;
+    /* between the column's first and last crossing: right for a skin of one surface and for one modelled as two close
+       surfaces (BodyParts3D's), where counting crossings would not be */
+    return list.length >= 2 && z > list[0] && z < list[list.length - 1];
+  }
+}
+
+/**
+ * Raises the skin where inner points lie outside it or within gap under it. Each such point pushes only its nearest skin
+ * vertex, out along that vertex's normal; the push spreads along the skin surface (not through the air, so the side of
+ * the chest cannot lift the inside of the arm beside it) with a smooth falloff; and the pushes are smoothed over
+ * neighbouring vertices (smoothing passes) before they are applied, so the skin rises as a swell rather than crumpling
+ * in a hollow.
+ * skin: { positions, indices }, moved in place; inner: flat points (cm); spread: cm along the surface over which a
+ * push fades out; fixed: per vertex, true for vertices that stay put. Returns the largest push, cm.
+ */
+export function pushOutOver(skin, inner, { gap = 0.35, spread = 2, rounds = 2, fixed = null, smoothing = 3 } = {}) {
+  const count = skin.positions.length / 3;
+  /* the skin's edges: each vertex's neighbours */
+  const neighbours = Array.from({ length: count }, () => new Set());
+  for (let t = 0; t < skin.indices.length; t += 3) for (const [a, b] of [[0, 1], [1, 2], [2, 0]]) { neighbours[skin.indices[t + a]].add(skin.indices[t + b]); neighbours[skin.indices[t + b]].add(skin.indices[t + a]); }
+  const list = neighbours.map(set => [...set]);
+  let largest = 0;
+  for (let round = 0; round < rounds; round++) {
+    const normal = vertexNormals(skin), test = new InsideTest(skin), surface = new PointGrid(skin.positions, 1);
+    const need = new Float32Array(count);
+    for (let k = 0; k < inner.length; k += 3) {
+      const q = [inner[k], inner[k + 1], inner[k + 2]];
+      const [v, distance] = surface.nearest(q[0], q[1], q[2], 4);
+      if (v < 0) continue;
+      if (test.inside(q[0], q[1], q[2]) !== false && distance >= gap) continue;
+      const n = [normal[3 * v], normal[3 * v + 1], normal[3 * v + 2]];
+      const along = (q[0] - skin.positions[3 * v]) * n[0] + (q[1] - skin.positions[3 * v + 1]) * n[1] + (q[2] - skin.positions[3 * v + 2]) * n[2];
+      need[v] = Math.max(need[v], along + gap);
+    }
+    /* spread along the surface: from each pushed vertex outward over its edges, up to spread cm */
+    const push = new Float32Array(count);
+    for (let v = 0; v < count; v++) {
+      if (need[v] <= 0) continue;
+      const reached = new Map([[v, 0]]), queue = [v];
+      while (queue.length) {
+        const u = queue.shift(), d = reached.get(u);
+        const t = d / spread;
+        push[u] = Math.max(push[u], need[v] * (1 - t * t) ** 2);
+        for (const w of list[u]) {
+          const e = Math.hypot(skin.positions[3 * w] - skin.positions[3 * u], skin.positions[3 * w + 1] - skin.positions[3 * u + 1], skin.positions[3 * w + 2] - skin.positions[3 * u + 2]);
+          if (d + e < spread && (!reached.has(w) || reached.get(w) > d + e)) { reached.set(w, d + e); queue.push(w); }
+        }
+      }
+    }
+    /* each vertex's move, smoothed over its neighbours three times */
+    let move = new Float32Array(count * 3);
+    for (let v = 0; v < count; v++) if (push[v] > 0 && !fixed?.[v]) for (let c = 0; c < 3; c++) move[3 * v + c] = normal[3 * v + c] * push[v];
+    for (let pass = 0; pass < smoothing; pass++) {
+      const next = new Float32Array(count * 3);
+      for (let v = 0; v < count; v++) {
+        if (fixed?.[v]) continue;
+        const around = list[v];
+        for (let c = 0; c < 3; c++) {
+          let sum = 0;
+          for (const w of around) sum += move[3 * w + c];
+          next[3 * v + c] = around.length ? 0.5 * move[3 * v + c] + 0.5 * sum / around.length : move[3 * v + c];
+        }
+      }
+      move = next;
+    }
+    let moved = 0;
+    for (let v = 0; v < count; v++) {
+      const length = Math.hypot(move[3 * v], move[3 * v + 1], move[3 * v + 2]);
+      if (length < 1e-4) continue;
+      for (let c = 0; c < 3; c++) skin.positions[3 * v + c] += move[3 * v + c];
+      largest = Math.max(largest, length); moved++;
+    }
+    if (!moved) break;
+  }
+  return largest;
+}
+
+export function vertexNormals({ positions, indices }) {
+  const normal = new Float32Array(positions.length);
+  for (let k = 0; k < indices.length; k += 3) {
+    const [a, b, c] = [indices[k], indices[k + 1], indices[k + 2]];
+    const pa = [positions[3 * a], positions[3 * a + 1], positions[3 * a + 2]];
+    const n = cross(sub([positions[3 * b], positions[3 * b + 1], positions[3 * b + 2]], pa), sub([positions[3 * c], positions[3 * c + 1], positions[3 * c + 2]], pa));
+    for (const v of [a, b, c]) for (let i = 0; i < 3; i++) normal[3 * v + i] += n[i];
+  }
+  for (let v = 0; v < positions.length; v += 3) { const length = Math.hypot(normal[v], normal[v + 1], normal[v + 2]) || 1; normal[v] /= length; normal[v + 1] /= length; normal[v + 2] /= length; }
+  return normal;
+}
+
+/* the 1 cm cells within reach of the skin, to skip points and triangles well inside it */
+export function nearSkin(skin, reach = 2) {
+  const cells = new Set(), r = Math.ceil(reach);
+  for (let k = 0; k < skin.positions.length; k += 3) {
+    const i = Math.floor(skin.positions[k]), j = Math.floor(skin.positions[k + 1]), l = Math.floor(skin.positions[k + 2]);
+    for (let a = -r; a <= r; a++) for (let b = -r; b <= r; b++) for (let c = -r; c <= r; c++) cells.add(`${i + a},${j + b},${l + c}`);
+  }
+  return (x, y, z) => cells.has(`${Math.floor(x)},${Math.floor(y)},${Math.floor(z)}`);
+}
+
+/* Moves each point of the structures that lies outside the skin, or inside it but nearer than gap, to gap under it
+   (along the normal of its nearest skin point), so no triangle between such points crosses the skin. Points near the
+   open edges of the eyes and mouth, where inside and outside cannot be told by crossings, are judged by that normal.
+   Returns the largest move, cm. */
+/* outsideOnly: move only what lies outside the skin, not what lies just under it (for a skin that folds into the eye
+   sockets and ear canals, whose inner folds would otherwise push what is near them about) */
+/* maxMove: a point further outside than this is not moved (it would stretch its triangles into spikes); trimOutside
+   removes what is left outside */
+export function easeUnder(skin, structures, { gap = 0.6, outsideOnly = false, maxMove = 2 } = {}) {
+  const normal = vertexNormals(skin), grid = new PointGrid(skin.positions, 1.5), test = new InsideTest(skin), near = nearSkin(skin);
+  let largest = 0;
+  for (const structure of structures) {
+    const p = structure.positions;
+    for (let k = 0; k < p.length; k += 3) {
+      if (!near(p[k], p[k + 1], p[k + 2]) && test.inside(p[k], p[k + 1], p[k + 2]) === true) continue;
+      const [v, distance] = grid.nearest(p[k], p[k + 1], p[k + 2], 15);
+      if (v < 0) continue;
+      const n = [normal[3 * v], normal[3 * v + 1], normal[3 * v + 2]];
+      const along = (p[k] - skin.positions[3 * v]) * n[0] + (p[k + 1] - skin.positions[3 * v + 1]) * n[1] + (p[k + 2] - skin.positions[3 * v + 2]) * n[2];
+      const inside = test.inside(p[k], p[k + 1], p[k + 2]);
+      const outside = inside === null ? along > -gap : !inside;
+      if (!outside && (outsideOnly || distance >= gap)) continue;
+      if (outside && distance > maxMove) continue;
+      const point = [p[k], p[k + 1], p[k + 2]], surface = [skin.positions[3 * v], skin.positions[3 * v + 1], skin.positions[3 * v + 2]];
+      /* inward: from the point to the skin when it is outside, from the skin to the point when it is inside (the skin's
+         own normal can face either way where it is two surfaces); by the normal where inside cannot be told */
+      const inward = inside === null || distance < 1e-6 ? scale(n, -1) : scale(outside ? sub(surface, point) : sub(point, surface), 1 / distance);
+      const target = outside ? surface.map((value, c) => value + inward[c] * gap) : point.map((value, c) => value + inward[c] * (gap - distance));
+      for (let c = 0; c < 3; c++) p[k + c] = target[c];
+      largest = Math.max(largest, outside ? distance + gap : gap - distance);
+    }
+  }
+  return largest;
+}
+
+/* A triangle whose corners lie under the skin can still cross it between them, where the skin curves over a long edge.
+   Each triangle is checked at its middle and edge midpoints; where one lies outside or within half the gap of the
+   skin, all three corners move deeper by that much. Repeated a few times. Returns how many triangles moved. */
+export function easeTriangles(skin, structures, { gap = 0.6, rounds = 3, outsideOnly = false } = {}) {
+  const normal = vertexNormals(skin), grid = new PointGrid(skin.positions, 1.5), test = new InsideTest(skin), near = nearSkin(skin);
+  const SAMPLES = [[1 / 3, 1 / 3, 1 / 3], [0.5, 0.5, 0], [0, 0.5, 0.5], [0.5, 0, 0.5]];
+  let count = 0;
+  for (let round = 0; round < rounds; round++) {
+    let moved = 0;
+    for (const { positions: p, indices } of structures) {
+      for (let t = 0; t < indices.length; t += 3) {
+        const corner = [indices[t], indices[t + 1], indices[t + 2]].map(v => 3 * v);
+        if (!corner.some(k => near(p[k], p[k + 1], p[k + 2]))) continue;
+        let need = 0, direction = null;
+        for (const w of SAMPLES) {
+          const q = [0, 1, 2].map(c => w[0] * p[corner[0] + c] + w[1] * p[corner[1] + c] + w[2] * p[corner[2] + c]);
+          const [v, distance] = grid.nearest(q[0], q[1], q[2], 10);
+          if (v < 0) continue;
+          const inside = test.inside(q[0], q[1], q[2]);
+          const n = [normal[3 * v], normal[3 * v + 1], normal[3 * v + 2]];
+          /* where inside cannot be told (beside the eyes and mouth), the depth along the skin's normal */
+          const depth = inside === null ? -((q[0] - skin.positions[3 * v]) * n[0] + (q[1] - skin.positions[3 * v + 1]) * n[1] + (q[2] - skin.positions[3 * v + 2]) * n[2]) : inside ? distance : -distance;
+          if ((outsideOnly ? depth < 0 : depth < gap / 2) && gap / 2 - depth > need) {
+            const surface = [skin.positions[3 * v], skin.positions[3 * v + 1], skin.positions[3 * v + 2]];
+            need = gap / 2 - depth;
+            direction = inside === null || distance < 1e-6 ? scale(n, -1) : scale(inside ? sub(q, surface) : sub(surface, q), 1 / distance);   // inward
+          }
+        }
+        if (!need) continue;
+        for (const k of corner) for (let c = 0; c < 3; c++) p[k + c] += direction[c] * need;
+        moved++;
+      }
+    }
+    count += moved;
+    if (!moved) break;
+  }
+  return count;
+}
+
+/* The last word: any triangle of these structures whose middle or an edge's midpoint still lies outside the skin is
+   dropped. Used on soft tissue only, after easing, for the few large triangles (a sheet of breast fat, a muscle's edge)
+   that easing cannot fold in. Returns how many triangles were dropped. */
+export const wholly = [];   // structures found wholly outside the skin by trimOutside
+export function trimOutside(skin, structures) {
+  const test = new InsideTest(skin), near = nearSkin(skin);
+  const SAMPLES = [[1 / 3, 1 / 3, 1 / 3], [0.5, 0.5, 0], [0, 0.5, 0.5], [0.5, 0, 0.5]];
+  let dropped = 0;
+  for (const structure of structures) {
+    const p = structure.positions, kept = [];
+    for (let t = 0; t < structure.indices.length; t += 3) {
+      const corner = [structure.indices[t], structure.indices[t + 1], structure.indices[t + 2]];
+      const outside = corner.some(v => near(p[3 * v], p[3 * v + 1], p[3 * v + 2])) && SAMPLES.some(w => {
+        const q = [0, 1, 2].map(c => w[0] * p[3 * corner[0] + c] + w[1] * p[3 * corner[1] + c] + w[2] * p[3 * corner[2] + c]);
+        return test.inside(q[0], q[1], q[2]) === false;
+      });
+      if (outside) { dropped++; continue; }
+      kept.push(...corner);
+    }
+    /* a structure keeps its triangles that are inside; one entirely outside is kept whole and named (it is the
+       placement that is wrong, and that should show, not vanish) */
+    if (kept.length) structure.indices = Uint32Array.from(kept);
+    else wholly.push(structure.name ?? structure.part);
+  }
+  return dropped;
 }

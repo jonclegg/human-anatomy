@@ -10,7 +10,8 @@ import { readOrgan, FRAMES } from './hra.mjs';
 import { register, warpMesh, meanGap, startMap } from './register.mjs';
 import { Assembly, ERROR, MINIMUM_SHARE } from './assemble.mjs';
 import { zanatomyAdditions } from './zanatomy.mjs';
-import { clear, obstacleOf, centreOf, towardCentre } from './clearance.mjs';
+import { clear, obstacleOf, centreOf, towardCentre, easeUnder, easeTriangles, trimOutside, wholly } from './clearance.mjs';
+import { LAYERS } from './systems.mjs';
 
 const root = process.argv[2];
 if (!root) throw new Error('usage: node scripts/body/build-male.mjs <"Human Anatomy 3D Models" folder>');
@@ -20,6 +21,7 @@ const HEIGHT = 171.9;
 const assembly = new Assembly('male', HEIGHT);
 const his = listStructures(root).map(structure => ({ ...structure, ...classify(structure) }));
 for (const structure of his) {
+  if (structure.name === 'Intervertebral disk') structure.name = 'Intervertebral disk of twelfth thoracic vertebra';   // unnamed in the source: the one between T12 and L1
   structure.mesh = simplify(weld(readMesh(structure.path)), ERROR[structure.layer], MINIMUM_SHARE[structure.layer]);
   assembly.add({ name: structure.name, layer: structure.layer, group: structure.group, source: 'BodyParts3D', id: structure.id, concept: structure.concept }, structure.mesh, { prepared: true });
 }
@@ -76,5 +78,14 @@ for (const mesh of lungs) {
 }
 console.log(`  lungs kept clear of the ribs: ${pushed} points moved`);
 console.log(`  check left femur: ${meanGap(warpMesh(vh(/M_femur_L$/)[0], warp), him(/^Left femur$/)[0]).toFixed(2)} cm from the BodyParts3D femur after the warp; ${lungs.length} lung segments carried across`);
+/* the body opens with its skin solid: what lies just outside it (a facial vein, a fold of muscle from
+   Z-Anatomy, which is aligned to these bones rather than modelled inside this skin) is moved to just under it */
+const skin = assembly.pieces.skin.find(piece => assembly.parts[piece.part].name === 'Skin');
+/* his skin folds into the eye sockets and ear canals, so only what is outside it moves, and not the eyes */
+const EYE = /sclera|cornea|lens|iris|retina|vitreous|choroid|conjunctiva|eyelid|tarsal plate|ciliary|pupil/i;
+/* his bones are from the same scan as his skin and fit it; only soft tissue (much of it Z-Anatomy's) is tucked in */
+const inside = LAYERS.filter(layer => layer !== 'skin' && layer !== 'skeleton').flatMap(layer => assembly.pieces[layer]).filter(piece => !EYE.test(assembly.parts[piece.part].name));
+console.log(`  kept under the skin: points moved up to ${easeUnder(skin, inside, { outsideOnly: true }).toFixed(1)} cm, ${easeTriangles(skin, inside, { outsideOnly: true })} triangles pushed deeper`);
+console.log(`  soft-tissue triangles still outside the skin dropped: ${trimOutside(skin, inside)}${wholly.length ? `; wholly outside: ${wholly.map(part => assembly.parts[part].name).join(', ')}` : ''}`);
 await assembly.write(new URL('../../site/body/data/male/', import.meta.url));
 

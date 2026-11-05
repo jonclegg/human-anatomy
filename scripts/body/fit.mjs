@@ -32,6 +32,16 @@ export class PointGrid {
     }
     bestDistance = Math.sqrt(bestDistance);
     return bestDistance <= maxDistance ? [best, bestDistance] : [-1, Infinity];
+  }  /* every point within distance: their indices */
+  within(x, y, z, distance) {
+    const reach = Math.ceil(distance / this.cell), out = [], limit = distance * distance;
+    const cx = Math.floor(x / this.cell), cy = Math.floor(y / this.cell), cz = Math.floor(z / this.cell);
+    for (let i = -reach; i <= reach; i++) for (let j = -reach; j <= reach; j++) for (let k = -reach; k <= reach; k++) {
+      const list = this.cells.get(`${cx + i},${cy + j},${cz + k}`);
+      if (!list) continue;
+      for (const index of list) if ((this.points[3 * index] - x) ** 2 + (this.points[3 * index + 1] - y) ** 2 + (this.points[3 * index + 2] - z) ** 2 <= limit) out.push(index);
+    }
+    return out;
   }
 }
 

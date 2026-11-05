@@ -36,6 +36,7 @@ export function cleanName(raw, file = '') {
   if (piece) name = `${name.slice(0, -2)} (part ${/\d/.test(piece[1]) ? Number(piece[1]) + 1 : 'abcdefghijk'.indexOf(piece[1]) + 1})`;
   if (/liver/.test(file) && /segment|lobe$/.test(name)) name += ' of liver';
   if (/spleen/.test(file) && !/spleen/.test(name)) name += ' of spleen';
+  if (/mammary/.test(file) && /^(left|right) fat$/.test(name)) name = `fat of ${name.split(' ')[0]} breast`;
   return name.charAt(0).toUpperCase() + name.slice(1);
 }
 

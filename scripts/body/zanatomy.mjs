@@ -22,9 +22,12 @@ export function zName(raw) {
 }
 
 function placeOf(name, group) {
+  /* what Z-Anatomy files with the joints or muscles but is not either */
+  if (/quadrangular membrane/i.test(name)) return { layer: 'organs', group: 'respiratory' };
+  if (/\btarsus\b/i.test(name)) return { layer: 'organs', group: 'senses' };
   if (group === '4: Muscular system') return { layer: 'muscles', group: null };
   if (group === '3: Joints' || group === '1: Skeletal system') return { layer: 'skeleton', group: null };
-  if (group === '5: Cardiovascular system') return { layer: 'vessels', group: /vein|sinus|plexus/i.test(name) ? 'veins' : 'arteries' };
+  if (group === '5: Cardiovascular system') return { layer: 'vessels', group: /vein|sinus|plexus|vena cava/i.test(name) ? 'veins' : 'arteries' };
   if (group === '6: Lymphoid organs') return { layer: 'organs', group: 'lymphatic' };
   if (group === '7: Nervous system & Sense organs') return { layer: 'nerves', group: /spinal|cauda|horn/i.test(name) ? 'spinal' : 'nerves' };
   if (group === '8: Visceral systems') return { layer: 'organs', group: /thyroid|hypophysis|pineal/i.test(name) ? 'endocrine' : /bronch|trachea|larynx|nasal/i.test(name) ? 'respiratory' : 'digestive' };
@@ -96,7 +99,7 @@ export async function zanatomyAdditions(folder, his, log = console.log) {
   };
   /* or it has the same name as one of his, once sides, "muscle" and a few synonyms are set aside */
   const SYNONYMS = [[/ductus deferens/, 'deferent duct'], [/external abdominal oblique/, 'external oblique'], [/internal abdominal oblique/, 'internal oblique'], [/seminal gland/, 'seminal vesicle'],
-    [/suprarenal gland/, 'adrenal gland'], [/vermiform appendix/, 'appendix'], [/oesophagus/, 'esophagus'], [/bucinator/, 'buccinator']];
+    [/suprarenal gland/, 'adrenal gland'], [/vermiform appendix/, 'appendix'], [/oesophagus/, 'esophagus'], [/bucinator/, 'buccinator'], [/pineal gland/, 'pineal body']];
   const plain = name => { let n = name.toLowerCase().replace(/\b(left|right)\b/g, '').replace(/\bmuscles?\b/g, '').replace(/\s+/g, ' ').trim(); for (const [pattern, to] of SYNONYMS) n = n.replace(pattern, to); return n.replace(/s$/, ''); };
   const hisNames = new Set(his.map(structure => plain(structure.name)));
   const out = [], seen = new Set();

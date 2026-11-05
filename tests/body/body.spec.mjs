@@ -65,6 +65,10 @@ test.describe('both bodies', () => {
     expect(female.entries).not.toContain('prostate');
     await expect(page.locator('#figure')).toContainText('Female');
     expect(await model(page, () => window.bodyModel.coverage())).toBeGreaterThan(0.02);
+    // her callouts, not his: the labels are rebuilt for the new body
+    await expect(page.locator('#labels .tag:not([hidden])').first()).toBeVisible();
+    await expect(page.locator('#labels .tag', { hasText: 'Uterus' })).toHaveCount(1);
+    await expect(page.locator('#labels .tag', { hasText: 'Prostate' })).toHaveCount(0);
   });
 
   test('a selected part carries over to its equivalent in the other body', async ({ page }) => {

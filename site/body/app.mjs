@@ -698,7 +698,7 @@ async function switchSex(sex) {
   body = await loadBody(sex);
   makeStateTextures(body.parts.length);
   state.selection = null; state.search = ''; $('search').value = '';
-  buildPartsList();
+  buildPartsList(); buildTags();
   applyView(state.view);
   await ensureLayers();
   const swap = previous && (body.entries[previous] ? previous : ENTRIES[previous]?.swap);

@@ -64,7 +64,7 @@ export async function readOrgan(path, frame) {
         positions.set(toModel(frame, world), k * 3);
       }
       const indices = primitive.getIndices() ? Uint32Array.from(primitive.getIndices().getArray()) : Uint32Array.from({ length: count }, (_, k) => k);
-      out.push({ raw: node.getName(), name: cleanName(node.getName(), path.split('/').pop()), positions, indices });
+      out.push({ raw: node.getName(), name: cleanName(node.getName(), path.split('/').pop()), extras: node.getExtras(), positions, indices });
     }
   }
   return out;

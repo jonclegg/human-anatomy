@@ -12,6 +12,7 @@ import { readOrgan, FRAMES } from './hra.mjs';
 import { register, warpMesh, meanGap, startMap } from './register.mjs';
 import { PointGrid, spread, icpSimilarity, applyAffine } from './fit.mjs';
 import { Assembly, ERROR, MINIMUM_SHARE } from './assemble.mjs';
+import { zanatomyAdditions } from './zanatomy.mjs';
 import { pushOutOf, obstacleOf, outerSurface, centreOf } from './clearance.mjs';
 
 const [root, reproductive] = process.argv.slice(2);
@@ -85,6 +86,8 @@ console.log(`female: ${nih.length} scanned meshes, ${skinHeight.toFixed(1)} cm t
 /* ---------- His parts, simplified, in the model frame ---------- */
 const his = listStructures(root).map(structure => ({ ...structure, ...classify(structure) }));
 for (const structure of his) structure.mesh = simplify(weld(readMesh(structure.path)), ERROR[structure.layer], MINIMUM_SHARE[structure.layer]);
+/* and what BodyParts3D lacks, from Z-Anatomy, aligned to his bones; fitted to her with the rest of him */
+his.push(...await zanatomyAdditions(`${root}/Whole Body - Z-Anatomy (Blender)/export`, his));
 const him = pattern => his.filter(structure => pattern.test(structure.name)).map(structure => structure.mesh);
 const himGroup = (layer, group) => his.filter(structure => structure.layer === layer && structure.group === group).map(structure => structure.mesh);
 
@@ -237,7 +240,7 @@ for (const structure of his) {
   /* twice over: a point pushed out of one organ can land in its neighbour */
   if (['skeleton', 'muscles', 'organs'].includes(structure.layer)) for (let pass = 0; pass < 2; pass++) for (const { grid, centre } of OBSTACLES) cleared += pushOutOf(mesh, grid, centre, { gap: 0.5 });
   if (structure.layer === 'vessels' && duplicatesHers(mesh)) { dropped++; continue; }
-  assembly.add({ name: structure.name, layer: structure.layer, group: structure.group, source: 'BodyParts3D', fitted: true, id: structure.id, concept: structure.concept }, mesh, { prepared: true });
+  assembly.add({ name: structure.name, layer: structure.layer, group: structure.group, source: structure.source || 'BodyParts3D', fitted: true, id: structure.id, concept: structure.concept }, mesh, { prepared: true });
   fitted++;
 }
 for (const mesh of nih) assembly.add({ name: mesh.name, layer: mesh.layer, group: mesh.group, source: 'NIH female' }, mesh);

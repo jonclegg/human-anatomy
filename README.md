@@ -70,7 +70,7 @@ npm test             # Playwright: desktop Safari, desktop Chrome and iPhone
 
 ## Human Anatomy: the whole body
 
-[`site/body/`](site/body/) is a second, larger model: the whole human body, male and female, at the same standard. It has the skeleton, the muscles, the organs, the vessels, the nervous system and the skin, about 2,300 named structures in each body. The model above stays as the detailed close-up of the female pelvis.
+[`site/body/`](site/body/) is a second, larger model: the whole human body, male and female, at the same standard. It has the skeleton, the muscles, the organs, the vessels, the nervous system and the skin, about 3,000 named structures in each body. The model above stays as the detailed close-up of the female pelvis.
 
 | | |
 |---|---|
@@ -83,6 +83,7 @@ npm test             # Playwright: desktop Safari, desktop Chrome and iPhone
 ### Where the shapes come from
 
 - **Male:** one adult man from [BodyParts3D](https://dbarchive.biosciencedbc.jp/en/bodyparts3d/) (2,234 structures, built from CT and MRI). BodyParts3D has no lungs and no spinal cord, so those come from the NIH Visible Human Male, carried into the BodyParts3D body by the fit described below.
+- **Added from [Z-Anatomy](https://github.com/Z-Anatomy/Models-of-human-anatomy):** about 750 structures BodyParts3D lacks: the muscles of the face, jaw, back and abdominal wall (latissimus dorsi, rectus abdominis, masseter, temporalis and others), ligaments and joint capsules, the peripheral and cranial nerves, lymph nodes, the thyroid gland, and many vessels. Z-Anatomy is built on BodyParts3D but remodelled, so it is aligned to the BodyParts3D bones by the same fit, and a Z-Anatomy structure is kept only where BodyParts3D has nothing of the same name or in the same place ([`scripts/body/zanatomy.mjs`](scripts/body/zanatomy.mjs)). Its non-commercial parts (the inner ear, a kidney) and its brain models with no stated licence are never exported.
 - **Female, scanned:** her skin, organs, brain, spinal cord, the vessels of her trunk and head, her bony pelvis, thigh and leg bones, kneecaps, breastbone and intervertebral discs come from the NIH Visible Human Female ([Human Reference Atlas](https://humanatlas.io/3d-reference-library)).
 - **Female, fitted:** no free model of a female skeleton or muscles exists. Her other bones (skull, spine, ribs, arms, hands, feet), all her muscles, and the few organs the NIH set lacks (oesophagus, stomach, gallbladder and bile ducts, adrenal glands, pituitary, tear glands, eyelid plates and outer ears) are the BodyParts3D male ones, **fitted** to her. In the app, each fitted part says *Fitted* in its details.
 
@@ -90,7 +91,7 @@ How the fit works ([`scripts/body/register.mjs`](scripts/body/register.mjs)): ma
 
 ### What is missing
 
-The free models have no latissimus dorsi, rectus abdominis, internal oblique, transversus abdominis, masseter, temporalis or facial muscles, no thyroid gland, and no peripheral nerves beyond those of the eye. The app's manual lists these gaps.
+The inner ear (the only free model is non-commercial), and the smallest vessels and nerves. The female skeleton and muscles are fitted, not scanned.
 
 ### Checks
 
@@ -106,7 +107,17 @@ node scripts/body/build-male.mjs "<Human Anatomy 3D Models folder>"
 node scripts/body/build-female.mjs "<Human Anatomy 3D Models folder>" "<female-reproductive-3d-models folder>"
 ```
 
-The male build takes under a minute; the female build about 12 minutes, most of it the fit. They write `site/body/data/<sex>/` (one GLB per layer and `parts.json`). The text for each main part is in [`site/body/parts.mjs`](site/body/parts.mjs). Serve the site with `npm run serve:body` (http://127.0.0.1:4174).
+First export Z-Anatomy with Blender (the scripts in [`scripts/body/blender/`](scripts/body/blender/) write to the folder the builds read):
+
+```bash
+blender -b --disable-autoexec "<Z-Anatomy folder>/Startup.blend" --python scripts/body/blender/export-zanatomy.py -- "<Human Anatomy 3D Models folder>/Whole Body - Z-Anatomy (Blender)/export/zanatomy.glb"
+```
+
+```bash
+blender -b --disable-autoexec "<Z-Anatomy folder>/Startup.blend" --python scripts/body/blender/export-zanatomy-bones.py -- "<Human Anatomy 3D Models folder>/Whole Body - Z-Anatomy (Blender)/export/zanatomy-bones.glb"
+```
+
+The male build takes about a minute; the female build about 15 minutes, most of it the fit. They write `site/body/data/<sex>/` (one GLB per layer and `parts.json`). The text for each main part is in [`site/body/parts.mjs`](site/body/parts.mjs). Serve the site with `npm run serve:body` (http://127.0.0.1:4174).
 
 ## Licence
 
@@ -116,5 +127,8 @@ The whole-body data in `site/body/data/` is derived from:
 
 - **BodyParts3D**, © The Database Center for Life Science, licensed under CC Attribution 4.0 International ([licence page](https://dbarchive.biosciencedbc.jp/en/bodyparts3d/lic.html)). The OBJ files' headers still carry an older CC BY-SA 2.1 Japan notice; the licence page, updated 27 February 2025, gives CC BY 4.0. Simplified, re-coloured and, for the female body, warped.
 - **Human Reference Atlas 3D reference organs** (HuBMAP, NIH; Visible Human Project, U.S. National Library of Medicine; brain from the Allen Institute), CC BY 4.0. Simplified, renamed and aligned.
+- **Z-Anatomy**, the libre 3D atlas of anatomy, CC BY-SA 4.0 (built on BodyParts3D); cranial nerves after Cranial Nerves and Foramina, University of Dundee CAHID, CC BY 4.0. Aligned, simplified and, for the female body, warped.
+
+Because it includes Z-Anatomy, the whole-body 3D data (`site/body/data/`) is shared under [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/). The code and the text in `site/body/parts.mjs` stay MIT.
 
 <div align="center"><sub>A <a href="https://wooten-labs.com">Wooten Labs</a> project.</sub></div>

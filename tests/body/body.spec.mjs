@@ -112,6 +112,17 @@ test.describe('parts', () => {
     await expect(page.locator('#inspectorTitle')).toContainText(/renal artery/i);
   });
 
+  test('both bodies have more than 2,900 structures, with Z-Anatomy\'s additions credited', async ({ page }) => {
+    for (const sex of ['male', 'female']) {
+      await open(page, { sex });
+      const found = await model(page, () => ({ count: window.bodyModel.body().parts.length, entries: window.bodyModel.entries() }));
+      expect(found.count, sex).toBeGreaterThan(2900);
+      expect(found.entries, sex).toEqual(expect.arrayContaining(['latissimusDorsi', 'rectusAbdominis', 'facialMuscles', 'thyroid', 'lymphNodes', 'legNerves', 'armNerves', 'brachialPlexus']));
+    }
+    await model(page, () => window.bodyModel.selectEntry('thyroid'));
+    await expect(page.locator('#inspector .source')).toContainText('Z-Anatomy');
+  });
+
   test('almost every structure falls under a main part\'s notes', async ({ page }) => {
     for (const sex of ['male', 'female']) {
       await open(page, { sex });

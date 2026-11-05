@@ -315,7 +315,7 @@ function applyVisibility() {
     colours[k + 3] = Math.round(THREE.MathUtils.clamp(opacity, 0, 1) * 255);
     flags[k] = chosen.has(index) ? 255 : 0;
     flags[k + 1] = isolate && !chosen.has(index) ? 255 : 0;
-    flags[k + 2] = part.layer === 'skin' ? 255 : 0;
+    flags[k + 2] = part.layer === 'skin' || part.layer === 'vessels' || part.group === 'nerves' ? 255 : 0;   // the skin, and thin tubes that a line would darken
     flags[k + 3] = chosen.has(index) && !isolate ? 255 : 0;
   });
   stateTexture.colour.needsUpdate = true; stateTexture.flags.needsUpdate = true;
@@ -443,13 +443,14 @@ function sourceNote(parts) {
   const fitted = parts.some(index => body.parts[index].fitted);
   const source = body.parts[parts[0]].source;
   return fitted
-    ? `<div class="source"><em class="fitted">Fitted</em><span>Male BodyParts3D shape, warped to fit the NIH Visible Human Female. No free female model of this part exists.</span></div>`
+    ? `<div class="source"><em class="fitted">Fitted</em><span>Male ${escapeHtml(source)} shape, warped to fit the NIH Visible Human Female. No free female model of this part exists.</span></div>`
     : `<div class="source"><em>Scanned</em><span>${escapeHtml(SOURCE_TEXT[source] || source)}</span></div>`;
 }
 const SOURCE_TEXT = {
   BodyParts3D: 'BodyParts3D: an adult Japanese man, built from CT and MRI.',
   'NIH female': 'NIH Visible Human Female: a 59-year-old woman, from cryosection images.',
   'NIH male': 'NIH Visible Human Male: a 38-year-old man, from cryosection images. Aligned to the BodyParts3D body.',
+  'Z-Anatomy': 'Z-Anatomy, an open atlas built on BodyParts3D (CC BY-SA 4.0). Aligned to the BodyParts3D body.',
 };
 function renderInspector() {
   const el = $('inspector');

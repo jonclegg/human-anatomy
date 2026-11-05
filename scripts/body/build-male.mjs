@@ -1,6 +1,7 @@
 // Builds the male body: every BodyParts3D structure, plus the lungs and spinal cord, which BodyParts3D lacks, from the NIH Visible Human
 // Male (Human Reference Atlas). His lungs come from a different man, so they are carried into the BodyParts3D body by
 // the same fit the female body uses (register.mjs), pinned to the matching bones, organs, spine and skin of both men.
+// Z-Anatomy adds what BodyParts3D lacks (zanatomy.mjs); export it first with the scripts in blender/.
 // Usage: node scripts/body/build-male.mjs <"Human Anatomy 3D Models" folder>
 import { listStructures, readMesh } from './bodyparts3d.mjs';
 import { classify } from './systems.mjs';
@@ -8,6 +9,7 @@ import { weld, simplify } from './mesh.mjs';
 import { readOrgan, FRAMES } from './hra.mjs';
 import { register, warpMesh, meanGap, startMap } from './register.mjs';
 import { Assembly, ERROR, MINIMUM_SHARE } from './assemble.mjs';
+import { zanatomyAdditions } from './zanatomy.mjs';
 import { clear, obstacleOf, centreOf, towardCentre } from './clearance.mjs';
 
 const root = process.argv[2];
@@ -20,6 +22,10 @@ const his = listStructures(root).map(structure => ({ ...structure, ...classify(s
 for (const structure of his) {
   structure.mesh = simplify(weld(readMesh(structure.path)), ERROR[structure.layer], MINIMUM_SHARE[structure.layer]);
   assembly.add({ name: structure.name, layer: structure.layer, group: structure.group, source: 'BodyParts3D', id: structure.id, concept: structure.concept }, structure.mesh, { prepared: true });
+}
+/* what BodyParts3D lacks, from Z-Anatomy, aligned to these bones */
+for (const structure of await zanatomyAdditions(`${root}/Whole Body - Z-Anatomy (Blender)/export`, his)) {
+  assembly.add({ name: structure.name, layer: structure.layer, group: structure.group, source: structure.source }, structure.mesh, { prepared: true });
 }
 const him = pattern => his.filter(structure => pattern.test(structure.name)).map(structure => structure.mesh);
 const himGroup = (layer, group) => his.filter(structure => structure.layer === layer && structure.group === group).map(structure => structure.mesh);

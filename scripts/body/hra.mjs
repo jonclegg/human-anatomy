@@ -15,12 +15,36 @@ export const FRAMES = {
 };
 export const toModel = (frame, [x, y, z]) => [x * 100 - frame.centreX, y * 100 - frame.floor, z * 100 - frame.centreZ];
 
-/* "VH_F_left_ventricle" -> "Left ventricle"; a trailing _L / _R becomes a leading Left / Right */
-export function cleanName(raw) {
+/* typos and shorthand in the source names */
+const FIXES = [[/jejenum/, 'jejunum'], [/ginviva/, 'gingiva'], [/ucinate process/, 'uncinate process of pancreas'], [/caecum/, 'cecum'], [/opthalmic/, 'ophthalmic'],
+  [/fibria/, 'fimbriae'], [/epiglotic/, 'epiglottic'], [/eigth/, 'eighth'], [/heptopancreatic/, 'hepatopancreatic'], [/hepataduodenal/, 'hepatoduodenal'],
+  [/schlemms/, "Schlemm's"], [/^ingulo/, 'cingulo'], [/segmennt|segm$/, 'segment'], [/heschls/, "Heschl's"], [/\bhth\b/i, 'hypothalamus'],
+  [/papillary muscle of heart ant$/, 'anterior papillary muscle'], [/papillary muscle of heart antlat$/, 'anterolateral papillary muscle'], [/papillary muscle of heart med$/, 'medial papillary muscle'],
+  [/papillary muscle of heart pos$/, 'posterior papillary muscle'], [/papillary muscle of heart posmed$/, 'posteromedial papillary muscle'], [/cardiac atrium/, 'atrium'], [/^lingula inferior bronchi$/, 'inferior lingular bronchus']];
+
+/* "VH_F_left_ventricle" -> "Left ventricle"; a trailing _L / _R becomes a leading Left / Right; a trailing letter or
+   number that only told pieces apart becomes "(part n)"; the organ's file adds context where the name lacks it */
+export function cleanName(raw, file = '') {
+  if (/bronchopulmonary_segm/.test(raw)) return lungSegmentName(raw);
   let name = raw.replace(/^VH_[FM]_/, '').replace(/^Allen_/, '').replace(/^Yao_/, '').replace(/_+/g, ' ').trim();
   const side = name.match(/\s([LR])$/) || name.match(/\s([LR])(?=\s)/);
   if (side) name = `${side[1] === 'L' ? 'left' : 'right'} ${name.replace(/\s[LR](\s|$)/, ' ').trim()}`;
-  name = name.replace(/\s\d+$/, '').replace(/\b(sup)$/, 'superior').replace(/\b(inf)$/, 'inferior');
+  for (const [pattern, replacement] of FIXES) name = name.replace(pattern, replacement);
+  name = name.replace(/\b(sup)$/, 'superior').replace(/\b(inf)$/, 'inferior');
+  name = name.replace(/([a-z])(\d)$/, '$1 $2');
+  const piece = name.match(/\s([a-k]|\d)$/);
+  if (piece) name = `${name.slice(0, -2)} (part ${/\d/.test(piece[1]) ? Number(piece[1]) + 1 : 'abcdefghijk'.indexOf(piece[1]) + 1})`;
+  if (/liver/.test(file) && /segment|lobe$/.test(name)) name += ' of liver';
+  if (/spleen/.test(file) && !/spleen/.test(name)) name += ' of spleen';
+  return name.charAt(0).toUpperCase() + name.slice(1);
+}
+
+/* "VH_M_lingula_superior_bronchopulmonary_segment" -> "Superior lingular segment of left lung" */
+export function lungSegmentName(raw) {
+  const words = raw.replace(/^VH_[MF]_/, '').replace(/segm\w*$/, '').replace(/bronchopulmonary_?/, '').split('_').filter(Boolean);
+  const lung = words[0] === 'left' || words[0] === 'lingula' ? 'left' : 'right';
+  const rest = words[0] === 'lingula' ? [...words.slice(1), 'lingular'] : words.slice(1);
+  const name = `${rest.join(' ')} segment of ${lung} lung`;
   return name.charAt(0).toUpperCase() + name.slice(1);
 }
 
@@ -40,7 +64,7 @@ export async function readOrgan(path, frame) {
         positions.set(toModel(frame, world), k * 3);
       }
       const indices = primitive.getIndices() ? Uint32Array.from(primitive.getIndices().getArray()) : Uint32Array.from({ length: count }, (_, k) => k);
-      out.push({ raw: node.getName(), name: cleanName(node.getName()), positions, indices });
+      out.push({ raw: node.getName(), name: cleanName(node.getName(), path.split('/').pop()), positions, indices });
     }
   }
   return out;

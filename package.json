@@ -4,7 +4,9 @@
   "description": "Interactive 3D anatomy of the vulva, clitoris and pelvic organs",
   "scripts": {
     "serve": "node tests/server.mjs",
-    "test": "playwright test"
+    "test": "playwright test",
+    "serve:body": "node tests/body-server.mjs",
+    "test:body": "playwright test --config playwright.body.config.mjs"
   },
   "license": "MIT",
   "type": "commonjs",

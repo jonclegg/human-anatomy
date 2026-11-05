@@ -68,8 +68,53 @@ npm test             # Playwright: desktop Safari, desktop Chrome and iPhone
 | `scripts/export-standalone.mjs <out.html>` | Writes the page as deployed on [wooten-labs.com](https://wooten-labs.com). |
 | `scripts/ui-review.mjs <round>` | Screenshots the page and asks several AI models to score the design against benchmark sites (needs `OPENROUTER_API_KEY`). Each round's scores and comments are in [`design-review/`](design-review/). |
 
+## Human Anatomy: the whole body
+
+[`site/body/`](site/body/) is a second, larger model: the whole human body, male and female, at the same standard. It has the skeleton, the muscles, the organs, the vessels, the nervous system and the skin, about 2,300 named structures in each body. The model above stays as the detailed close-up of the female pelvis.
+
+| | |
+|---|---|
+| **Male and female** | Switch bodies at the top right. A selected part carries over, or jumps to its equivalent (testes and ovaries). |
+| **Views per system** | Body, Skeleton, Muscles, Organs, Vessels and Nerves, each with the rest as faint context. |
+| **Every structure** | Every structure can be picked on the model, found by name in the parts list, and isolated. 167 main parts have a description, a common misconception, published measurements and the other sex's equivalent. Step through them with ‹ › or the arrow keys. |
+| **X-ray and skin** | Fade a view's outer layer to outlines, and fade the skin. |
+| **Loads fast** | Each system is its own compressed GLB (meshopt), fetched only when a view needs it. The opening view loads 2–3 MB. |
+
+### Where the shapes come from
+
+- **Male:** one adult man from [BodyParts3D](https://dbarchive.biosciencedbc.jp/en/bodyparts3d/) (2,234 structures, built from CT and MRI). BodyParts3D has no lungs and no spinal cord, so those come from the NIH Visible Human Male, carried into the BodyParts3D body by the fit described below.
+- **Female, scanned:** her skin, organs, brain, spinal cord, the vessels of her trunk and head, her bony pelvis, thigh and leg bones, kneecaps, breastbone and intervertebral discs come from the NIH Visible Human Female ([Human Reference Atlas](https://humanatlas.io/3d-reference-library)).
+- **Female, fitted:** no free model of a female skeleton or muscles exists. Her other bones (skull, spine, ribs, arms, hands, feet), all her muscles, and the few organs the NIH set lacks (oesophagus, stomach, gallbladder and bile ducts, adrenal glands, pituitary, tear glands, eyelid plates and outer ears) are the BodyParts3D male ones, **fitted** to her. In the app, each fitted part says *Fitted* in its details.
+
+How the fit works ([`scripts/body/register.mjs`](scripts/body/register.mjs)): matching structures (hip bones, femurs, tibias, kneecaps, sternum, heart, liver, kidneys, spleen, bladder, rectum, brain, eyes, trachea, larynx) are aligned one by one with affine ICP. The spine is matched disc by disc along its length, and each hand and foot is turned as a whole to match hers (she was scanned lying down with her feet pointed). A thin-plate spline through all of those points carries the rest of his body across. Near a matched structure, soft tissue moves with that structure's own fit, as skin follows a bone, so muscles are not stretched out into her thicker body fat. Finally, any fitted bone or muscle that would pass into one of her scanned organs is pushed clear of it ([`scripts/body/clearance.mjs`](scripts/body/clearance.mjs)).
+
+### What is missing
+
+The free models have no latissimus dorsi, rectus abdominis, internal oblique, transversus abdominis, masseter, temporalis or facial muscles, no thyroid gland, and no peripheral nerves beyond those of the eye. The app's manual lists these gaps.
+
+### Checks
+
+`npm run test:body` runs Playwright on desktop Safari, desktop Chrome and an iPhone. It covers loading, every view, both bodies, picking, isolation, stepping, X-ray, the phone layout, and anatomy. The anatomy tests measure each body's bones and organs (height, femur, humerus, tibia, kidney, heart, spleen, trachea, spinal cord, pelvic width, uterus) against published adult ranges, and check that no major organ passes through bone.
+
+### Rebuilding the data
+
+```bash
+node scripts/body/build-male.mjs "<Human Anatomy 3D Models folder>"
+```
+
+```bash
+node scripts/body/build-female.mjs "<Human Anatomy 3D Models folder>" "<female-reproductive-3d-models folder>"
+```
+
+The male build takes under a minute; the female build about 12 minutes, most of it the fit. They write `site/body/data/<sex>/` (one GLB per layer and `parts.json`). The text for each main part is in [`site/body/parts.mjs`](site/body/parts.mjs). Serve the site with `npm run serve:body` (http://127.0.0.1:4174).
+
 ## Licence
 
 Code and text are [MIT](LICENSE). Embedded data keeps its own licence: the pelvis is from the NIH Human Reference Atlas (CC BY 4.0), and the body outline is from MakeHuman (CC0).
+
+The whole-body data in `site/body/data/` is derived from:
+
+- **BodyParts3D**, © The Database Center for Life Science, licensed under CC Attribution 4.0 International ([licence page](https://dbarchive.biosciencedbc.jp/en/bodyparts3d/lic.html)). The OBJ files' headers still carry an older CC BY-SA 2.1 Japan notice; the licence page, updated 27 February 2025, gives CC BY 4.0. Simplified, re-coloured and, for the female body, warped.
+- **Human Reference Atlas 3D reference organs** (HuBMAP, NIH; Visible Human Project, U.S. National Library of Medicine; brain from the Allen Institute), CC BY 4.0. Simplified, renamed and aligned.
 
 <div align="center"><sub>A <a href="https://wooten-labs.com">Wooten Labs</a> project.</sub></div>

@@ -1,4 +1,4 @@
-// Builds the male body: every BodyParts3D structure, plus the lungs, which BodyParts3D lacks, from the NIH Visible Human
+// Builds the male body: every BodyParts3D structure, plus the lungs and spinal cord, which BodyParts3D lacks, from the NIH Visible Human
 // Male (Human Reference Atlas). His lungs come from a different man, so they are carried into the BodyParts3D body by
 // the same fit the female body uses (register.mjs), pinned to the matching bones, organs, spine and skin of both men.
 // Usage: node scripts/body/build-male.mjs <"Human Anatomy 3D Models" folder>
@@ -8,6 +8,7 @@ import { weld, simplify } from './mesh.mjs';
 import { readOrgan, FRAMES } from './hra.mjs';
 import { register, warpMesh, meanGap, startMap } from './register.mjs';
 import { Assembly, ERROR, MINIMUM_SHARE } from './assemble.mjs';
+import { clear, obstacleOf, centreOf, towardCentre } from './clearance.mjs';
 
 const root = process.argv[2];
 if (!root) throw new Error('usage: node scripts/body/build-male.mjs <"Human Anatomy 3D Models" folder>');
@@ -54,18 +55,20 @@ const vhHeight = 182.4;
 const start = startMap(vhHeight, HEIGHT, centre(vh(/(pubis|ilium|ischium)_compact/)), centre(him(/^(Left|Right) hip bone$/)));
 const warp = register({ pairs, spine: { source: vhDiscs, target: discs }, skin: { source: vhSkin, target: his.find(s => s.name === 'Skin').mesh, skip: (x, y) => y < 16 || Math.abs(x) > 22 }, start });
 
-const lungs = (await nihMale([['Respiratory', 'HRA_lung_male_vh.glb']])).filter(mesh => /bronchopulmonary_segment|segmen/.test(mesh.raw));
+/* BodyParts3D has the spinal cord's central canal but not the cord itself: carried across from the Visible Human Male too */
+for (const mesh of await nihMale([['Nervous', 'HRA_spinal_cord_male_vh.glb']])) assembly.add({ name: mesh.name, layer: 'nerves', group: 'spinal', source: 'NIH male' }, warpMesh(mesh, warp));
+const lungs = (await nihMale([['Respiratory', 'HRA_lung_male_vh.glb']])).filter(mesh => /bronchopulmonary_segm/.test(mesh.raw));
+/* his lungs came from another man: where they would pass through this man's ribs, they give way, as lungs carry the
+   impressions of the ribs; each lung is pushed toward its own middle */
+const chestBones = obstacleOf(his.filter(structure => /rib$|costal cartilage|vertebra$|sternum|xiphoid|manubrium|clavicle|scapula/i.test(structure.name)).map(structure => structure.mesh));
+const lungCentre = { left: centreOf(lungs.filter(mesh => /left/.test(mesh.name)).map(mesh => warpMesh(mesh, warp))), right: centreOf(lungs.filter(mesh => /right/.test(mesh.name)).map(mesh => warpMesh(mesh, warp))) };
+let pushed = 0;
 for (const mesh of lungs) {
-  assembly.add({ name: lungSegmentName(mesh.raw), layer: 'organs', group: 'respiratory', source: 'NIH male' }, warpMesh(mesh, warp));
+  const placed = warpMesh(mesh, warp);
+  pushed += clear(placed, chestBones, towardCentre(lungCentre[/left/.test(mesh.name) ? 'left' : 'right']), { reach: 1.8, depth: 1.6 });
+  assembly.add({ name: mesh.name, layer: 'organs', group: 'respiratory', source: 'NIH male' }, placed);
 }
+console.log(`  lungs kept clear of the ribs: ${pushed} points moved`);
 console.log(`  check left femur: ${meanGap(warpMesh(vh(/M_femur_L$/)[0], warp), him(/^Left femur$/)[0]).toFixed(2)} cm from the BodyParts3D femur after the warp; ${lungs.length} lung segments carried across`);
 await assembly.write(new URL('../../site/body/data/male/', import.meta.url));
 
-/* "VH_M_lingula_superior_bronchopulmonary_segment" -> "Superior lingular segment of left lung" */
-export function lungSegmentName(raw) {
-  const words = raw.replace(/^VH_[MF]_/, '').replace(/segm\w*$/, '').replace(/bronchopulmonary_?/, '').split('_').filter(Boolean);
-  const lung = words[0] === 'left' || words[0] === 'lingula' ? 'left' : 'right';
-  const rest = words[0] === 'lingula' ? [...words.slice(1), 'lingular'] : words.slice(1);
-  const name = `${rest.join(' ')} segment of ${lung} lung`;
-  return name.charAt(0).toUpperCase() + name.slice(1);
-}

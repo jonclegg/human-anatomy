@@ -121,7 +121,8 @@ const fill = new THREE.DirectionalLight(0xdfe8ff, 0.5); fill.position.set(160, -
 
 /* ---------- Per-part state ----------
    Each part's colour and opacity live in one texel of a texture the shaders read by the vertex's _part index, and its
-   flags in a second: red = selected, green = isolation context (drawn as grey outlines), blue = no ink line. */
+   flags in a second: red = selected, green = isolation context (drawn as grey outlines), blue = no ink line, alpha = the
+   faint highlight glow, for a selected part shown among the others (an isolated part needs none). */
 const STATE_WIDTH = 1024;
 const stateTexture = { colour: null, flags: null, rows: 1 };
 function makeStateTextures(count) {
@@ -164,7 +165,7 @@ function partMaterial(pass) {
       .replace('#include <emissivemap_fragment>', `#include <emissivemap_fragment>
   float edge = 1.0 - abs(dot(normal, normalize(vViewPosition)));
   totalEmissiveRadiance += diffuseColor.rgb * vec3(0.5, 0.2, 0.14) * pow(edge, 2.5) * 0.7;   // light through thin edges, a cheap subsurface glow
-  if (vFlags.r > 0.5) totalEmissiveRadiance += vec3(1.0, 0.69, 0.0) * 0.16;`)
+  if (vFlags.a > 0.5) totalEmissiveRadiance += vec3(1.0, 0.69, 0.0) * 0.16;`)
       .replace('#include <opaque_fragment>', `#include <opaque_fragment>
   if (vState.a < 0.5) {   /* a faded part keeps its silhouette and loses its middle, so faded context stays readable */
     float rim = 1.0 - abs(dot(normal, normalize(vViewPosition)));
@@ -186,7 +187,7 @@ function outlineMaterial() {
     Object.assign(shader.uniforms, uniforms, { uResolution: outlineResolution });
     shader.vertexShader = VERTEX_STATE + 'uniform vec2 uResolution;\n' + shader.vertexShader.replace('#include <project_vertex>', `#include <project_vertex>
 ${FETCH_STATE}
-  vec4 clipNormal = projectionMatrix * modelViewMatrix * vec4(objectNormal, 0.0);
+  vec4 clipNormal = projectionMatrix * modelViewMatrix * vec4(normal, 0.0);
   float width = vFlags.r > 0.5 ? 2.0 : 1.2;
   gl_Position.xy += normalize(clipNormal.xy + 1e-6) / uResolution * 2.0 * width * gl_Position.w;`);
     shader.fragmentShader = 'varying vec4 vState; varying vec4 vFlags;\n' + shader.fragmentShader.replace('vec4 diffuseColor = vec4( diffuse, opacity );', `
@@ -315,6 +316,7 @@ function applyVisibility() {
     flags[k] = chosen.has(index) ? 255 : 0;
     flags[k + 1] = isolate && !chosen.has(index) ? 255 : 0;
     flags[k + 2] = part.layer === 'skin' ? 255 : 0;
+    flags[k + 3] = chosen.has(index) && !isolate ? 255 : 0;
   });
   stateTexture.colour.needsUpdate = true; stateTexture.flags.needsUpdate = true;
   invalidate();
@@ -355,11 +357,10 @@ function buildPartsList() {
   let shown = 0;
   for (const layer of LAYERS) {
     const keys = body.order.filter(key => entryLayer(key) === layer);
-    const minor = body.parts.filter(part => part.layer === layer && body.entryOf[part.index] < 0);
+    const structures = body.parts.filter(part => part.layer === layer);
     const keysShown = keys.filter(key => !query || ENTRIES[key].name.toLowerCase().includes(query) || (ENTRIES[key].aka || '').toLowerCase().includes(query));
-    const minorShown = query ? minor.filter(part => part.name.toLowerCase().includes(query)).slice(0, 60) : minor;
-    const partsShown = query ? body.parts.filter(part => part.layer === layer && body.entryOf[part.index] >= 0 && part.name.toLowerCase().includes(query) && !keysShown.includes(body.order[0])).slice(0, 0) : [];
-    if (!keysShown.length && !minorShown.length && !partsShown.length) continue;
+    const structuresShown = query ? structures.filter(part => part.name.toLowerCase().includes(query)).slice(0, 80) : structures;
+    if (!keysShown.length && !(query && structuresShown.length)) continue;
     const wrapper = document.createElement('div');
     wrapper.innerHTML = `<div class="group-name" style="--dot:${LAYER_INFO[layer].dot}"><i></i>${LAYER_INFO[layer].name}</div>`;
     const list = document.createElement('ul'); list.className = 'part-list';
@@ -371,27 +372,28 @@ function buildPartsList() {
       item.append(button); list.append(item); listButtons[key] = button; shown++;
     }
     wrapper.append(list);
-    if (minorShown.length) {
-      /* the smaller structures (branches, segments, little muscles) are all here too, named, under a fold */
+    if (structuresShown.length) {
+      /* every structure of the layer, named and selectable, under a fold (open when searching) */
       const more = document.createElement('details'); more.className = 'more'; if (query) more.open = true;
-      more.innerHTML = `<summary>${query ? `${minorShown.length} more matching` : `All ${minor.length} other ${LAYER_INFO[layer].name.toLowerCase()} structures`}</summary>`;
+      more.innerHTML = `<summary>${query ? `${structuresShown.length}${structuresShown.length === 80 ? '+' : ''} structures matching` : `All ${structures.length} ${LAYER_INFO[layer].name.toLowerCase()} structures`}</summary>`;
       const minorList = document.createElement('ul'); minorList.className = 'part-list minor';
       const fill = () => {
         if (minorList.childElementCount) return;
-        for (const part of minorShown.slice().sort((a, b) => a.name.localeCompare(b.name))) {
+        for (const part of structuresShown.slice().sort((a, b) => a.name.localeCompare(b.name))) {
           const item = document.createElement('li'), button = document.createElement('button');
           button.type = 'button'; button.dataset.part = part.index;
-          button.innerHTML = `<span>·</span>${escapeHtml(part.name)}`;
+          const at = body.entryOf[part.index];
+          button.innerHTML = `<span>${at >= 0 ? entryNumber(Object.keys(ENTRIES)[at]) : '·'}</span>${escapeHtml(part.name)}`;
           button.addEventListener('click', () => { stopTour(); if (phone.matches) state.drawer = false; selectPart(part.index); focusSelection(); });
           item.append(button); minorList.append(item);
         }
       };
       more.addEventListener('toggle', fill); if (query) fill();
-      more.append(minorList); wrapper.append(more); shown += minorShown.length;
+      more.append(minorList); wrapper.append(more); shown += query ? structuresShown.length : 0;
     }
     holder.append(wrapper);
   }
-  $('searchNote').textContent = query ? (shown ? '' : 'Nothing by that name in this body.') : `${body.order.length} main parts, ${body.parts.length} structures in all.`;
+  $('searchNote').textContent = query ? (shown ? '' : 'Nothing by that name in this body.') : `${body.order.length} main parts, ${body.parts.length.toLocaleString('en')} structures in all.`;
 }
 $('search').addEventListener('input', event => { state.search = event.target.value; buildPartsList(); syncUI(); });
 $('partsBtn').addEventListener('click', () => { state.drawer = !state.drawer; if (state.drawer) state.dock = false; syncUI(); });
@@ -481,8 +483,10 @@ function renderInspector() {
     return;
   }
   const key = selection.entry, entry = key ? ENTRIES[key] : null, part = body.parts[selection.part ?? selection.parts[0]];
-  const title = selection.part !== undefined && (!entry || entry.whole === false || body.entries[key].length > 1) ? part.name : entry ? entry.name : part.name;
-  const aka = entry ? (title === entry.name ? entry.aka : `Part of: ${entry.name}`) : `${LAYER_INFO[part.layer].name} · ${GROUP_INFO[part.group]?.name || part.group}`;
+  const title = selectionName();
+  const picked = selection.part !== undefined ? body.parts[selection.part].name : null;
+  const aka = !entry ? `${LAYER_INFO[part.layer].name} · ${GROUP_INFO[part.group]?.name || part.group}`
+    : title !== entry.name ? `Part of: ${entry.name}` : picked && picked !== entry.name ? `Selected piece: ${picked}` : entry.aka;
   const stepper = state.tour || !key ? '' : `<div class="stepper"><button type="button" data-step="-1" aria-label="Previous part">‹</button><span>${body.order.indexOf(key) + 1} of ${body.order.length}</span><button type="button" data-step="1" aria-label="Next part">›</button></div>`;
   const size = part.max.map((value, axis) => value - part.min[axis]);
   const facts = entry ? entry.stats : [['Size (this model)', `${Math.max(...size).toFixed(1)} cm across`], ['Layer', LAYER_INFO[part.layer].name]];
@@ -550,10 +554,12 @@ function syncUI() {
   if (body) $('partCount').textContent = `${body.parts.length.toLocaleString('en')} parts`;
   for (const range of document.querySelectorAll('input[type="range"]')) range.style.setProperty('--fill', `${(range.value - range.min) / (range.max - range.min) * 100}%`);
 }
+/* a picked structure is named for itself, unless it is a piece of a whole organ; a chosen entry by the entry's name */
 const selectionName = () => {
-  const selection = state.selection;
-  if (selection.part !== undefined && (!selection.entry || body.entries[selection.entry].length > 1)) return body.parts[selection.part].name;
-  return selection.entry ? ENTRIES[selection.entry].name : body.parts[selection.parts[0]].name;
+  const selection = state.selection, entry = selection.entry && ENTRIES[selection.entry];
+  if (!entry) return body.parts[selection.parts[0]].name;
+  if (selection.part !== undefined && !entry.whole && body.entries[selection.entry].length > 1) return body.parts[selection.part].name;
+  return entry.name;
 };
 /* internal parts are isolated (solid, everything else faint); parts on the surface of their layer just get highlighted */
 const shouldIsolate = parts => parts.every(index => !['skin'].includes(body.parts[index].layer)) && VIEW_INFO[state.view].isolate;
@@ -570,10 +576,12 @@ function selectEntry(key) {
   const parts = body.entries[key];
   select({ entry: key, parts, isolate: shouldIsolate(parts) });
 }
-/* a picked part: the whole entry when the entry is one organ in pieces (the liver's segments), else just that part */
+/* a picked part: the whole entry when the entry is one organ in pieces (the liver's segments), or the organ on that side
+   when it is a pair (one kidney's pyramids and calyces), else just that part */
+const sideOf = index => body.parts[index].side || (body.parts[index].centre[0] > 0.5 ? 'left' : body.parts[index].centre[0] < -0.5 ? 'right' : null);
 function selectPart(index) {
-  const at = body.entryOf[index], key = at >= 0 ? Object.keys(ENTRIES)[at] : null;
-  const parts = key && ENTRIES[key].whole ? body.entries[key] : [index];
+  const at = body.entryOf[index], key = at >= 0 ? Object.keys(ENTRIES)[at] : null, whole = key && ENTRIES[key].whole;
+  const parts = whole === true ? body.entries[key] : whole === 'side' ? body.entries[key].filter(other => sideOf(other) === sideOf(index)) : [index];
   select({ entry: key, part: index, parts, isolate: shouldIsolate(parts) });
 }
 
@@ -625,6 +633,8 @@ function boxPoints(parts, margin = 0) {
 function fitFrame(points, direction, up, fill = 1) {
   resize();
   const { clientWidth: width, clientHeight: height } = stage, free = freeRect();
+  /* a page opened in a hidden tab has no size yet: keep the camera where it is, and fit once the stage appears */
+  if (!width || !height) { fitWhenShown = true; return { target: controls.target.clone(), position: camera.position.clone() }; }
   const target = new THREE.Box3().setFromPoints(points).getCenter(new THREE.Vector3());
   const probe = camera.clone();
   let distance = 300;
@@ -895,7 +905,14 @@ function resize() {
   camera.setViewOffset(width + 2 * Math.abs(shiftX), height + 2 * Math.abs(shiftY), shiftX > 0 ? 2 * shiftX : 0, shiftY < 0 ? -2 * shiftY : 0, width, height);
   invalidate();
 }
-new ResizeObserver(resize).observe(stage);
+let fitWhenShown = false;
+new ResizeObserver(() => {
+  resize();
+  if (fitWhenShown && stage.clientWidth && stage.clientHeight && body) {
+    fitWhenShown = false;
+    const frame = viewFrame(state.view); camera.position.copy(frame.position); controls.target.copy(frame.target); invalidate();
+  }
+}).observe(stage);
 function animate(now) {
   requestAnimationFrame(animate);
   frame(now);
@@ -958,6 +975,49 @@ window.bodyModel = {
     const stride = Math.max(1, Math.floor(out.length / 2000));
     return out.filter((_, k) => k % stride === 0);
   },
+  /* the box (cm) around an entry's parts, all of them or one side's */
+  size(key, side = null) {
+    const box = new THREE.Box3();
+    for (const index of body.entries[key] || []) if (!side || sideOf(index) === side) box.expandByPoint(V(...body.parts[index].min)).expandByPoint(V(...body.parts[index].max));
+    return box.isEmpty() ? null : { x: box.max.x - box.min.x, y: box.max.y - box.min.y, z: box.max.z - box.min.z, min: box.min.toArray(), max: box.max.toArray() };
+  },
+  sideOf,
+  /* length (cm) of an entry's parts along their long axis: the spread of their points along the main principal axis */
+  lengthOf(key, side = null) {
+    const points = (body.entries[key] || []).filter(index => !side || sideOf(index) === side).flatMap(index => window.bodyModel.points(index));
+    if (!points.length) return null;
+    const mean = [0, 1, 2].map(c => points.reduce((sum, p) => sum + p[c], 0) / points.length);
+    const C = [0, 1, 2].map(i => [0, 1, 2].map(j => points.reduce((sum, p) => sum + (p[i] - mean[i]) * (p[j] - mean[j]), 0) / points.length));
+    let axis = [0.3, 1, 0.2];
+    for (let k = 0; k < 50; k++) { const next = [0, 1, 2].map(i => C[i][0] * axis[0] + C[i][1] * axis[1] + C[i][2] * axis[2]); const n = Math.hypot(...next); axis = next.map(v => v / n); }
+    const along = points.map(p => (p[0] - mean[0]) * axis[0] + (p[1] - mean[1]) * axis[1] + (p[2] - mean[2]) * axis[2]);
+    return Math.max(...along) - Math.min(...along);
+  },
+  /* share of a set of parts' points that lie inside any of another set of (closed) parts: a ray from each point counts
+     crossings of the other parts' surfaces, odd meaning inside. Both layers must be loaded. */
+  inside(indices, solids, sample = 600) {
+    const meshes = solids.map(index => {
+      const part = body.parts[index], record = body.layers[part.layer];
+      const geometry = record.pick.geometry, ids = geometry.attributes._part, source = geometry.index.array, kept = [];
+      for (let t = 0; t < source.length; t += 3) if (ids.getX(source[t]) === index) kept.push(source[t], source[t + 1], source[t + 2]);
+      const piece = new THREE.BufferGeometry(); piece.setAttribute('position', geometry.attributes.position); piece.setIndex(kept);
+      piece.computeBoundingBox(); piece.computeBoundingSphere();
+      return new THREE.Mesh(piece, new THREE.MeshBasicMaterial({ side: THREE.DoubleSide }));
+    });
+    const points = indices.flatMap(index => window.bodyModel.points(index));
+    const stride = Math.max(1, Math.floor(points.length / sample)), caster = new THREE.Raycaster(), direction = V(0.577, 0.577, 0.577);
+    let inside = 0, tested = 0;
+    for (let k = 0; k < points.length; k += stride) {
+      const origin = V(...points[k]);
+      tested++;
+      for (const mesh of meshes) {
+        if (!mesh.geometry.boundingBox.containsPoint(origin)) continue;
+        caster.set(origin, direction);
+        if (caster.intersectObject(mesh, false).length % 2 === 1) { inside++; break; }
+      }
+    }
+    return tested ? inside / tested : 0;
+  },
   /* share of a 24 x 24 grid of canvas pixels that the model covers (the background clears to transparent) */
   coverage() {
     renderer.render(scene, camera);
@@ -975,8 +1035,8 @@ window.bodyModel = {
 const loading = $('loading');
 for (const [view, info] of Object.entries(VIEW_INFO)) info.name = view;
 $('systemRoute').innerHTML = Object.entries(VIEW_INFO).filter(([view]) => view !== 'body').map(([view, info]) => {
-  const [key, note] = info.items[0];
-  return `<button type="button" data-entry="${key}" data-view="${view}" data-route><i>${LAYER_INFO[info.main].short}</i>${escapeHtml(info.title)} <span>${escapeHtml(note)}</span></button>`;
+  const [key] = info.items[0];
+  return `<button type="button" data-entry="${key}" data-view="${view}" data-route><i>${LAYER_INFO[info.main].short}</i>${escapeHtml(info.title)} <span>${escapeHtml(info.route)}</span></button>`;
 }).join('');
 body = await loadBody(state.sex);
 makeStateTextures(body.parts.length);

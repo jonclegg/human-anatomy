@@ -12,6 +12,7 @@ import { readOrgan, FRAMES } from './hra.mjs';
 import { register, warpMesh, meanGap, startMap } from './register.mjs';
 import { PointGrid, spread, icpSimilarity, applyAffine } from './fit.mjs';
 import { Assembly, ERROR, MINIMUM_SHARE } from './assemble.mjs';
+import { pushOutOf, obstacleOf, outerSurface, centreOf } from './clearance.mjs';
 
 const [root, reproductive] = process.argv.slice(2);
 if (!root || !reproductive) throw new Error('usage: node scripts/body/build-female.mjs <"Human Anatomy 3D Models" folder> <female-reproductive-3d-models folder>');
@@ -64,16 +65,11 @@ const NIH = [
   [`${reproductive}/HRA_ovary_right_female_VHF.glb`, 'organs', 'reproductive'],
   [`${reproductive}/HRA_uterine_ovarian_ligaments_broad_round_female_VHF.glb`, 'organs', 'reproductive'],
 ];
-/* a few raw names read better with a fix */
-const RENAME = { Jejenum: 'Jejunum', 'Ginviva of upper jaw': 'Gingiva of upper jaw', 'Ucinate process': 'Uncinate process of pancreas', Caecum: 'Cecum',
-  'Opthalmic artery': 'Ophthalmic artery', 'Fibria of uterine tube': 'Fimbriae of uterine tube', Thyroid_cartilage: 'Thyroid cartilage', 'Epiglotic cartilage': 'Epiglottic cartilage' };
-const fixName = name => { for (const [from, to] of Object.entries(RENAME)) name = name.replace(from, to); return name.replace(/ (a|b|c)$/, (m, letter) => ` (part ${'abc'.indexOf(letter) + 1})`); };
-
 const nih = [];   // { name, raw, file, layer, group, positions, indices }
 for (const [path, layer, group, keep] of NIH) {
   for (const mesh of await readOrgan(path, FRAMES.female)) {
     if (keep && !keep(mesh.raw)) continue;
-    nih.push({ ...mesh, name: fixName(mesh.name), file: path.split('/').pop(), layer, group: group || (/vein|sinus|vena/i.test(mesh.raw) ? 'veins' : 'arteries') });
+    nih.push({ ...mesh, file: path.split('/').pop(), layer, group: group || (/vein|sinus|vena/i.test(mesh.raw) ? 'veins' : 'arteries') });
   }
 }
 /* the same organ appears in more than one file (the bladder sits in two): keep the first */
@@ -230,14 +226,22 @@ const duplicatesHers = mesh => { const points = spread(mesh.positions, 0.5); let
 
 const assembly = new Assembly('female', Math.round(skinHeight * 10) / 10);
 let fitted = 0, dropped = 0;
+/* her scanned organs stay as scanned; any fitted bone, muscle or organ that would pass into one is pushed out of it */
+const OBSTACLES = [/segment of left lung$/, /segment of right lung$/, /heart_female/, /segment of liver$|lobe of liver$/, /left kidney|outer cortex of kidney L|kidney capsule L/i, /right kidney|kidney capsule R|outer cortex of kidney R/i, /spleen/i]
+  .map(pattern => nih.filter(mesh => pattern.test(mesh.name) || pattern.test(mesh.file)))
+  .filter(meshes => meshes.length).map(meshes => ({ grid: meshes.length > 1 ? outerSurface(meshes) : obstacleOf(meshes), centre: centreOf(meshes) }));
+let cleared = 0;
 for (const structure of his) {
   if (!keepsHis(structure)) { dropped++; continue; }
   const mesh = warpMesh(structure.mesh, warp);
+  /* twice over: a point pushed out of one organ can land in its neighbour */
+  if (['skeleton', 'muscles', 'organs'].includes(structure.layer)) for (let pass = 0; pass < 2; pass++) for (const { grid, centre } of OBSTACLES) cleared += pushOutOf(mesh, grid, centre, { gap: 0.5 });
   if (structure.layer === 'vessels' && duplicatesHers(mesh)) { dropped++; continue; }
   assembly.add({ name: structure.name, layer: structure.layer, group: structure.group, source: 'BodyParts3D', fitted: true, id: structure.id, concept: structure.concept }, mesh, { prepared: true });
   fitted++;
 }
 for (const mesh of nih) assembly.add({ name: mesh.name, layer: mesh.layer, group: mesh.group, source: 'NIH female' }, mesh);
+console.log(`  fitted parts kept clear of her organs: ${cleared} points moved`);
 console.log(`female: ${fitted} fitted from the male, ${dropped} of his replaced by hers, ${nih.length} scanned`);
 await assembly.write(new URL('../../site/body/data/female/', import.meta.url));
 

@@ -4,6 +4,7 @@ const port = Number(process.env.PORT || 4173);
 
 export default defineConfig({
   testDir: './tests',
+  testMatch: 'manual.spec.mjs',   // the whole-body model has its own config, playwright.body.config.mjs
   timeout: 60_000,
   expect: { timeout: 10_000 },
   fullyParallel: true,

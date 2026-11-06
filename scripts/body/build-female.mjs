@@ -4,9 +4,9 @@
 // Fitted: no free female skeleton or muscle model exists, so her other bones and all her muscles (and the few organs
 // the NIH set lacks, such as the stomach) are the BodyParts3D male ones, warped to her body. The warp is pinned to her
 // scanned bones and organs, her spine disc by disc, and her skin (register.mjs). Fitted parts are marked as such.
-// Slimmed: the NIH woman was heavy and in her late fifties, so her skin is replaced by a slim young woman's from
-// MakeHuman, and everything inside her is drawn in to fit it (slim.mjs).
-// Usage: node scripts/body/build-female.mjs <"Human Anatomy 3D Models" folder> <female-reproductive-3d-models folder> <MakeHuman folder>
+// This writes her body as fitted to the scan, to build/female-fitted/; slim-female.mjs then reshapes it to a slim young
+// woman and writes the site's data (the NIH woman was heavy and in her late fifties).
+// Usage: node scripts/body/build-female.mjs <"Human Anatomy 3D Models" folder> <female-reproductive-3d-models folder>
 import { listStructures, readMesh } from './bodyparts3d.mjs';
 import { classify } from './systems.mjs';
 import { weld, simplify } from './mesh.mjs';
@@ -15,11 +15,10 @@ import { register, warpMesh, meanGap, startMap } from './register.mjs';
 import { PointGrid, spread, icpSimilarity, applyAffine } from './fit.mjs';
 import { Assembly, ERROR, MINIMUM_SHARE } from './assemble.mjs';
 import { zanatomyAdditions } from './zanatomy.mjs';
-import { slimFemale } from './slim.mjs';
 import { pushOutOf, obstacleOf, outerSurface, centreOf } from './clearance.mjs';
 
-const [root, reproductive, makehuman] = process.argv.slice(2);
-if (!root || !reproductive || !makehuman) throw new Error('usage: node scripts/body/build-female.mjs <"Human Anatomy 3D Models" folder> <female-reproductive-3d-models folder> <MakeHuman folder>');
+const [root, reproductive] = process.argv.slice(2);
+if (!root || !reproductive) throw new Error('usage: node scripts/body/build-female.mjs <"Human Anatomy 3D Models" folder> <female-reproductive-3d-models folder>');
 const hra = (folder, file) => `${root}/${folder}/Human Reference Atlas (GLB)/${file}`;
 
 /* ---------- Her scanned parts: file, layer, group, and which meshes to keep ---------- */
@@ -265,12 +264,8 @@ for (const mesh of nih) {
 }
 console.log(`  fitted parts kept clear of her organs: ${cleared} points moved`);
 console.log(`female: ${fitted} fitted from the male, ${dropped} of his replaced by hers, ${nih.length} scanned`);
-slimFemale(structures, makehuman);
-for (const structure of structures) {
-  const info = structure.layer === 'skin' && structure.name === 'Skin' ? { ...structure.info, source: 'MakeHuman' } : structure.info;
-  assembly.add(info, structure, { prepared: true });
-}
-await assembly.write(new URL('../../site/body/data/female/', import.meta.url));
+for (const structure of structures) assembly.add(structure.info, structure, { prepared: true });
+await assembly.write(new URL('../../build/female-fitted/', import.meta.url));
 
 function centreY(mesh) { let sum = 0; for (let k = 1; k < mesh.positions.length; k += 3) sum += mesh.positions[k]; return sum / (mesh.positions.length / 3); }
 function centreX(mesh) { let sum = 0; for (let k = 0; k < mesh.positions.length; k += 3) sum += mesh.positions[k]; return sum / (mesh.positions.length / 3); }

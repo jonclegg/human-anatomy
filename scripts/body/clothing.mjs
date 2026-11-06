@@ -32,7 +32,9 @@ const shoulder = [top(bone('Left humerus')), top(bone('Right humerus'))];
 const hipY = (hip[0][1] + hip[1][1]) / 2 - 2.3, hipX = (Math.abs(hip[0][0]) + Math.abs(hip[1][0])) / 2;
 const shoulderY = (shoulder[0][1] + shoulder[1][1]) / 2 - 2.5, shoulderX = (Math.abs(shoulder[0][0]) + Math.abs(shoulder[1][0])) / 2;
 
-/* ---------- the skin cut at a height: clusters of outline points ---------- */
+/* ---------- the skin cut at a height: clusters of outline points ----------
+   Where the skin's edges cross the height, and the skin's own points within 0.75 cm of it (a coarse mesh crosses a
+   height in few places, which alone would let the outline miss the widest point between rings) */
 function slice(y) {
   const p = skin.positions, t = skin.indices, points = [];
   for (let k = 0; k < t.length; k += 3) {
@@ -44,6 +46,7 @@ function slice(y) {
       points.push([A[0] + f * (B[0] - A[0]), A[2] + f * (B[2] - A[2])]);
     }
   }
+  for (let k = 0; k < p.length; k += 3) if (Math.abs(p[k + 1] - y) < 0.75) points.push([p[k], p[k + 2]]);
   /* join points closer than 2.5 cm into clusters (MakeHuman's skin is coarse: its outline points can be 2 cm apart) */
   const cell = 2.5, cells = new Map(), parent = points.map((_, k) => k);
   const find = k => parent[k] === k ? k : (parent[k] = find(parent[k]));
@@ -56,7 +59,9 @@ function slice(y) {
   }
   const groups = new Map();
   points.forEach((point, k) => { const root = find(k); (groups.get(root) || groups.set(root, []).get(root)).push(point); });
-  return [...groups.values()].filter(group => group.length > 6).map(group => ({ points: group, x: group.reduce((sum, q) => sum + q[0], 0) / group.length, z: group.reduce((sum, q) => sum + q[1], 0) / group.length }));
+  /* every cluster is kept, however small: where the mesh's triangles are large, gaps over the join distance break the
+     outline into fragments, and leaving out the small ones would cut the cloth into the body there */
+  return [...groups.values()].map(group => ({ points: group, x: group.reduce((sum, q) => sum + q[0], 0) / group.length, z: group.reduce((sum, q) => sum + q[1], 0) / group.length }));
 }
 
 /* the convex hull of 2D points, set out by OFFSET, sampled at AROUND even angles about its middle */
@@ -147,13 +152,17 @@ if (sex === 'female') {
     return parts.parts[index].centre;
   });
   const nippleY = (nipples[0][1] + nipples[1][1]) / 2;
-  const bottom = nippleY - 8, upper = shoulderY - 9;
+  const bottom = nippleY - 8, upper = shoulderY - 10;
   const reach = shoulderX + 1;   // the arms hang beyond this
   const rings = [];
   for (let y = upper; y >= bottom; y -= STEP) {
-    const trunk = trunkAt(y, reach);
-    /* close to the armpits the arm can join the trunk's outline: keep only what lies inside the shoulders */
-    rings.push({ y, points: ring(trunk.flatMap(cluster => cluster.points).filter(([x]) => Math.abs(x) < shoulderX - 3.5)) });
+    /* the trunk's own outline (the arms hang clear of it as their own pieces); where an arm has joined it near the
+       armpit, the joined piece is cut at the shoulder joints */
+    const trunk = trunkAt(y, reach).flatMap(cluster => {
+      const xs = cluster.points.map(q => q[0]), wide = Math.max(...xs) - Math.min(...xs) > 2 * shoulderX;
+      return wide ? cluster.points.filter(([x]) => Math.abs(x) < shoulderX) : cluster.points;
+    });
+    rings.push({ y, points: ring(trunk) });
   }
   tube('Crop top', rings, { band: (r, n) => r >= n - 3 });
   /* the straps: the skin cut front to back through each shoulder, above the top's upper edge, set off it */

@@ -65,6 +65,10 @@ export async function readOrgan(path, frame) {
         positions.set(toModel(frame, world), k * 3);
       }
       const indices = primitive.getIndices() ? Uint32Array.from(primitive.getIndices().getArray()) : Uint32Array.from({ length: count }, (_, k) => k);
+      /* a mirrored node (Z-Anatomy keeps its left-side structures as mirror images of the right) turns its triangles
+         inside out; turn them back, so their faces point outward as the renderer expects */
+      const m = matrix, determinant = m[0] * (m[5] * m[10] - m[9] * m[6]) - m[4] * (m[1] * m[10] - m[9] * m[2]) + m[8] * (m[1] * m[6] - m[5] * m[2]);
+      if (determinant < 0) for (let k = 0; k < indices.length; k += 3) { const swap = indices[k + 1]; indices[k + 1] = indices[k + 2]; indices[k + 2] = swap; }
       out.push({ raw: node.getName(), name: cleanName(node.getName(), path.split('/').pop()), extras: node.getExtras(), positions, indices });
     }
   }

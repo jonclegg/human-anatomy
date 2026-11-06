@@ -94,11 +94,11 @@ How the fit works ([`scripts/body/register.mjs`](scripts/body/register.mjs)): ma
 
 How the slimming works ([`scripts/body/slim.mjs`](scripts/body/slim.mjs), [`scripts/body/makehuman.mjs`](scripts/body/makehuman.mjs)):
 
-1. Her arms, pressed to her sides in the scan, are turned out at the shoulder to MakeHuman's A-pose, with what belongs to each arm.
-2. MakeHuman is posed to her skeleton with its own skin weights: the trunk is scaled to her shoulders and hips and bent to follow her spine, each limb segment is turned and stretched onto her bones, and the head, hands and feet are fitted as wholes (the forearm and shin share the hand's and foot's turn, so the wrists and ankles do not pinch).
-3. A thin-plate spline takes each point of her old skin to the nearest point of the new one, arm to arm and trunk to trunk, with her bones held still (all but the ribcage, which is fitted from the male and was too wide). Her muscles, organs, vessels and nerves follow it.
-4. Her hand and foot bones are moved into MakeHuman's hands and feet joint by joint.
-5. Anything still outside the skin, or just under it, is moved to just under it, and the skin is raised over bone that shows through (not on the hands, feet or face, which keep MakeHuman's shape).
+1. Her arms, pressed to her sides in the scan, are turned out at the shoulder to MakeHuman's A-pose, with what belongs to each arm; muscles that run from the ribcage to the arm turn by degrees between the two.
+2. Her trunk is brought forward, height by height, so her spine follows a standing back (she was scanned lying down, which pressed her upper spine flat).
+3. MakeHuman is posed to her skeleton with its own skin weights: the trunk is scaled to her shoulders and hips and bent to follow her spine, each limb segment is turned and stretched onto her bones, and the head, hands and feet are fitted as wholes.
+4. One smooth thin-plate spline takes her old skin to the new one (arm to arm, trunk to trunk), her nipples and eyes to MakeHuman's, and her hand and foot joints to its joints. Everything inside her follows it, bones included, so nothing tears. Each hand and foot then gets its own exact fit, bone end onto joint.
+5. A second smooth spline draws the outer layer in where it still reaches past the new skin (at most 2 cm, holding everything deeper than 3 cm and the hands still); the skin is raised a little over anything still showing through (not on the feet or the middle of the face, and only just on the hands). A stray piece more than 4 cm outside the body is dropped and named in the build log.
 
 ### What is missing
 
@@ -115,8 +115,11 @@ node scripts/body/build-male.mjs "<Human Anatomy 3D Models folder>"
 ```
 
 ```bash
-node scripts/body/build-female.mjs "<Human Anatomy 3D Models folder>" "<female-reproductive-3d-models folder>" "<MakeHuman folder>"
+node scripts/body/build-female.mjs "<Human Anatomy 3D Models folder>" "<female-reproductive-3d-models folder>"
+node scripts/body/slim-female.mjs "<MakeHuman folder>"
 ```
+
+The first writes her fitted (unslimmed) body to `build/female-fitted/`; the second reshapes it onto MakeHuman's slim young woman and writes `site/body/data/female/`, so the reshaping can be rerun on its own (a few minutes). `node scripts/body/review.mjs <female|male>` then writes contact sheets of every view to `build/review/<sex>/` (with the site served).
 
 The MakeHuman folder holds, from [makehumancommunity/makehuman](https://github.com/makehumancommunity/makehuman/tree/master/makehuman/data): `3dobjs/base.obj`, `rigs/default.mhskel`, `rigs/default_weights.mhw`, and from `targets/macrodetails/` the four targets named in [`scripts/body/slim.mjs`](scripts/body/slim.mjs), all in one folder.
 

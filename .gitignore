@@ -7,3 +7,6 @@ design-review/references/
 design-review/**/*.jpg
 design-review/**/*.png
 design-review/report.html
+
+# the fitted female body, before it is reshaped (build-female.mjs -> slim-female.mjs)
+build/

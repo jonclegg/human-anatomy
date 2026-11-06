@@ -61,7 +61,7 @@ export function tidyName(name, { min, max, centre, height }) {
   const word = name.match(/\b(left|right)\b/i);
   if (word && !CROSSES_MIDLINE.test(name)) {
     const saysLeft = word[1].toLowerCase() === 'left';
-    const onLeft = min[0] > 0.3, onRight = max[0] < -0.3;   // +x is the body's left
+    const onLeft = min[0] > 0, onRight = max[0] < 0;   // wholly on one side; +x is the body's left
     if ((saysLeft && onRight) || (!saysLeft && onLeft)) {
       const swapped = saysLeft ? 'right' : 'left';
       name = name.slice(0, word.index) + (word[1][0] === word[1][0].toUpperCase() ? swapped[0].toUpperCase() + swapped.slice(1) : swapped) + name.slice(word.index + word[1].length);

@@ -10,7 +10,8 @@ import { PointGrid, fitSimilarity, fitAffine, applyAffine } from './fit.mjs';
 /**
  * folder: the MakeHuman files; targets: { name: weight } morph targets added to the base shape
  * Returns { positions (cm, +y up from the floor, +z front, +x the body's left), indices (the skin only),
- *   joints: { name: [x, y, z] }, bones: { name: { head, tail, parent } }, weights: { bone: [[vertex, weight]] } }
+ *   joints: { name: [x, y, z] }, bones: { name: { head, tail, parent } }, weights: { bone: [[vertex, weight]] },
+ *   all: every vertex of the file in the same frame, numbered as the file numbers them }
  */
 export function readMakeHuman(folder, targets) {
   const vertices = [], triangles = [];
@@ -54,7 +55,9 @@ export function readMakeHuman(folder, targets) {
     const mine = list.filter(([vertex]) => kept[vertex] >= 0).map(([vertex, weight]) => [kept[vertex], weight]);
     if (mine.length) skinWeights[bone] = mine;
   }
-  return { positions, indices: Uint32Array.from(triangles, index => kept[index]), bones, weights: skinWeights, count };
+  /* every vertex of the file, helper meshes included: MakeHuman's clothes are tied to those */
+  const all = Float32Array.from(vertices.flatMap(toModel));
+  return { positions, indices: Uint32Array.from(triangles, index => kept[index]), bones, weights: skinWeights, count, all };
 }
 
 /* ---------- Small vector helpers ---------- */

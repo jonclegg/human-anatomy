@@ -219,7 +219,7 @@ const endOf = segment => (/^(hand|foot)/.test(segment) ? segment : /^(lowerForeA
  *   new skin's positions and indices
  * folder: the MakeHuman files; sourceTargets: the morph targets nearest the source body; targets: the new body's
  * Returns { segment: each new skin vertex's body segment, lining: 1 where it lines the mouth or an eye socket, breast: its
- *   share of the breast (0 to 1) }
+ *   share of the breast (0 to 1), rest: the new body's MakeHuman shape before it was posed (readMakeHuman) }
  */
 export function transfer(structures, folder, sourceTargets, targets, { height = null, log = console.log } = {}) {
   const named = (layer, name, { optional = false } = {}) => {
@@ -330,5 +330,5 @@ export function transfer(structures, folder, sourceTargets, targets, { height = 
     for (const structure of structures) for (let k = 0; k < structure.positions.length; k++) structure.positions[k] *= factor;
     log(`scaled by ${factor.toFixed(3)} to stand ${height} cm tall`);
   }
-  return { segment: posed.segment, lining, breast };
+  return { segment: posed.segment, lining, breast, rest: body };
 }

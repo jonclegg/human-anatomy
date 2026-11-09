@@ -77,7 +77,7 @@ npm test             # Playwright: desktop Safari, desktop Chrome and iPhone
 | **Male and female** | Switch bodies at the top right. A selected part carries over, or jumps to its equivalent (testes and ovaries). |
 | **Views per system** | Body, Skeleton, Muscles, Organs, Vessels and Nerves, each with the rest as faint context. |
 | **Every structure** | Every structure can be picked on the model, found by name in the parts list, and isolated. 188 main parts have a description, a common misconception, published measurements and the other sex's equivalent. Step through them with ‹ › or the arrow keys. |
-| **Clothed by default** | Both bodies open with the skin solid and plain underwear on (a crop top and shorts, boxer briefs), as a safe-for-work first view. The Clothing switch takes it off; in the system views it fades with the skin but still covers. |
+| **Clothed by default** | Both bodies open with the skin solid and clothes on (a short top and shorts, boxer briefs), as a safe-for-work first view. The Clothing switch takes it off; in the system views it fades with the skin but still covers. |
 | **X-ray and skin** | Fade a view's outer layer to outlines, and fade the skin. |
 | **Loads fast** | Each system is its own compressed GLB (meshopt), fetched only when a view needs it. The opening view loads 2–3 MB. |
 
@@ -86,7 +86,7 @@ npm test             # Playwright: desktop Safari, desktop Chrome and iPhone
 - **Male:** one adult man from [BodyParts3D](https://dbarchive.biosciencedbc.jp/en/bodyparts3d/) (2,234 structures, built from CT and MRI). BodyParts3D has no lungs and no spinal cord, so those come from the NIH Visible Human Male, carried into the BodyParts3D body by the fit described below.
 - **Added from [Z-Anatomy](https://github.com/Z-Anatomy/Models-of-human-anatomy):** about 750 structures BodyParts3D lacks: the muscles of the face, jaw, back and abdominal wall (latissimus dorsi, rectus abdominis, masseter, temporalis and others), ligaments and joint capsules, the peripheral and cranial nerves, lymph nodes, the thyroid gland, and many vessels. Z-Anatomy is built on BodyParts3D but remodelled, so it is aligned to the BodyParts3D bones by the same fit, and a Z-Anatomy structure is kept only where BodyParts3D has nothing of the same name or in the same place ([`scripts/body/zanatomy.mjs`](scripts/body/zanatomy.mjs)). Its non-commercial parts (the inner ear, a kidney) and its brain models with no stated licence are never exported.
 - **Female, fitted:** no free model of a whole female body exists; scans of women give organs, but no skeleton or muscles that belong with them. So her body is the male body, reshaped as a whole onto a slim young woman's skin (below). In the app, each part that came this way says *Fitted* in its details.
-- **Female, modelled:** her skin is [MakeHuman](https://github.com/makehumancommunity/makehuman)'s base mesh with its young-female and low-weight shape targets (CC0), as the Vagina Anatomy body uses.
+- **Female, modelled:** her skin is [MakeHuman](https://github.com/makehumancommunity/makehuman)'s base mesh with its young Caucasian female and low-weight shape targets (CC0).
 - **Female, scanned:** what is hers alone: her uterus, vagina, ovaries, tubes and their ligaments, and her breasts, from the NIH Visible Human Female ([Human Reference Atlas](https://humanatlas.io/3d-reference-library)), fitted into her pelvis and under her skin. The man's own reproductive organs are left out.
 
 How the male's lungs and spinal cord are carried in ([`scripts/body/register.mjs`](scripts/body/register.mjs)): matching structures of the Visible Human Male and the BodyParts3D man (hip bones, femurs, tibias, kneecaps, heart, liver, kidneys, trachea, larynx) are aligned one by one with affine ICP, and the spine disc by disc. A thin-plate spline through all of those points carries the rest across; near a matched structure, soft tissue moves with that structure's own fit.
@@ -122,10 +122,10 @@ The female build reads the built male body (`site/body/data/male/`), so the male
 
 The MakeHuman files are read from `MakeHuman (CC0)` inside the models folder. They come from [makehumancommunity/makehuman](https://github.com/makehumancommunity/makehuman/tree/master/makehuman/data): `3dobjs/base.obj`, `rigs/default.mhskel`, `rigs/default_weights.mhw`, and from `targets/macrodetails/` the targets named in [`scripts/body/build-female.mjs`](scripts/body/build-female.mjs), all in one folder.
 
-Then the clothing, shaped from each body's skin:
+She is dressed by her own build, in MakeHuman's clothing (CC0): the top of its `female_sportsuit01` and the shorts of its `female_casualsuit02`, read from `MakeHuman clothes (CC0)/clothes` inside the models folder (the `makehuman_system_assets_cc0` pack from [files.makehumancommunity.org](https://files.makehumancommunity.org/asset_packs/makehuman_system_assets/)). A MakeHuman garment is tied vertex by vertex to the MakeHuman body mesh, which her skin is, so it follows her shape ([`scripts/body/garments.mjs`](scripts/body/garments.mjs)). His briefs are shaped from his skin:
 
 ```bash
-node scripts/body/clothing.mjs male && node scripts/body/clothing.mjs female
+node scripts/body/clothing.mjs male
 ```
 
 First export Z-Anatomy with Blender (the scripts in [`scripts/body/blender/`](scripts/body/blender/) write to the folder the builds read):
@@ -148,7 +148,7 @@ The whole-body data in `site/body/data/` is derived from:
 
 - **BodyParts3D**, © The Database Center for Life Science, licensed under CC Attribution 4.0 International ([licence page](https://dbarchive.biosciencedbc.jp/en/bodyparts3d/lic.html)). The OBJ files' headers still carry an older CC BY-SA 2.1 Japan notice; the licence page, updated 27 February 2025, gives CC BY 4.0. Simplified, re-coloured and, for the female body, reshaped.
 - **Human Reference Atlas 3D reference organs** (HuBMAP, NIH; Visible Human Project, U.S. National Library of Medicine; brain from the Allen Institute), CC BY 4.0. Simplified, renamed and aligned.
-- **MakeHuman** base mesh, skeleton, skin weights and shape targets (the female skin), CC0.
+- **MakeHuman** base mesh, skeleton, skin weights and shape targets (the female skin), and two garments (the female clothing), CC0.
 - **Z-Anatomy**, the libre 3D atlas of anatomy, CC BY-SA 4.0 (built on BodyParts3D); cranial nerves after Cranial Nerves and Foramina, University of Dundee CAHID, CC BY 4.0. Aligned, simplified and, for the female body, reshaped.
 
 Because it includes Z-Anatomy, the whole-body 3D data (`site/body/data/`) is shared under [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/). The code and the text in `site/body/parts.mjs` stay MIT.

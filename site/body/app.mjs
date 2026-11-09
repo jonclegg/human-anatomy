@@ -297,7 +297,7 @@ function loadLayer(body, layer) {
   });
   return record.promise;
 }
-/* plain underwear (data/<sex>/clothing.glb), its colours in the file; not a part, so it is neither listed nor picked */
+/* the clothing (data/<sex>/clothing.glb), its colours in the file; not a part, so it is neither listed nor picked */
 const CLOTH = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.85, metalness: 0, side: THREE.DoubleSide });
 function loadClothing(body) {
   if (body.clothing) return body.clothing.promise;
@@ -335,10 +335,10 @@ function measureAnchors(body, geometry) {
 
 /* ---------- State ---------- */
 const state = {
-  sex: 'male', view: 'body', layers: {}, xray: 0, body: 0.25, labels: true, clothed: true, tone: 1,
+  sex: 'male', view: 'body', layers: {}, xray: 0, body: 0.25, labels: true, clothed: true, tone: 0,
   selection: null, hovered: -1, drawer: false, dock: false, inspectorOpen: true, sheet: 'peek', tour: null, touched: false, search: '',
 };
-try { const saved = JSON.parse(localStorage.getItem('wl-body') || '{}'); if (Number.isInteger(saved.tone)) state.tone = saved.tone; if (saved.sex === 'female' || saved.sex === 'male') state.sex = saved.sex; } catch (error) { /* storage unavailable */ }
+try { const saved = JSON.parse(localStorage.getItem('wl-body') || '{}'); if (saved.tonePicked && Number.isInteger(saved.tone)) state.tone = saved.tone; if (saved.sex === 'female' || saved.sex === 'male') state.sex = saved.sex; } catch (error) { /* storage unavailable */ }
 const params = new URLSearchParams(location.search);
 if (params.get('sex') === 'female' || params.get('sex') === 'male') state.sex = params.get('sex');
 let body = null;   // the body on show
@@ -401,10 +401,12 @@ const tonesEl = $('tones');
 TONES.forEach((tone, k) => {
   const button = document.createElement('button'); button.type = 'button'; button.style.setProperty('--sw', tone);
   button.setAttribute('aria-label', `Skin tone ${k + 1}`);
-  button.addEventListener('click', () => { state.tone = k; save(); applyVisibility(); syncUI(); });
+  button.addEventListener('click', () => { state.tone = k; tonePicked = true; save(); applyVisibility(); syncUI(); });
   tonesEl.append(button);
 });
-const save = () => { try { localStorage.setItem('wl-body', JSON.stringify({ tone: state.tone, sex: state.sex })); } catch (error) { /* storage unavailable */ } };
+/* the skin tone is kept only once the visitor has picked one, so the default can change for everyone else */
+let tonePicked = (() => { try { return !!JSON.parse(localStorage.getItem('wl-body') || '{}').tonePicked; } catch (error) { return false; } })();
+const save = () => { try { localStorage.setItem('wl-body', JSON.stringify({ tone: state.tone, tonePicked, sex: state.sex })); } catch (error) { /* storage unavailable */ } };
 
 /* every entry has a number, as in a parts diagram: the callouts on the model and the parts list share it */
 const entryNumber = key => body.order.indexOf(key) + 1;

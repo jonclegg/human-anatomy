@@ -8,6 +8,8 @@
 // What is hers alone is scanned: her uterus, vagina, ovaries, tubes and their ligaments, and her breasts, from the NIH
 // Visible Human Female (Human Reference Atlas, CC BY 4.0), fitted into her pelvis and under her skin. His own
 // reproductive organs are left out.
+// She is dressed in MakeHuman's own clothing (CC0): a sports top and shorts, from `MakeHuman clothes (CC0)/clothes`
+// in the models folder (the makehuman_system_assets_cc0 pack of files.makehumancommunity.org).
 // Usage: node scripts/body/build-female.mjs <"Human Anatomy 3D Models" folder> <female-reproductive-3d-models folder>
 import { readParts, readLayer } from './built.mjs';
 import { transfer, keepUnder } from './transfer.mjs';
@@ -15,16 +17,16 @@ import { readOrgan, FRAMES } from './hra.mjs';
 import { register, warpMesh, startMap } from './register.mjs';
 import { pushOutOf, obstacleOf, centreOf } from './clearance.mjs';
 import { Assembly } from './assemble.mjs';
+import { readGarment, wear, writeClothing } from './garments.mjs';
 import { bounds } from './mesh.mjs';
 import { LAYERS } from './systems.mjs';
 
 const [root, reproductive] = process.argv.slice(2);
 if (!root || !reproductive) throw new Error('usage: node scripts/body/build-female.mjs <"Human Anatomy 3D Models" folder> <female-reproductive-3d-models folder>');
 const HEIGHT = 163;   // cm
-/* the MakeHuman shape nearest the man, and hers: an even mix of its three young-female shapes plus half its lowest-weight
-   one, as the Vagina Anatomy body uses */
+/* the MakeHuman shape nearest the man, and hers: its young Caucasian female shape plus half its lowest-weight one */
 const HIS_SHAPE = { 'caucasian-male-young': 1 };
-const HER_SHAPE = { 'caucasian-female-young': 1 / 3, 'african-female-young': 1 / 3, 'asian-female-young': 1 / 3, 'universal-female-young-averagemuscle-minweight': 0.5 };
+const HER_SHAPE = { 'caucasian-female-young': 1, 'universal-female-young-averagemuscle-minweight': 0.5 };
 
 /* ---------- His body, without what is his alone ---------- */
 /* his outer ear is a part of its own; her skin has ears */
@@ -38,7 +40,7 @@ for (const layer of LAYERS) for (const piece of await readLayer('male', layer)) 
   structures.push({ positions: piece.positions, indices: piece.indices, name: part.name, layer, part });
 }
 console.log(`female: ${structures.length} of his structures carried across, ${left} left out`);
-const { lining, breast } = transfer(structures, `${root}/MakeHuman (CC0)`, HIS_SHAPE, HER_SHAPE, { height: HEIGHT });
+const { lining, breast, rest } = transfer(structures, `${root}/MakeHuman (CC0)`, HIS_SHAPE, HER_SHAPE, { height: HEIGHT });
 const skin = structures.find(structure => structure.layer === 'skin');
 const hers = name => { const found = structures.filter(structure => structure.name === name); if (!found.length) throw new Error(`she has no ${name}`); return found; };
 
@@ -124,3 +126,22 @@ for (const structure of structures) {
 for (const mesh of added) assembly.add({ name: mesh.name, layer: mesh.layer, group: mesh.group, source: 'NIH female' }, mesh);
 console.log(`female: ${structures.length} structures from the male body, ${added.length} scanned`);
 await assembly.write(new URL('../../site/body/data/female/', import.meta.url));
+
+/* ---------- Her clothing ---------- */
+{
+  const clothes = `${root}/MakeHuman clothes (CC0)/clothes`;
+  const restSkin = { positions: rest.positions, indices: rest.indices }, isLining = (a, b, c) => lining[a] || lining[b] || lining[c];
+  /* linear colours (as glTF stores them): a slate-blue top (#3c4c64 on screen) and charcoal shorts (#40444f) */
+  const garments = [];
+  for (const [label, name, pick, colour] of [['Top', 'female_sportsuit01', piece => piece.high > 0.6, [0.045, 0.072, 0.127]], ['Shorts', 'female_casualsuit02', piece => piece.high < 0.62, [0.051, 0.058, 0.078]]]) {
+    /* a suit is a top and a bottom: its pieces are told apart by how high they reach, as a share of her rest height */
+    const height = rest.positions.reduce((top, value, k) => (k % 3 === 1 ? Math.max(top, value) : top), 0);
+    const pieces = readGarment(clothes, name, rest.all).filter(piece => pick({ high: piece.positions.reduce((top, value, k) => (k % 3 === 1 ? Math.max(top, value) : top), 0) / height }));
+    if (!pieces.length) throw new Error(`no ${label.toLowerCase()} in ${name}`);
+    pieces.forEach((piece, k) => {
+      const positions = wear(piece, restSkin, skin, { skip: isLining });
+      garments.push({ name: k ? `${label} (part ${k + 1})` : label, positions, colours: Array.from({ length: positions.length / 3 }, () => colour).flat(), indices: piece.indices });
+    });
+  }
+  console.log(`female clothing: ${await writeClothing(garments, new URL('../../site/body/data/female/clothing.glb', import.meta.url))}`);
+}

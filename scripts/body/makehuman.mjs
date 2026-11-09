@@ -105,6 +105,7 @@ const SEGMENT_BONES = side => ({
  *   back-most point), from the lowest lumbar vertebra up to the seventh cervical, and front: the front of the breastbone
  *   along its length
  * Returns { positions, segment: each vertex's main segment name, place(bone, point): where a point moving with a bone goes,
+ *   poseOther(body): the same pose given to another shape of the mesh,
  *   trunkMap, back: MakeHuman's back midline as placed on the trunk, before it is fitted to the skeleton's }.
  */
 export function poseMakeHuman(body, target, log = console.log) {
@@ -219,22 +220,49 @@ export function poseMakeHuman(body, target, log = console.log) {
     const name = segmentOf(bone);
     for (const [vertex, weight] of list) share[vertex][name] = (share[vertex][name] || 0) + weight;
   }
-  const out = new Float32Array(positions.length), main = new Array(count);
-  for (let v = 0; v < count; v++) {
-    const p = [positions[3 * v], positions[3 * v + 1], positions[3 * v + 2]];
-    const entries = Object.entries(share[v]);
-    const total = entries.reduce((sum, [, weight]) => sum + weight, 0);
-    let q = [0, 0, 0];
-    if (!total) { q = bent(p); main[v] = 'trunk'; }
-    else {
-      for (const [name, weight] of entries) q = add(q, scale(maps[name](p), weight / total));
-      main[v] = entries.sort((x, y) => y[1] - x[1])[0][0];
+  const main = share.map(entry => Object.entries(entry).sort((x, y) => y[1] - x[1])[0]?.[0] ?? 'trunk');
+  const blended = (rest, maps, trunk) => {
+    const out = new Float32Array(rest.length);
+    for (let v = 0; v < count; v++) {
+      const p = [rest[3 * v], rest[3 * v + 1], rest[3 * v + 2]];
+      const entries = Object.entries(share[v]);
+      const total = entries.reduce((sum, [, weight]) => sum + weight, 0);
+      let q = [0, 0, 0];
+      if (!total) q = trunk(p);
+      else for (const [name, weight] of entries) q = add(q, scale(maps[name](p), weight / total));
+      out.set(q, 3 * v);
     }
-    out.set(q, 3 * v);
-  }
+    return out;
+  };
+  const out = blended(positions, maps, bent);
+  /* The same pose for another shape of the mesh (other morph targets): each segment turns and stretches as it does
+     here, but about the other shape's own joint, which sits where that shape's parent segment puts it (plus whatever
+     gap this fit left at that joint). So a shorter body with narrower shoulders comes out in this pose with its own
+     proportions, its arms hinged at its own shoulders. Returns { positions, place(bone, point) }. */
+  const JOINT = { head: ['trunk', 'head'] };
+  for (const side of ['L', 'R']) Object.assign(JOINT, {
+    ['clavicle' + side]: ['trunk', `clavicle.${side}`], ['upperArm' + side]: ['clavicle' + side, `upperarm01.${side}`],
+    ['foreArm' + side]: ['upperArm' + side, `lowerarm01.${side}`], ['lowerForeArm' + side]: ['upperArm' + side, `lowerarm01.${side}`],
+    ['hand' + side]: ['lowerForeArm' + side, `wrist.${side}`], ['thigh' + side]: ['trunk', `upperleg01.${side}`],
+    ['shin' + side]: ['thigh' + side, `lowerleg01.${side}`], ['lowerShin' + side]: ['thigh' + side, `lowerleg01.${side}`],
+    ['foot' + side]: ['lowerShin' + side, `foot.${side}`],
+  });
+  const poseOther = other => {
+    /* the trunk's depth and curve are given height by height: the other shape's trunk is read at the matching height */
+    const span = body => [trunkMap(scale(add(body.bones['upperleg01.L'].head, body.bones['upperleg01.R'].head), 0.5))[1], trunkMap(body.bones.neck01.head)[1]];
+    const [myHips, myNeck] = span({ bones }), [theirHips, theirNeck] = span(other);
+    const theirs = { trunk: p => { const q = trunkMap(p), [, a, b] = rowAt(myHips + (q[1] - theirHips) * (myNeck - myHips) / (theirNeck - theirHips)); return [q[0], q[1], a * q[2] + b]; } };
+    for (const [name, [parent, bone]] of Object.entries(JOINT)) {
+      const mine = bones[bone].head, joint = other.bones[bone].head, map = maps[name], parentMap = parent === 'trunk' ? bent : maps[parent];
+      const origin = map([0, 0, 0]), columns = [[1, 0, 0], [0, 1, 0], [0, 0, 1]].map(axis => sub(map(axis), origin));
+      const base = add(theirs[parent](joint), sub(map(mine), parentMap(mine)));
+      theirs[name] = p => { const d = sub(p, joint); return [0, 1, 2].map(c => base[c] + columns[0][c] * d[0] + columns[1][c] * d[1] + columns[2][c] * d[2]); };
+    }
+    return { positions: blended(other.positions, theirs, theirs.trunk), place: (bone, point) => theirs[segmentOf(bone)](point) };
+  };
   /* where a MakeHuman point that moves with a given bone ends up */
   const place = (bone, point) => maps[segmentOf(bone)](point);
-  return { positions: out, segment: main, place, trunkMap, back: myBack };
+  return { positions: out, segment: main, place, poseOther, trunkMap, back: myBack };
 }
 
 /* MakeHuman's own landmarks, from its skeleton */

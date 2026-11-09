@@ -87,7 +87,7 @@ test.describe('both bodies', () => {
     await open(page, { sex: 'female', view: 'skeleton' });
     await model(page, () => window.bodyModel.selectEntry('humerus'));
     await expect(page.locator('#inspector .source em')).toHaveText('Fitted');
-    await model(page, () => window.bodyModel.selectEntry('femur'));
+    await model(page, () => window.bodyModel.selectEntry('uterus'));
     await expect(page.locator('#inspector .source')).toContainText('Visible Human Female');
   });
 });
@@ -240,13 +240,13 @@ test.describe('picking and inspector', () => {
 
   test('picking a piece of an organ selects the organ on that side', async ({ page }) => {
     await open(page, { sex: 'female', view: 'organs' });
-    const pyramid = await model(page, () => window.bodyModel.body().parts.findIndex(part => /^Left renal pyramid/.test(part.name)));
-    expect(pyramid).toBeGreaterThan(-1);
-    const chosen = await model(page, index => { window.bodyModel.selectPart(index); return window.bodyModel.state.selection.parts.map(other => window.bodyModel.sideOf(other)); }, pyramid);
-    expect(chosen.length).toBeGreaterThan(10);
+    const segment = await model(page, () => { const parts = window.bodyModel.body().parts, index = parts.findIndex(part => /segment of left lung$/.test(part.name)); return { index, name: parts[index]?.name }; });
+    expect(segment.index).toBeGreaterThan(-1);
+    const chosen = await model(page, index => { window.bodyModel.selectPart(index); return window.bodyModel.state.selection.parts.map(other => window.bodyModel.sideOf(other)); }, segment.index);
+    expect(chosen.length).toBeGreaterThan(5);
     expect(new Set(chosen)).toEqual(new Set(['left']));
-    await expect(page.locator('#inspectorTitle')).toHaveText('Kidneys');
-    await expect(page.locator('#inspector .aka')).toContainText('Left renal pyramid');
+    await expect(page.locator('#inspectorTitle')).toHaveText('Lungs');
+    await expect(page.locator('#inspector .aka')).toContainText(segment.name);
   });
 
   test('choosing a part isolates it: it stays solid and the rest fades', async ({ page }) => {
@@ -308,17 +308,24 @@ test.describe('layout', () => {
 /* Sizes from the models themselves, against published adult ranges. Lengths are along each structure's long axis. */
 test.describe('anatomy', () => {
   test.describe.configure({ timeout: 180_000 });
-  test('female: a slim young body, not the NIH scan\'s outline', async ({ page }, testInfo) => {
+  test('female: a slim young body', async ({ page }, testInfo) => {
     test.skip(testInfo.project.name !== 'chromium', 'geometry, checked once');
     await open(page, { sex: 'female' });
     const waist = await model(page, () => {
       const m = window.bodyModel, skin = m.findPart('Skin'), points = m.points(skin), height = m.size('skin').y;
-      /* the narrowest trunk width between the hips and the ribs, and the depth there; the arms hang well clear */
+      /* the narrowest trunk width between the hips and the ribs, and the depth there. Her forearms hang beside her
+         waist: the trunk is the run of points through the midline with no gap of 3 cm across. */
       let best = null;
       for (let y = 0.56 * height; y <= 0.66 * height; y += 0.5) {
-        const row = points.filter(p => Math.abs(p[1] - y) < 1.5 && Math.abs(p[0]) < 20);   // the hook samples about 2,000 of the skin's points
+        const across = points.filter(p => Math.abs(p[1] - y) < 1.5).sort((a, b) => a[0] - b[0]);   // the hook samples about 2,000 of the skin's points
+        const start = across.findIndex(p => p[0] >= 0);
+        if (start < 1) continue;
+        let low = start - 1, high = start;
+        while (low > 0 && across[low][0] - across[low - 1][0] < 3) low--;
+        while (high < across.length - 1 && across[high + 1][0] - across[high][0] < 3) high++;
+        const row = across.slice(low, high + 1);
         if (row.length < 8) continue;
-        const width = Math.max(...row.map(p => p[0])) - Math.min(...row.map(p => p[0])), depth = Math.max(...row.map(p => p[2])) - Math.min(...row.map(p => p[2]));
+        const width = row.at(-1)[0] - row[0][0], depth = Math.max(...row.map(p => p[2])) - Math.min(...row.map(p => p[2]));
         if (!best || width < best.width) best = { width, depth };
       }
       return { ...best, source: m.part(skin).source };

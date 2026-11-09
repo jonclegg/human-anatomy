@@ -85,24 +85,24 @@ npm test             # Playwright: desktop Safari, desktop Chrome and iPhone
 
 - **Male:** one adult man from [BodyParts3D](https://dbarchive.biosciencedbc.jp/en/bodyparts3d/) (2,234 structures, built from CT and MRI). BodyParts3D has no lungs and no spinal cord, so those come from the NIH Visible Human Male, carried into the BodyParts3D body by the fit described below.
 - **Added from [Z-Anatomy](https://github.com/Z-Anatomy/Models-of-human-anatomy):** about 750 structures BodyParts3D lacks: the muscles of the face, jaw, back and abdominal wall (latissimus dorsi, rectus abdominis, masseter, temporalis and others), ligaments and joint capsules, the peripheral and cranial nerves, lymph nodes, the thyroid gland, and many vessels. Z-Anatomy is built on BodyParts3D but remodelled, so it is aligned to the BodyParts3D bones by the same fit, and a Z-Anatomy structure is kept only where BodyParts3D has nothing of the same name or in the same place ([`scripts/body/zanatomy.mjs`](scripts/body/zanatomy.mjs)). Its non-commercial parts (the inner ear, a kidney) and its brain models with no stated licence are never exported.
-- **Female, scanned:** her organs, brain, spinal cord, the vessels of her trunk and head, her bony pelvis, thigh and leg bones, kneecaps, breastbone and intervertebral discs come from the NIH Visible Human Female ([Human Reference Atlas](https://humanatlas.io/3d-reference-library)).
-- **Female, fitted:** no free model of a female skeleton or muscles exists. Her other bones (skull, spine, ribs, arms, hands, feet), all her muscles, and the few organs the NIH set lacks (oesophagus, stomach, gallbladder and bile ducts, adrenal glands, pituitary, tear glands, eyelid plates and outer ears) are the BodyParts3D male ones, **fitted** to her. In the app, each fitted part says *Fitted* in its details.
+- **Female, fitted:** no free model of a whole female body exists; scans of women give organs, but no skeleton or muscles that belong with them. So her body is the male body, reshaped as a whole onto a slim young woman's skin (below). In the app, each part that came this way says *Fitted* in its details.
+- **Female, modelled:** her skin is [MakeHuman](https://github.com/makehumancommunity/makehuman)'s base mesh with its young-female and low-weight shape targets (CC0), as the Vagina Anatomy body uses.
+- **Female, scanned:** what is hers alone: her uterus, vagina, ovaries, tubes and their ligaments, and her breasts, from the NIH Visible Human Female ([Human Reference Atlas](https://humanatlas.io/3d-reference-library)), fitted into her pelvis and under her skin. The man's own reproductive organs are left out.
 
-- **Female, slimmed:** the Visible Human Female was a heavier woman in her late fifties. Her skin is replaced by a slim young woman's from [MakeHuman](https://github.com/makehumancommunity/makehuman) (its base mesh with the young-female and low-weight shape targets, CC0, as the Vagina Anatomy body uses), and everything inside is drawn in to fit it ([`scripts/body/slim.mjs`](scripts/body/slim.mjs)). Her scanned organs keep their shapes but not their exact places.
+How the male's lungs and spinal cord are carried in ([`scripts/body/register.mjs`](scripts/body/register.mjs)): matching structures of the Visible Human Male and the BodyParts3D man (hip bones, femurs, tibias, kneecaps, heart, liver, kidneys, trachea, larynx) are aligned one by one with affine ICP, and the spine disc by disc. A thin-plate spline through all of those points carries the rest across; near a matched structure, soft tissue moves with that structure's own fit.
 
-How the fit works ([`scripts/body/register.mjs`](scripts/body/register.mjs)): matching structures (hip bones, femurs, tibias, kneecaps, sternum, heart, liver, kidneys, spleen, bladder, rectum, brain, eyes, trachea, larynx) are aligned one by one with affine ICP. The spine is matched disc by disc along its length, and each hand and foot is turned as a whole to match hers (she was scanned lying down with her feet pointed). A thin-plate spline through all of those points carries the rest of his body across. Near a matched structure, soft tissue moves with that structure's own fit, as skin follows a bone, so muscles are not stretched out into her thicker body fat. Finally, any fitted bone or muscle that would pass into one of her scanned organs is pushed clear of it ([`scripts/body/clearance.mjs`](scripts/body/clearance.mjs)).
+How the female body is made ([`scripts/body/transfer.mjs`](scripts/body/transfer.mjs), [`scripts/body/makehuman.mjs`](scripts/body/makehuman.mjs)). The male body is one man, so his skin, bones, muscles and organs fit each other. The method keeps that fit by never moving one part against another:
 
-How the slimming works ([`scripts/body/slim.mjs`](scripts/body/slim.mjs), [`scripts/body/makehuman.mjs`](scripts/body/makehuman.mjs)):
-
-1. Her arms, pressed to her sides in the scan, are turned out at the shoulder to MakeHuman's A-pose, with what belongs to each arm; muscles that run from the ribcage to the arm turn by degrees between the two.
-2. Her trunk is brought forward, height by height, so her spine follows a standing back (she was scanned lying down, which pressed her upper spine flat).
-3. MakeHuman is posed to her skeleton with its own skin weights: the trunk is scaled to her shoulders and hips and bent to follow her spine, each limb segment is turned and stretched onto her bones, and the head, hands and feet are fitted as wholes.
-4. One smooth thin-plate spline takes her old skin to the new one (arm to arm, trunk to trunk), her nipples and eyes to MakeHuman's, and her hand and foot joints to its joints. Everything inside her follows it, bones included, so nothing tears. Each hand and foot then gets its own exact fit, bone end onto joint.
-5. A second smooth spline draws the outer layer in where it still reaches past the new skin (at most 2 cm, holding everything deeper than 3 cm and the hands still); the skin is raised a little over anything still showing through (not on the feet or the middle of the face, and only just on the hands). A stray piece more than 4 cm outside the body is dropped and named in the build log.
+1. MakeHuman, in a male shape, is posed to his skeleton with its own skin weights, then drawn onto his skin: each vertex moves to the nearest skin point that faces the same way, as a sheet that resists stretching, so it keeps its layout. Every MakeHuman vertex now marks a known spot on him.
+2. The same mesh in its female shape is put through the same pose, each limb hinged at its own joints. Her skin is his skin plus the difference between the two posed shapes, so flaws of the pose, which both share, cancel. Her head, hands and feet are MakeHuman's own, and her lips are closed.
+3. One smooth thin-plate spline takes each marked spot on his skin to the same vertex of hers (the breasts are left out, so the chest wall does not swell into them), his eyes to her eyes, and his hand and foot joints to hers. Everything inside him follows it. The pose does not change, so nothing has to turn or tear.
+4. Each hand and foot then gets its own exact fit, bone end onto joint, and each eyeball is set in her eyelids.
+5. Whatever still lies outside the skin or just under it is brought under: the layers there are pressed inward together, so a sheet of muscle stays over its bone. The man's own data has some of this (a vein, a band of fascia and some toe ligaments from Z-Anatomy run over his skin).
+6. The body is scaled to 163 cm. Her scanned pelvic organs are fitted by matching the scan's hip bones, sacrum, bladder and rectum to hers; each scanned breast is fitted into the breast of her skin, nipple under nipple and back on the chest wall.
 
 ### What is missing
 
-The inner ear (the only free model is non-commercial), and the smallest vessels and nerves. The female skeleton and muscles are fitted, not scanned, and the female body has no hair (MakeHuman's hair is not in its public repository).
+The inner ear (the only free model is non-commercial), and the smallest vessels and nerves. The female body is the male one reshaped, apart from her scanned reproductive organs and breasts, and it has no hair (MakeHuman's hair is not in its public repository).
 
 ### Checks
 
@@ -116,12 +116,11 @@ node scripts/body/build-male.mjs "<Human Anatomy 3D Models folder>"
 
 ```bash
 node scripts/body/build-female.mjs "<Human Anatomy 3D Models folder>" "<female-reproductive-3d-models folder>"
-node scripts/body/slim-female.mjs "<MakeHuman folder>"
 ```
 
-The first writes her fitted (unslimmed) body to `build/female-fitted/`; the second reshapes it onto MakeHuman's slim young woman and writes `site/body/data/female/`, so the reshaping can be rerun on its own (a few minutes). `node scripts/body/review.mjs <female|male>` then writes contact sheets of every view to `build/review/<sex>/` (with the site served).
+The female build reads the built male body (`site/body/data/male/`), so the male comes first; it takes about a minute and writes `site/body/data/female/`. `node scripts/body/review.mjs <female|male>` then writes contact sheets of every view to `build/review/<sex>/`, and `node scripts/body/shots.mjs` close-ups from any angle (both with the site served).
 
-The MakeHuman folder holds, from [makehumancommunity/makehuman](https://github.com/makehumancommunity/makehuman/tree/master/makehuman/data): `3dobjs/base.obj`, `rigs/default.mhskel`, `rigs/default_weights.mhw`, and from `targets/macrodetails/` the four targets named in [`scripts/body/slim.mjs`](scripts/body/slim.mjs), all in one folder.
+The MakeHuman files are read from `MakeHuman (CC0)` inside the models folder. They come from [makehumancommunity/makehuman](https://github.com/makehumancommunity/makehuman/tree/master/makehuman/data): `3dobjs/base.obj`, `rigs/default.mhskel`, `rigs/default_weights.mhw`, and from `targets/macrodetails/` the targets named in [`scripts/body/build-female.mjs`](scripts/body/build-female.mjs), all in one folder.
 
 Then the clothing, shaped from each body's skin:
 
@@ -139,7 +138,7 @@ blender -b --disable-autoexec "<Z-Anatomy folder>/Startup.blend" --python script
 blender -b --disable-autoexec "<Z-Anatomy folder>/Startup.blend" --python scripts/body/blender/export-zanatomy-bones.py -- "<Human Anatomy 3D Models folder>/Whole Body - Z-Anatomy (Blender)/export/zanatomy-bones.glb"
 ```
 
-The male build takes a few minutes; the female build about 20 minutes, most of it the fit and the slimming. They write `site/body/data/<sex>/` (one GLB per layer, `parts.json`, and `clothing.glb`). The text for each main part is in [`site/body/parts.mjs`](site/body/parts.mjs). Serve the site with `npm run serve:body` (http://127.0.0.1:4174).
+The male build takes a few minutes. The builds write `site/body/data/<sex>/` (one GLB per layer, `parts.json`, and `clothing.glb`). The text for each main part is in [`site/body/parts.mjs`](site/body/parts.mjs). Serve the site with `npm run serve:body` (http://127.0.0.1:4174).
 
 ## Licence
 
@@ -147,10 +146,10 @@ Code and text are [MIT](LICENSE). Embedded data keeps its own licence: the pelvi
 
 The whole-body data in `site/body/data/` is derived from:
 
-- **BodyParts3D**, © The Database Center for Life Science, licensed under CC Attribution 4.0 International ([licence page](https://dbarchive.biosciencedbc.jp/en/bodyparts3d/lic.html)). The OBJ files' headers still carry an older CC BY-SA 2.1 Japan notice; the licence page, updated 27 February 2025, gives CC BY 4.0. Simplified, re-coloured and, for the female body, warped.
+- **BodyParts3D**, © The Database Center for Life Science, licensed under CC Attribution 4.0 International ([licence page](https://dbarchive.biosciencedbc.jp/en/bodyparts3d/lic.html)). The OBJ files' headers still carry an older CC BY-SA 2.1 Japan notice; the licence page, updated 27 February 2025, gives CC BY 4.0. Simplified, re-coloured and, for the female body, reshaped.
 - **Human Reference Atlas 3D reference organs** (HuBMAP, NIH; Visible Human Project, U.S. National Library of Medicine; brain from the Allen Institute), CC BY 4.0. Simplified, renamed and aligned.
 - **MakeHuman** base mesh, skeleton, skin weights and shape targets (the female skin), CC0.
-- **Z-Anatomy**, the libre 3D atlas of anatomy, CC BY-SA 4.0 (built on BodyParts3D); cranial nerves after Cranial Nerves and Foramina, University of Dundee CAHID, CC BY 4.0. Aligned, simplified and, for the female body, warped.
+- **Z-Anatomy**, the libre 3D atlas of anatomy, CC BY-SA 4.0 (built on BodyParts3D); cranial nerves after Cranial Nerves and Foramina, University of Dundee CAHID, CC BY 4.0. Aligned, simplified and, for the female body, reshaped.
 
 Because it includes Z-Anatomy, the whole-body 3D data (`site/body/data/`) is shared under [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/). The code and the text in `site/body/parts.mjs` stay MIT.
 

@@ -503,14 +503,14 @@ function sourceNote(parts) {
   const fitted = parts.some(index => body.parts[index].fitted);
   const source = body.parts[parts[0]].source;
   return fitted
-    ? `<div class="source"><em class="fitted">Fitted</em><span>Male ${escapeHtml(source)} shape, warped to fit the NIH Visible Human Female. No free female model of this part exists.</span></div>`
+    ? `<div class="source"><em class="fitted">Fitted</em><span>The male body's part (${escapeHtml(SOURCE_NAME[source] || source)}), reshaped with the whole body to a young woman's build. No free female model of this part exists.</span></div>`
     : `<div class="source"><em>${source === 'MakeHuman' ? 'Modelled' : 'Scanned'}</em><span>${escapeHtml(SOURCE_TEXT[source] || source)}</span></div>`;
 }
+const SOURCE_NAME = { 'NIH male': 'NIH Visible Human Male' };
 const SOURCE_TEXT = {
   BodyParts3D: 'BodyParts3D: an adult Japanese man, built from CT and MRI.',
-  'NIH female': 'NIH Visible Human Female: a 59-year-old woman, from cryosection images. Drawn in to fit the slimmer body here.',
-  'Allen brain': 'Human Reference Atlas female brain, from the Allen Institute (CC BY 4.0). Placed in this body.',
-  MakeHuman: 'MakeHuman base mesh with young-female shape targets (CC0), posed to this skeleton.',
+  'NIH female': 'NIH Visible Human Female: a 59-year-old woman, from cryosection images. Fitted into the slim young body here.',
+  MakeHuman: 'MakeHuman base mesh with young-female shape targets (CC0), in the pose of the male body.',
   'NIH male': 'NIH Visible Human Male: a 38-year-old man, from cryosection images. Aligned to the BodyParts3D body.',
   'Z-Anatomy': 'Z-Anatomy, an open atlas built on BodyParts3D (CC BY-SA 4.0). Aligned to the BodyParts3D body.',
 };

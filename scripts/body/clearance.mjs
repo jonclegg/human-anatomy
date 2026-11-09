@@ -56,21 +56,6 @@ export function pushOutOf(mesh, obstacle, centre, { gap = 0.3, reach = 6 } = {})
   return moved;
 }
 
-/* An organ made of pieces (a lung's segments, the liver's) has faces inside it where the pieces meet. Only its outer
-   surface should count as an obstacle: a point of one piece that lies against another piece is on an inner face. */
-export function outerSurface(meshes, tolerance = 0.35) {
-  const grids = meshes.map(mesh => new PointGrid(mesh.positions, 1));
-  const out = [];
-  meshes.forEach((mesh, m) => {
-    for (let k = 0; k < mesh.positions.length; k += 3) {
-      const x = mesh.positions[k], y = mesh.positions[k + 1], z = mesh.positions[k + 2];
-      if (grids.some((grid, other) => other !== m && grid.nearest(x, y, z, tolerance)[0] >= 0)) continue;
-      out.push(x, y, z);
-    }
-  });
-  return new PointGrid(Float32Array.from(out), 1.5);
-}
-
 /* Inside or outside a closed skin: for each column of a grid across x and y, where the skin crosses it along z; a point is
    inside when it lies between the first and last crossing. MakeHuman's skin is open at the eyes and mouth, so a column
    there may have an odd count; there, and beside such columns, the test does not answer (null). */
@@ -108,75 +93,23 @@ export class InsideTest {
   }
 }
 
-/**
- * Raises the skin where inner points lie outside it or within gap under it. Each such point pushes only its nearest skin
- * vertex, out along that vertex's normal; the push spreads along the skin surface (not through the air, so the side of
- * the chest cannot lift the inside of the arm beside it) with a smooth falloff; and the pushes are smoothed over
- * neighbouring vertices (smoothing passes) before they are applied, so the skin rises as a swell rather than crumpling
- * in a hollow.
- * skin: { positions, indices }, moved in place; inner: flat points (cm); spread: cm along the surface over which a
- * push fades out; fixed: per vertex, true for vertices that stay put. Returns the largest push, cm.
- */
-export function pushOutOver(skin, inner, { gap = 0.35, spread = 2, rounds = 2, fixed = null, smoothing = 3 } = {}) {
-  const count = skin.positions.length / 3;
-  /* the skin's edges: each vertex's neighbours */
-  const neighbours = Array.from({ length: count }, () => new Set());
-  for (let t = 0; t < skin.indices.length; t += 3) for (const [a, b] of [[0, 1], [1, 2], [2, 0]]) { neighbours[skin.indices[t + a]].add(skin.indices[t + b]); neighbours[skin.indices[t + b]].add(skin.indices[t + a]); }
-  const list = neighbours.map(set => [...set]);
-  let largest = 0;
-  for (let round = 0; round < rounds; round++) {
-    const normal = vertexNormals(skin), test = new InsideTest(skin), surface = new PointGrid(skin.positions, 1);
-    const need = new Float32Array(count);
-    for (let k = 0; k < inner.length; k += 3) {
-      const q = [inner[k], inner[k + 1], inner[k + 2]];
-      const [v, distance] = surface.nearest(q[0], q[1], q[2], 4);
-      if (v < 0) continue;
-      if (test.inside(q[0], q[1], q[2]) !== false && distance >= gap) continue;
-      const n = [normal[3 * v], normal[3 * v + 1], normal[3 * v + 2]];
-      const along = (q[0] - skin.positions[3 * v]) * n[0] + (q[1] - skin.positions[3 * v + 1]) * n[1] + (q[2] - skin.positions[3 * v + 2]) * n[2];
-      need[v] = Math.max(need[v], along + gap);
-    }
-    /* spread along the surface: from each pushed vertex outward over its edges, up to spread cm */
-    const push = new Float32Array(count);
-    for (let v = 0; v < count; v++) {
-      if (need[v] <= 0) continue;
-      const reached = new Map([[v, 0]]), queue = [v];
-      while (queue.length) {
-        const u = queue.shift(), d = reached.get(u);
-        const t = d / spread;
-        push[u] = Math.max(push[u], need[v] * (1 - t * t) ** 2);
-        for (const w of list[u]) {
-          const e = Math.hypot(skin.positions[3 * w] - skin.positions[3 * u], skin.positions[3 * w + 1] - skin.positions[3 * u + 1], skin.positions[3 * w + 2] - skin.positions[3 * u + 2]);
-          if (d + e < spread && (!reached.has(w) || reached.get(w) > d + e)) { reached.set(w, d + e); queue.push(w); }
-        }
-      }
-    }
-    /* each vertex's move, smoothed over its neighbours three times */
-    let move = new Float32Array(count * 3);
-    for (let v = 0; v < count; v++) if (push[v] > 0 && !fixed?.[v]) for (let c = 0; c < 3; c++) move[3 * v + c] = normal[3 * v + c] * push[v];
-    for (let pass = 0; pass < smoothing; pass++) {
-      const next = new Float32Array(count * 3);
-      for (let v = 0; v < count; v++) {
-        if (fixed?.[v]) continue;
-        const around = list[v];
-        for (let c = 0; c < 3; c++) {
-          let sum = 0;
-          for (const w of around) sum += move[3 * w + c];
-          next[3 * v + c] = around.length ? 0.5 * move[3 * v + c] + 0.5 * sum / around.length : move[3 * v + c];
-        }
-      }
-      move = next;
-    }
-    let moved = 0;
-    for (let v = 0; v < count; v++) {
-      const length = Math.hypot(move[3 * v], move[3 * v + 1], move[3 * v + 2]);
-      if (length < 1e-4) continue;
-      for (let c = 0; c < 3; c++) skin.positions[3 * v + c] += move[3 * v + c];
-      largest = Math.max(largest, length); moved++;
-    }
-    if (!moved) break;
+/* The same test along all three axes: a point is outside if any axis says so. One axis alone calls the air between two
+   parts that line up along it (the gap between two toes, seen from the side) inside. */
+export class InsideAllWays {
+  constructor({ positions, indices }, cell = 0.4) {
+    const turned = shift => { const out = new Float32Array(positions.length); for (let k = 0; k < positions.length; k += 3) for (let c = 0; c < 3; c++) out[k + c] = positions[k + (c + shift) % 3]; return out; };
+    this.tests = [0, 1, 2].map(shift => new InsideTest({ positions: turned(shift), indices }, cell));
   }
-  return largest;
+  inside(x, y, z) {
+    const p = [x, y, z];
+    let unsure = false;
+    for (let shift = 0; shift < 3; shift++) {
+      const answer = this.tests[shift].inside(p[shift % 3], p[(1 + shift) % 3], p[(2 + shift) % 3]);
+      if (answer === false) return false;
+      if (answer === null) unsure = true;
+    }
+    return unsure ? null : true;
+  }
 }
 
 export function vertexNormals({ positions, indices }) {

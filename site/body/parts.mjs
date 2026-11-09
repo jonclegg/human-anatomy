@@ -121,8 +121,8 @@ export const DIFFERENCES = [
 
 /* what the free models do not have, said plainly */
 export const GAPS = [
-  ['Female skeleton and muscles', 'Fitted from the male, apart from her scanned pelvis, thigh and leg bones, kneecaps, breastbone and spinal discs.'],
-  ['Female skin and build', 'A slim young woman from MakeHuman, not a scan. Her scanned organs are drawn in to fit it, so their places are adjusted.'],
+  ['Female body', 'No free model of a whole female body exists. Hers is the male body reshaped to a young woman\'s build, so her bones, muscles and most organs are his, fitted. Her uterus, vagina, ovaries, tubes and breasts are scanned from a woman.'],
+  ['Female skin and build', 'A slim young woman from MakeHuman, not a scan.'],
   ['Inner ear', 'Left out: the only free model is licensed for non-commercial use.'],
   ['Small structures', 'Simplified for speed; very small vessels and nerves are not shown.'],
 ];

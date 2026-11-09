@@ -9,6 +9,7 @@ import { reorder, quantize, meshopt } from '@gltf-transform/functions';
 import { MeshoptEncoder } from 'meshoptimizer';
 import { writeFileSync } from 'node:fs';
 import { readLayer, readParts, builtFolder } from './built.mjs';
+import { PointGrid } from './fit.mjs';
 
 const OFFSET = 0.5;         // cm off the skin
 const AROUND = 96;          // points around each ring
@@ -32,12 +33,36 @@ const shoulder = [top(bone('Left humerus')), top(bone('Right humerus'))];
 const hipY = (hip[0][1] + hip[1][1]) / 2 - 2.3, hipX = (Math.abs(hip[0][0]) + Math.abs(hip[1][0])) / 2;
 const shoulderY = (shoulder[0][1] + shoulder[1][1]) / 2 - 2.5, shoulderX = (Math.abs(shoulder[0][0]) + Math.abs(shoulder[1][0])) / 2;
 
+/* The skin of the arms and hands is no part of a garment's outline, and the hands may hang against the thighs. A skin
+   vertex may belong to the arm if the bone nearest it is one of the arm's or the hand's; the arm is those that connect,
+   through others like them, to the fingers (the skin of the hip beside a hanging hand has a hand bone nearest too, but
+   joins the hand only by way of the trunk). */
+const onArm = new Uint8Array(skin.positions.length / 3);
+{
+  const points = [], group = [];
+  for (const structure of skeleton) {
+    const name = parts.parts[structure.part].group;
+    for (let k = 0; k < structure.positions.length; k += 3) { points.push(structure.positions[k], structure.positions[k + 1], structure.positions[k + 2]); group.push(name); }
+  }
+  const grid = new PointGrid(Float32Array.from(points), 2), may = new Uint8Array(onArm.length), queue = [];
+  for (let v = 0; v < onArm.length; v++) {
+    const [index, distance] = grid.nearest(skin.positions[3 * v], skin.positions[3 * v + 1], skin.positions[3 * v + 2], 30);
+    if (index < 0 || (group[index] !== 'arm' && group[index] !== 'hand')) continue;
+    may[v] = 1;
+    if (group[index] === 'hand' && distance < 1.2) { onArm[v] = 1; queue.push(v); }
+  }
+  const neighbours = Array.from({ length: onArm.length }, () => []);
+  for (let k = 0; k < skin.indices.length; k += 3) for (const [a, b] of [[0, 1], [1, 2], [2, 0]]) { neighbours[skin.indices[k + a]].push(skin.indices[k + b]); neighbours[skin.indices[k + b]].push(skin.indices[k + a]); }
+  while (queue.length) for (const w of neighbours[queue.pop()]) if (may[w] && !onArm[w]) { onArm[w] = 1; queue.push(w); }
+}
+
 /* ---------- the skin cut at a height: clusters of outline points ----------
    Where the skin's edges cross the height, and the skin's own points within 0.75 cm of it (a coarse mesh crosses a
    height in few places, which alone would let the outline miss the widest point between rings) */
 function slice(y) {
   const p = skin.positions, t = skin.indices, points = [];
   for (let k = 0; k < t.length; k += 3) {
+    if (onArm[t[k]] || onArm[t[k + 1]] || onArm[t[k + 2]]) continue;
     const v = [t[k], t[k + 1], t[k + 2]].map(n => [p[3 * n], p[3 * n + 1], p[3 * n + 2]]);
     for (const [a, b] of [[0, 1], [1, 2], [2, 0]]) {
       const A = v[a], B = v[b];
@@ -46,7 +71,7 @@ function slice(y) {
       points.push([A[0] + f * (B[0] - A[0]), A[2] + f * (B[2] - A[2])]);
     }
   }
-  for (let k = 0; k < p.length; k += 3) if (Math.abs(p[k + 1] - y) < 0.75) points.push([p[k], p[k + 2]]);
+  for (let k = 0; k < p.length; k += 3) if (!onArm[k / 3] && Math.abs(p[k + 1] - y) < 0.75) points.push([p[k], p[k + 2]]);
   /* join points closer than 2.5 cm into clusters (MakeHuman's skin is coarse: its outline points can be 2 cm apart) */
   const cell = 2.5, cells = new Map(), parent = points.map((_, k) => k);
   const find = k => parent[k] === k ? k : (parent[k] = find(parent[k]));

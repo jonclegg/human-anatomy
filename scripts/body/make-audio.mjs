@@ -9,6 +9,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { NARRATION, VOICE, MUSIC } from '../../site/body/narration.mjs';
 import { REGIONS, ALL } from '../../site/body/closeups.mjs';
 import { TOUR } from '../../site/body/parts.mjs';
+import { STORIES } from '../../site/body/stories.mjs';
 
 const [again] = process.argv.slice(2);
 const geminiKey = process.env.GEMINI_API_KEY;
@@ -21,6 +22,7 @@ const manifest = { voice: VOICE.name, music: previous.music || null, narration: 
 
 /* what is to be said: what is written for the ear, then every other part of a close-up or of the main tour, from its note */
 const lines = { ...NARRATION };
+for (const [region, story] of Object.entries(STORIES)) story.forEach((step, k) => { lines[`story:${region}:${k}`] = step.say; });   // a story's steps, as they are told
 for (const key of [...Object.values(REGIONS).flatMap(region => region.parts), ...TOUR.map(([key]) => key)]) lines[`entry:${key}`] ||= `${ALL[key].name}. ${ALL[key].what} ${ALL[key].does}`;
 
 async function say([key, text]) {

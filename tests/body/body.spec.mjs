@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { ENTRIES } from '../../site/body/parts.mjs';
 import { REGIONS, DETAILS } from '../../site/body/closeups.mjs';
+import { STORIES } from '../../site/body/stories.mjs';
 
 /* the tests turn the sound on: it plays, but silently, so a test run is never heard on the machine it runs on */
 test.beforeEach(async ({ page }) => {
@@ -330,7 +331,7 @@ test.describe('close-ups', () => {
             clothing: m.clothing().opacity, coverage: m.coverage(), pressed: document.querySelectorAll('#views [aria-pressed="true"]').length };
         }, id);
         expect(seen.parts, id).toBe(REGIONS[id].parts.filter(key => !(DETAILS[key] || ENTRIES[key]).sex || (DETAILS[key] || ENTRIES[key]).sex === sex).length);   // every listed part is in this body
-        expect(seen.listed, id).toBe(seen.parts);
+        expect(seen.listed, id).toBe(STORIES[id] ? STORIES[id].length : seen.parts);   // beside it: its story's steps where it has a story, else its parts
         expect({ own: seen.own, context: seen.context, others: seen.others, clothing: seen.clothing, pressed: seen.pressed }, id).toEqual({ own: 0, context: 0, others: 0, clothing: 0, pressed: 0 });
         expect(seen.coverage, id).toBeGreaterThan(0.03);
       }
@@ -350,7 +351,13 @@ test.describe('close-ups', () => {
     expect(await model(page, () => window.bodyModel.state.selection.entry)).toBe(first[1]);
     expect(await model(page, () => window.bodyModel.state.region)).toBe('heart');
     await page.locator('#tourBtn').click();
-    await expect(page.locator('#tourCount')).toHaveText(`Tour 1 of ${REGIONS.heart.parts.length}`);
+    await expect(page.locator('#tourCount')).toHaveText(`Tour 1 of ${STORIES.heart.length}`);   // the heart's tour is its story
+    await expect(page.locator('#inspectorTitle')).toHaveText(STORIES.heart[0].title);
+    await expect(page.locator('#soundBtn')).toHaveAttribute('aria-pressed', 'true');   // a tour is told aloud
+    await page.locator('#side [data-story="3"]').click();                               // a later step: one stretch of the beat, slowed, one side's blood, its own labels
+    await expect(page.locator('#inspectorTitle')).toHaveText(STORIES.heart[3].title);
+    await expect.poll(() => model(page, () => window.bodyModel.sound().key)).toBe('story:heart:3');
+    await expect.poll(() => page.locator('#labels .tag:not([hidden])').allTextContents()).toEqual(expect.arrayContaining([expect.stringContaining('Right ventricle'), expect.stringContaining('Pulmonary valve')]));
     await page.locator('#tourBtn').click();
     await page.keyboard.press('Escape');
     await page.locator('#inspector [data-leave]').click();
@@ -528,6 +535,22 @@ test.describe('motion', () => {
       expect(errors).toEqual([]);
     });
   }
+  test('a step of the heart\'s story plays its own stretch of the beat, slowed, with one side\'s blood', async ({ page }, testInfo) => {
+    desktopOnly(testInfo);
+    await page.goto('/?sex=male&closeup=heart');
+    await page.waitForSelector('html[data-model-ready="true"]', { timeout: 60_000 });
+    await model(page, () => window.bodyModel.ready());
+    await expect.poll(() => model(page, () => window.bodyModel.motion().moving)).toBe(true);
+    await page.locator('#side [data-story="3"]').click();
+    await page.waitForTimeout(500);
+    const phases = await page.evaluate(async () => { const seen = []; for (let k = 0; k < 30; k++) { seen.push(window.bodyModel.motion().phase); await new Promise(done => setTimeout(done, 100)); } return seen; });
+    expect(Math.min(...phases)).toBeGreaterThan(0.129); expect(Math.max(...phases)).toBeLessThan(0.581);
+    expect(new Set(phases).size).toBeGreaterThan(10);   // and it moves through it
+    await page.locator('#inspector [data-tour="stop"]').click();
+    await page.waitForTimeout(1500);
+    const free = await page.evaluate(async () => { const seen = []; for (let k = 0; k < 14; k++) { seen.push(window.bodyModel.motion().phase); await new Promise(done => setTimeout(done, 100)); } return seen; });
+    expect(Math.max(...free) - Math.min(...free)).toBeGreaterThan(0.7);   // the tour over, the heart beats on at its own pace
+  });
   test('with reduced motion nothing moves until it is asked to', async ({ browser }, testInfo) => {
     desktopOnly(testInfo);
     const context = await browser.newContext({ reducedMotion: 'reduce' }), page = await context.newPage();
@@ -553,7 +576,7 @@ test.describe('sound', () => {
     expect((await model(page, () => window.bodyModel.sound())).musicLevel).toBeLessThan(0.1);   // the music drops under the voice
     await page.locator('#side [data-tour-region="heart"]').click();
     await settle(page);
-    await expect.poll(() => model(page, () => window.bodyModel.sound().key)).toBe(`entry:${REGIONS.heart.parts[0]}`);
+    await expect.poll(() => model(page, () => window.bodyModel.sound().key)).toBe('story:heart:0');
     await page.waitForTimeout(1500);
     expect(await model(page, () => window.bodyModel.state.tour.index)).toBe(0);   // the tour waits for the voice
     await page.locator('#soundBtn').click();

@@ -5,6 +5,7 @@ import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
 import { LAYER_INFO, GROUP_INFO, VIEW_INFO, TOUR, BUGS, DIFFERENCES, GAPS, colourOf, SHOWN_WHEN_CHOSEN } from './parts.mjs';
 import { REGIONS, ALL, indexParts, regionContext, sideOfPart } from './closeups.mjs';
 import { MOTIONS } from './motions.mjs';
+import { STORIES } from './stories.mjs';
 performance.mark('body:module-start');
 
 /* ---------- Coordinates ----------
@@ -528,15 +529,24 @@ $('differenceRows').innerHTML = DIFFERENCES.map(([female, male]) => `<tr><td>${e
 $('gapList').innerHTML = GAPS.map(([title, text]) => `<li><b>${escapeHtml(title)}.</b> ${escapeHtml(text)}</li>`).join('');
 
 /* the tour visits the main landmarks of each system, each from the view it is best seen in */
-const tourStops = () => (state.region ? body.order.map(key => [key, null]) : TOUR.filter(([key]) => body.entries[key]));   // a close-up's tour is its own parts in order
+/* a close-up's tour is its story, a step at a time, where it has one; else its own parts in order */
+const tourStops = () => (!state.region ? TOUR.filter(([key]) => body.entries[key]) : STORIES[state.region] ? STORIES[state.region].map(step => [step.entry, null, step]) : body.order.map(key => [key, null]));
+const telling = () => state.tour?.step || null;   // the step of a story being told now
 const TOUR_STEP_MS = 7000;
 function goTour(index) {
-  const stops = tourStops(), [key, view] = stops[index];
-  state.tour = { index, playing: state.tour?.playing ?? true, stepStart: performance.now() };
+  const stops = tourStops(), [key, view, step = null] = stops[index];
+  state.tour = { index, playing: state.tour?.playing ?? true, stepStart: performance.now(), step };
   if (view) applyView(view);
   state.inspectorOpen = true;
-  selectEntry(key);
-  focusSelection(viewInfo());
+  /* a story's step picks nothing out: the part it is about stays as it is drawn in motion (glass, with its blood showing), labelled and gently lit */
+  if (step) { select(null); focusStep(step); } else { selectEntry(key); focusSelection(viewInfo()); }
+}
+/* a story's step closes in on what it is about, from where it is best seen */
+function focusStep(step) {
+  if (!step.frame) { const frame = viewFrame(); flyTo(frame.position, frame.target, V(0, 1, 0)); return; }
+  const parts = step.frame.flatMap(key => body.entries[key] || []);
+  const frame = fitFrame(boxPoints(parts, 1), step.from ? V(...step.from).normalize() : viewInfo().direction || FRONT, V(0, 1, 0), 0.82);
+  flyTo(frame.position, frame.target, V(0, 1, 0), 1400);
 }
 /* step through the main parts by hand, in number order; each is shown in the view of its layer */
 function stepPart(delta) {
@@ -552,12 +562,14 @@ function stepPart(delta) {
   focusSelection(viewInfo());
 }
 const viewForLayer = layer => ({ skeleton: 'skeleton', muscles: 'muscles', organs: 'organs', vessels: 'vessels', nerves: 'nerves', skin: 'body' })[layer];
-function startTour() { state.tour = { index: 0, playing: true }; goTour(0); }
+/* a tour is told aloud: starting one turns the sound on */
+function startTour(index = 0) { setSound(true); state.tour = { index, playing: true }; goTour(index); }
 function stopTour() { if (!state.tour) return; state.tour = null; renderInspector(); syncUI(); }
 function stepTour(now) {
   if (!state.tour?.playing) return;
   /* with the sound on, a stop that is spoken lasts as long as the voice, and a breath more */
-  if (sound.on && sound.clip ? sound.speaking || now - sound.endedAt < AFTER_VOICE_MS : now - state.tour.stepStart < TOUR_STEP_MS) return;
+  const unspoken = telling() ? Math.max(TOUR_STEP_MS, telling().say.length * 60) : TOUR_STEP_MS;   // a story's step, read, takes as long as its words
+  if (sound.on && sound.clip ? sound.speaking || now - sound.endedAt < AFTER_VOICE_MS : now - state.tour.stepStart < unspoken) return;
   if (state.tour.index + 1 < tourStops().length) goTour(state.tour.index + 1);
   else { state.tour.playing = false; renderInspector(); syncUI(); }
 }
@@ -576,7 +588,7 @@ function toggleMotion() {
 $('figure').addEventListener('click', () => { if ($('figure').classList.contains('live')) toggleMotion(); });
 $('figure').addEventListener('keydown', event => { if ((event.key === 'Enter' || event.key === ' ') && $('figure').classList.contains('live')) { event.preventDefault(); toggleMotion(); } });
 const motionKey = () => (moving() ? `${body.sex}:${state.region}` : null);
-const motion = { for: null, definition: null, rig: null, rigs: {}, phase: 0, clock: 0, caption: '', moment: -1, last: 0, held: null, base: null, touched: new Set(), chosen: new Set() };   // held: a moment of the cycle to stay at (tests and pictures)
+const motion = { for: null, definition: null, rig: null, rigs: {}, phase: 0, clock: 0, caption: '', moment: -1, told: null, into: 0, last: 0, held: null, base: null, touched: new Set(), chosen: new Set() };   // held: a moment of the cycle to stay at (tests and pictures)
 const DROP = (() => { const c = document.createElement('canvas'); c.width = c.height = 32; const g = c.getContext('2d'), fill = g.createRadialGradient(16, 16, 0, 16, 16, 16); fill.addColorStop(0, 'rgba(255,255,255,1)'); fill.addColorStop(0.5, 'rgba(255,255,255,0.9)'); fill.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = fill; g.fillRect(0, 0, 32, 32); return new THREE.CanvasTexture(c); })();
 const WAY = 600;
 const dropHeight = { value: 1 };   // the canvas height in pixels: a drop's size is in cm
@@ -740,18 +752,28 @@ function stepMotion(now) {
   if (!key || motion.for !== key) return;
   const { definition, rig } = motion, cycle = definition.cycle / 1000;
   const seconds = THREE.MathUtils.clamp((now - motion.last) / 1000, 0, 0.05); motion.last = now;   // frames can arrive out of order by a hair: nothing steps back
+  /* a story's step plays one stretch of the cycle, slowed, over and over, with a breath between: the drops fade out and in across the join */
+  const step = telling(), span = motion.held === null && step?.span ? step : null;
+  if (motion.told !== step) { motion.told = step; motion.clock = 0; }
   if (motion.held === null) motion.clock += seconds;
-  const time = motion.held === null ? motion.clock : motion.held * cycle, before = motion.phase, phase = motion.phase = (time % cycle) / cycle;
+  let time = motion.held === null ? motion.clock : motion.held * cycle, join = 1, rejoined = false;
+  if (span) {
+    const round = span.seconds + 0.6, into = motion.clock % round;
+    time = (span.span[0] + (span.span[1] - span.span[0]) * Math.min(1, into / span.seconds)) * cycle;
+    join = THREE.MathUtils.clamp(Math.min(into / 0.35, (round - into) / 0.35), 0, 1); rejoined = into < motion.into; motion.into = into;
+  }
+  const before = motion.phase, phase = motion.phase = (time % cycle) / cycle;
   const colours = stateTexture.colour.image.data;
   for (const index of motion.touched) colours.set(motion.base.subarray(index * 4, index * 4 + 4), index * 4);
   motion.touched.clear(); motion.chosen = new Set(selectedParts());
   const moment = definition.step(rig, phase, act, time) || {};
+  if (span) for (const index of body.entries[step.entry] || []) act.glow(body.parts[index], 0.3);   // what the step is about, gently lit
   stateTexture.moves.needsUpdate = true; stateTexture.colour.needsUpdate = true;
   dropHeight.value = renderer.domElement.height;
-  for (const stream of rig.streams) {
-    const { position, alpha, tint } = stream.cloud.geometry.attributes, shown = stream.shown ? stream.shown(phase, time) : 1;
+  rig.streams.forEach((stream, which) => {
+    const { position, alpha, tint } = stream.cloud.geometry.attributes, shown = step?.streams && !step.streams.includes(which) ? 0 : join * (stream.shown ? stream.shown(phase, time) : 1);
     stream.cloud.visible = shown > 0.004;
-    if (!stream.cloud.visible) continue;
+    if (!stream.cloud.visible) return;
     const lay = stream.lay?.(phase, time);   // a stream that knows where each of its drops is, by its place in the queue
     stream.drops.forEach((drop, k) => {
       if (lay) drop.where = lay(drop.label);
@@ -775,9 +797,9 @@ function stepMotion(now) {
       tint.setXYZ(k, stream.from.r + (stream.to.r - stream.from.r) * drop.where, stream.from.g + (stream.to.g - stream.from.g) * drop.where, stream.from.b + (stream.to.b - stream.from.b) * drop.where);
     });
     position.needsUpdate = alpha.needsUpdate = tint.needsUpdate = true;
-  }
+  });
   /* a sound is made as the cycle passes its moment: not while a moment is held, nor on a frame in which no time passed */
-  if (sound.on && motion.held === null && phase !== before) for (const [at, make] of rig.sounds || definition.sounds || []) if (before < phase ? before < at && at <= phase : at > before || at <= phase) make(play, rig);
+  if (sound.on && motion.held === null && phase !== before && !rejoined) for (const [at, make] of rig.sounds || definition.sounds || []) if (before < phase ? before < at && at <= phase : at > before || at <= phase) make(play, rig);
   const which = moment.moment ?? -1;
   if ((moment.caption && moment.caption !== motion.caption) || which !== motion.moment) { motion.caption = moment.caption || motion.caption; motion.moment = which; captionMotion(); }
   needsRender = true;
@@ -834,7 +856,7 @@ const MUSIC_LEVEL = 0.2, UNDER_VOICE = 0.07, AFTER_VOICE_MS = 900;
 const sound = { on: false, manifest: null, music: new Audio(), voice: new Audio(), key: null, clip: null, speaking: false, endedAt: 0 };
 sound.music.loop = true; sound.music.volume = MUSIC_LEVEL;
 sound.voice.addEventListener('ended', () => { sound.speaking = false; sound.endedAt = performance.now(); sound.music.volume = MUSIC_LEVEL; invalidate(); });
-const voiceKey = () => (state.selection?.entry ? `entry:${state.selection.entry}` : state.region ? `region:${state.region}` : state.selection || state.blend ? null : `view:${state.view}`);
+const voiceKey = () => (telling() ? `story:${state.region}:${state.tour.index}` : state.selection?.entry ? `entry:${state.selection.entry}` : state.region ? `region:${state.region}` : state.selection || state.blend ? null : `view:${state.view}`);
 /* a browser may still refuse to play (no click yet): the sound goes back off. A clip cut short by the next one is not a refusal. */
 const refused = error => { if (error.name === 'AbortError') return; sound.on = false; sound.music.pause(); sound.voice.pause(); sound.speaking = false; syncUI(); };
 function speak() {
@@ -846,13 +868,16 @@ function speak() {
   sound.voice.src = `audio/${sound.clip}`; sound.speaking = true; sound.music.volume = UNDER_VOICE;
   sound.voice.play().catch(refused);
 }
-$('soundBtn').addEventListener('click', () => {
-  sound.on = !sound.on;
+$('soundBtn').addEventListener('click', () => setSound(!sound.on));
+/* only ever called from a touch or a click, which is what a browser waits for before it will play */
+function setSound(on) {
+  if (sound.on === on) return;
+  sound.on = on;
   if (sound.on) outlet();
   if (sound.on && sound.manifest.music) { sound.music.src ||= `audio/${sound.manifest.music}`; sound.music.play().catch(refused); }
   if (!sound.on) { sound.music.pause(); sound.voice.pause(); sound.speaking = false; }
   syncUI();
-});
+}
 
 const otherSex = () => state.sex === 'male' ? 'female' : 'male';
 function sourceNote(parts) {
@@ -890,6 +915,13 @@ function renderInspector() {
       <button type="button" class="btn" data-tour="stop">End</button>
       <div class="tour-progress"><span style="width:${((state.tour.index + 1) / stops.length * 100).toFixed(1)}%"></span></div>
     </div>` : '';
+  if (telling()) {
+    el.innerHTML = `${handle}${tour}
+      <div class="inspector-head"><span class="sys">Step ${state.tour.index + 1} of ${stops.length}</span><button type="button" class="close" data-close aria-label="Close panel">×</button></div>
+      <div><h2 id="inspectorTitle">${escapeHtml(telling().title)}</h2></div>
+      <p class="lead">${escapeHtml(telling().say)}</p>`;
+    return;
+  }
   if (!selection) {
     const intro = viewInfo();
     const items = body ? intro.items.filter(([key]) => body.entries[key]) : [];
@@ -940,11 +972,15 @@ let sideShown = null;
 function renderSide() {
   const el = $('side');
   if (!body || phone.matches) { el.hidden = true; return; }
-  const key = state.region ? `stops ${state.region} ${body.sex} ${state.selection?.entry || ''}` : atHome() && REGIONS[state.spot] ? `card ${state.spot}` : '';
+  const story = STORIES[state.region];
+  const key = state.region ? `stops ${state.region} ${body.sex} ${story ? state.tour?.index ?? '' : state.selection?.entry || ''}` : atHome() && REGIONS[state.spot] ? `card ${state.spot}` : '';
   if (key === sideShown) return;
   sideShown = key;
   el.hidden = !key;
-  if (state.region) {
+  if (story) {
+    el.innerHTML = `<div class="hint-line">${escapeHtml(REGIONS[state.region].name)}: how it works, in ${story.length} steps</div><div class="stops">${story.map((step, k) =>
+      `<button type="button" data-story="${k}" aria-current="${k === state.tour?.index}"><i>${String(k + 1).padStart(2, '0')}</i>${escapeHtml(step.title)}</button>`).join('')}</div>`;
+  } else if (state.region) {
     el.innerHTML = `<div class="hint-line">${escapeHtml(REGIONS[state.region].name)}: ${body.order.length} stops</div><div class="stops">${body.order.map((entry, k) =>
       `<button type="button" data-entry="${entry}" aria-current="${entry === state.selection?.entry}"><i>${String(k + 1).padStart(2, '0')}</i>${escapeHtml(ALL[entry].short || ALL[entry].name)}</button>`).join('')}</div>`;
   } else if (key) {
@@ -957,11 +993,12 @@ function renderSide() {
   requestAnimationFrame(resize);
 }
 document.addEventListener('click', event => {
-  const target = event.target.closest('[data-entry],[data-tour],[data-close],[data-sheet],[data-step],[data-show-all],[data-route],[data-leave],[data-region],[data-tour-region],[data-tour-start],[data-motion]');
+  const target = event.target.closest('[data-entry],[data-tour],[data-close],[data-sheet],[data-step],[data-show-all],[data-route],[data-leave],[data-region],[data-tour-region],[data-tour-start],[data-motion],[data-story]');
   if (!target || target.closest('#views') || target.closest('#partGroups')) return;
   if (target.hasAttribute('data-leave')) { stopTour(); setView(state.view); }
   if (target.dataset.tourRegion) { setRegion(target.dataset.tourRegion); startTour(); return; }
   if (target.hasAttribute('data-tour-start')) { startTour(); return; }
+  if (target.dataset.story) { startTour(Number(target.dataset.story)); return; }
   if (target.hasAttribute('data-motion')) { toggleMotion(); return; }
   if (target.dataset.region) { stopTour(); state.closeups = false; setRegion(target.dataset.region); }
   if (target.dataset.step) stepPart(Number(target.dataset.step));
@@ -1344,13 +1381,14 @@ function updateLabels(width, height) {
   const placed = [...document.querySelectorAll(OVERLAYS.join(','))].filter(el => !el.hidden && el.offsetParent).map(el => el.getBoundingClientRect())
     .map(r => [r.left - origin.left, r.top - origin.top, r.right - origin.left, r.bottom - origin.top]);
   const panels = placed.slice();
-  const selectedKey = state.selection?.entry, hoveredKey = state.hovered >= 0 && body.entryOf[state.hovered] >= 0 ? body.keys[body.entryOf[state.hovered]] : null;
-  const priority = atHome() && spotEls.length && !state.blend && state.peel === 0 ? [] : viewInfo().labels[state.sex] || viewInfo().labels.any;   // on the opening view the glowing points invite; callouts come with the layers
+  const selectedKey = telling()?.span ? telling().entry : state.selection?.entry, hoveredKey = state.hovered >= 0 && body.entryOf[state.hovered] >= 0 ? body.keys[body.entryOf[state.hovered]] : null;
+  const told = telling() ? telling().labels || [telling().entry] : null;
+  const priority = told ? told : atHome() && spotEls.length && !state.blend && state.peel === 0 ? [] : viewInfo().labels[state.sex] || viewInfo().labels.any;   // on the opening view the glowing points invite; callouts come with the layers
   const order = (isolating() ? [selectedKey, hoveredKey] : [selectedKey, hoveredKey, ...priority]).filter((key, k, list) => key && body.entries[key] && list.indexOf(key) === k);
   for (const [key, tag] of Object.entries(tagEls)) if (!order.includes(key)) tag.hidden = true;
   const shown = [];
   for (const key of order) {
-    const important = key === selectedKey || key === hoveredKey;
+    const important = key === selectedKey || key === hoveredKey || !!told?.includes(key);
     const anchor = anchorOf(key);
     if (!anchor || (!important && (!state.labels || !anchor.seen))) { tagEls[key].hidden = true; continue; }
     projected.copy(anchor.point).project(camera);

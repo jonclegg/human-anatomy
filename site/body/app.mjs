@@ -524,11 +524,38 @@ function startTour() { state.tour = { index: 0, playing: true }; goTour(0); }
 function stopTour() { if (!state.tour) return; state.tour = null; renderInspector(); syncUI(); }
 function stepTour(now) {
   if (!state.tour?.playing) return;
-  if (now - state.tour.stepStart < TOUR_STEP_MS) return;
+  /* with the sound on, a stop that is spoken lasts as long as the voice, and a breath more */
+  if (sound.on && sound.clip ? sound.speaking || now - sound.endedAt < AFTER_VOICE_MS : now - state.tour.stepStart < TOUR_STEP_MS) return;
   if (state.tour.index + 1 < tourStops().length) goTour(state.tour.index + 1);
   else { state.tour.playing = false; renderInspector(); syncUI(); }
 }
 $('tourBtn').addEventListener('click', () => state.tour ? stopTour() : startTour());
+
+/* ---------- Sound: music under everything, and a voice for what is on show ----------
+   Off until asked for (a browser plays nothing before a click). audio/manifest.json lists the music and the voice clips
+   (scripts/body/make-audio.mjs); a clip belongs to a part, a close-up's opening, or a whole-body view. */
+const MUSIC_LEVEL = 0.2, UNDER_VOICE = 0.07, AFTER_VOICE_MS = 900;
+const sound = { on: false, manifest: null, music: new Audio(), voice: new Audio(), key: null, clip: null, speaking: false, endedAt: 0 };
+sound.music.loop = true; sound.music.volume = MUSIC_LEVEL;
+sound.voice.addEventListener('ended', () => { sound.speaking = false; sound.endedAt = performance.now(); sound.music.volume = MUSIC_LEVEL; invalidate(); });
+const voiceKey = () => (state.selection?.entry ? `entry:${state.selection.entry}` : state.region ? `region:${state.region}` : state.selection || state.blend ? null : `view:${state.view}`);
+/* a browser may still refuse to play (no click yet): the sound goes back off. A clip cut short by the next one is not a refusal. */
+const refused = error => { if (error.name === 'AbortError') return; sound.on = false; sound.music.pause(); sound.voice.pause(); sound.speaking = false; syncUI(); };
+function speak() {
+  const key = sound.on ? voiceKey() : null;
+  if (key === sound.key) return;
+  sound.key = key; sound.clip = key && sound.manifest.narration[key] ? sound.manifest.narration[key].file : null;
+  sound.voice.pause(); sound.speaking = false; sound.music.volume = MUSIC_LEVEL;
+  if (!sound.clip) return;
+  sound.voice.src = `audio/${sound.clip}`; sound.speaking = true; sound.music.volume = UNDER_VOICE;
+  sound.voice.play().catch(refused);
+}
+$('soundBtn').addEventListener('click', () => {
+  sound.on = !sound.on;
+  if (sound.on && sound.manifest.music) { sound.music.src ||= `audio/${sound.manifest.music}`; sound.music.play().catch(refused); }
+  if (!sound.on) { sound.music.pause(); sound.voice.pause(); sound.speaking = false; }
+  syncUI();
+});
 
 const otherSex = () => state.sex === 'male' ? 'female' : 'male';
 function sourceNote(parts) {
@@ -671,6 +698,8 @@ function syncUI() {
   $('tourBtn').querySelector('span').textContent = state.tour ? 'End tour' : 'Guided tour';
   $('dock').classList.toggle('open', state.dock);
   $('dockBtn').setAttribute('aria-expanded', String(state.dock));
+  $('soundBtn').setAttribute('aria-pressed', String(sound.on));
+  speak();
   $('peel').value = Math.round(state.peel * 100);
   $('peel').parentElement.hidden = !!state.region;   // the peel is of the whole body
   renderSide();
@@ -1260,6 +1289,7 @@ function frame(now) {
 /* Test and debugging hook: read-only views of the model plus the same actions the UI uses. */
 window.bodyModel = {
   state, camera, controls, setView, setRegion, setPeel, spots: () => spotEls.filter(spot => !spot.el.hidden).map(spot => spot.id), freeRect, switchSex, selectEntry, selectPart, stepPart, startTour, stopTour, frame, pick,
+  sound: () => ({ on: sound.on, key: sound.key, clip: sound.clip, speaking: sound.speaking, music: sound.music.src.split('/').pop(), musicPlaying: !sound.music.paused, musicLevel: sound.music.volume }),
   regions: () => Object.values(REGIONS).filter(region => !region.sex || region.sex === body.sex).map(region => region.id), around: () => body.around,
   body: () => body, entries: () => body.order, entryParts: key => body.entries[key] || [],
   part: index => body.parts[index], findPart: name => body.parts.find(part => part.name === name)?.index ?? -1,
@@ -1351,6 +1381,7 @@ $('systemRoute').innerHTML = Object.entries(VIEW_INFO).filter(([view]) => view !
   const [key] = info.items[0];
   return `<button type="button" data-entry="${key}" data-view="${view}" data-route><i>${LAYER_INFO[info.main].short}</i>${escapeHtml(info.title)} <span>${escapeHtml(info.route)}</span></button>`;
 }).join('');
+{ const response = await fetch('audio/manifest.json'); if (!response.ok) throw new Error(`audio/manifest.json: ${response.status}`); sound.manifest = await response.json(); }
 body = await loadBody(state.sex);
 makeStateTextures(body.parts.length);
 buildPartsList(); buildTags(); buildSpots(); buildHeightRuler(); buildCloseupList();

@@ -445,6 +445,27 @@ test.describe('peel and glowing points', () => {
   });
 });
 
+test.describe('sound', () => {
+  test.use({ reducedMotion: 'reduce' });
+  test('sound is off until asked for; then music plays, and the voice speaks for what is on show', async ({ page }, testInfo) => {
+    desktopOnly(testInfo);
+    const errors = await open(page);
+    expect(await model(page, () => window.bodyModel.sound())).toMatchObject({ on: false, clip: null, musicPlaying: false });
+    await page.locator('#soundBtn').click();
+    await expect(page.locator('#soundBtn')).toHaveAttribute('aria-pressed', 'true');
+    await expect.poll(() => model(page, () => window.bodyModel.sound())).toMatchObject({ on: true, key: 'view:body', clip: 'view-body.mp3', speaking: true, music: 'music.mp3', musicPlaying: true });
+    expect((await model(page, () => window.bodyModel.sound())).musicLevel).toBeLessThan(0.1);   // the music drops under the voice
+    await page.locator('#side [data-tour-region="heart"]').click();
+    await settle(page);
+    await expect.poll(() => model(page, () => window.bodyModel.sound().key)).toBe(`entry:${REGIONS.heart.parts[0]}`);
+    await page.waitForTimeout(1500);
+    expect(await model(page, () => window.bodyModel.state.tour.index)).toBe(0);   // the tour waits for the voice
+    await page.locator('#soundBtn').click();
+    expect(await model(page, () => window.bodyModel.sound())).toMatchObject({ on: false, speaking: false, musicPlaying: false });
+    expect(errors).toEqual([]);
+  });
+});
+
 test.describe('layout', () => {
   test('the model gets most of the screen and nothing scrolls sideways', async ({ page }) => {
     await open(page);

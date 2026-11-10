@@ -55,6 +55,12 @@ button:focus-visible, input:focus-visible, a:focus-visible { outline: 2px solid 
 .sex { display: flex; padding: 3px; gap: 2px; border: 1px solid var(--line-strong); border-radius: 22px; }
 .sex button { border: 0; background: transparent; color: var(--muted); min-height: 36px; padding: 0 14px; border-radius: 18px; cursor: pointer; font-size: 13px; font-weight: 500; }
 .sex button[aria-pressed="true"] { background: var(--ink); color: var(--on-ink); font-weight: 600; }
+.sound-btn { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 16px 0 12px; border: 1px solid var(--line-strong); border-radius: 22px; background: transparent; color: var(--muted); font-size: 13px; font-weight: 500; cursor: pointer; }
+.sound-btn svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+.sound-btn .waves { display: none; }
+.sound-btn[aria-pressed="true"] { color: var(--mark); border-color: var(--mark); }
+.sound-btn[aria-pressed="true"] .waves { display: inline; } .sound-btn[aria-pressed="true"] .mute { display: none; }
+.sound-btn:hover { color: var(--ink); }
 .tour-btn { display: inline-flex; align-items: center; gap: 10px; min-height: 44px; border: 0; border-radius: 22px; padding: 0 20px 0 16px; background: var(--mark); color: var(--mark-ink); font-weight: 600; font-size: 14px; cursor: pointer; }
 .tour-btn svg { width: 11px; height: 11px; }
 .tour-btn:hover { background: #ffd978; }
@@ -303,6 +309,8 @@ footer a { color: inherit; }
   .sex button { min-height: 28px; padding: 0 10px; font-size: 12.5px; }
   .sex { padding: 2px; }
   .top-right { top: 8px; right: var(--gutter); }
+  .sound-btn { min-height: 32px; padding: 0 8px; }
+  .sound-btn span { display: none; }
   .tour-btn { min-height: 32px; padding: 0 12px 0 10px; font-size: 12.5px; gap: 6px; }
   .tour-btn svg { width: 9px; height: 9px; }
   .tour-btn span { font-size: 0; }
@@ -361,6 +369,7 @@ footer a { color: inherit; }
       <button type="button" data-sex="female" aria-pressed="false">Female</button>
       <button type="button" data-sex="male" aria-pressed="true">Male</button>
     </div>
+    <button type="button" class="sound-btn" id="soundBtn" aria-pressed="false" aria-label="Sound: music and a voice"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9.5v5h3.5l4.5 4v-13l-4.5 4z"/><path class="waves" d="M15.5 9a4 4 0 0 1 0 6M18 6.5a7.5 7.5 0 0 1 0 11"/><path class="mute" d="M16 9.5l5 5M21 9.5l-5 5"/></svg><span>Sound</span></button>
     <button type="button" class="tour-btn" id="tourBtn" aria-pressed="false" aria-label="Guided tour"><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M3 1.8v10.4L12 7z" fill="currentColor"/></svg><span>Guided tour</span></button>
   </div>
 

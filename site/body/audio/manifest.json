@@ -1,0 +1,46 @@
+{
+ "voice": "en-GB-Chirp3-HD-Charon",
+ "music": "music.mp3",
+ "narration": {
+  "view:body": {
+   "file": "view-body.mp3",
+   "hash": "32267ea916"
+  },
+  "region:heart": {
+   "file": "region-heart.mp3",
+   "hash": "c159fbf3f9"
+  },
+  "entry:heartRightAtrium": {
+   "file": "entry-heartRightAtrium.mp3",
+   "hash": "8dd92dc449"
+  },
+  "entry:heartTricuspidValve": {
+   "file": "entry-heartTricuspidValve.mp3",
+   "hash": "40430c969d"
+  },
+  "entry:heartRightVentricle": {
+   "file": "entry-heartRightVentricle.mp3",
+   "hash": "f86356b4a2"
+  },
+  "entry:heartPulmonaryValve": {
+   "file": "entry-heartPulmonaryValve.mp3",
+   "hash": "edca28030d"
+  },
+  "entry:heartLeftAtrium": {
+   "file": "entry-heartLeftAtrium.mp3",
+   "hash": "aa4fa450c0"
+  },
+  "entry:heartMitralValve": {
+   "file": "entry-heartMitralValve.mp3",
+   "hash": "4db1baca9e"
+  },
+  "entry:heartLeftVentricle": {
+   "file": "entry-heartLeftVentricle.mp3",
+   "hash": "f530368035"
+  },
+  "entry:heartAorticValve": {
+   "file": "entry-heartAorticValve.mp3",
+   "hash": "62e3a4c926"
+  }
+ }
+}

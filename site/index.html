@@ -2157,6 +2157,16 @@ window.wootenManual = {
     const offset = band => { const near = points.filter(p => band(-p.z)); return Math.hypot(near.reduce((s, p) => s + p.x, 0) / near.length, near.reduce((s, p) => s + p.y, 0) / near.length - -2); };
     return { shown: bodyMesh.visible && bodyMaterial.opacity > 0, height: top - bottom, headOffset: offset(h => h > top - 20), feetOffset: offset(h => h < bottom + 15) };
   },
+  /* every mesh of a part, whole: its vertices in the model frame (cm) and its triangles (scripts/body/export-pelvic-detail.mjs) */
+  meshes: id => {
+    root.updateMatrixWorld(true);
+    return (meshesByPart[id] || []).map(mesh => {
+      const position = mesh.geometry.attributes.position, positions = [];
+      for (let k = 0; k < position.count; k++) positions.push(...root.worldToLocal(new THREE.Vector3().fromBufferAttribute(position, k).applyMatrix4(mesh.matrixWorld)).toArray());
+      return { positions, indices: mesh.geometry.index ? Array.from(mesh.geometry.index.array) : positions.map((_, k) => k).slice(0, position.count) };
+    });
+  },
+  partIds: () => Object.keys(meshesByPart),
   /* up to about 3000 vertices per mesh of a part, in the model frame (cm) */
   points: id => {
     root.updateMatrixWorld(true);

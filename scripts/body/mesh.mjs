@@ -86,8 +86,8 @@ export async function writeLayer(pieces) {
   const indexCount = pieces.reduce((sum, piece) => sum + piece.indices.length, 0);
   const positions = new Float32Array(vertexCount * 3), normal = new Float32Array(vertexCount * 3), part = new Uint16Array(vertexCount), indices = new Uint32Array(indexCount);
   let vertex = 0, index = 0;
-  for (const piece of pieces) {
-    positions.set(piece.positions, vertex * 3); normal.set(normals(piece), vertex * 3); part.fill(piece.part, vertex, vertex + piece.positions.length / 3);
+  for (const piece of pieces) {   // a piece may bring its own normals
+    positions.set(piece.positions, vertex * 3); normal.set(piece.normals || normals(piece), vertex * 3); part.fill(piece.part, vertex, vertex + piece.positions.length / 3);
     for (let k = 0; k < piece.indices.length; k++) indices[index + k] = piece.indices[k] + vertex;
     vertex += piece.positions.length / 3; index += piece.indices.length;
   }

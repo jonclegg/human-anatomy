@@ -16,3 +16,9 @@ export function toModel([x, y, z]) {   // metres, glTF axes -> model cm
   return [(x * 100 - SOURCE.centreX) * scale, TARGET.symphysis[0] + f * scale, -(TARGET.symphysis[1] + h * scale)];
 }
 
+
+export function fromModel([x, y, z]) {   // model cm -> metres, glTF axes: the inverse of toModel
+  const f = (y - TARGET.symphysis[0]) / scale, h = (-z - TARGET.symphysis[1]) / scale;
+  const front = f * Math.cos(turn) + h * Math.sin(turn), height = -f * Math.sin(turn) + h * Math.cos(turn);
+  return [(x / scale + SOURCE.centreX) / 100, (height + SOURCE.symphysis[1]) / 100, (front + SOURCE.symphysis[0]) / 100];
+}

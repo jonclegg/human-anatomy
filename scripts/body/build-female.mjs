@@ -20,6 +20,7 @@ import { Assembly } from './assemble.mjs';
 import { readGarment, wear, writeClothing } from './garments.mjs';
 import { bounds } from './mesh.mjs';
 import { LAYERS } from './systems.mjs';
+import { readDetail, detailParts, meetOpening, joinToBladder, vulvaSkin } from './pelvic-detail.mjs';
 
 const [root, reproductive] = process.argv.slice(2);
 if (!root || !reproductive) throw new Error('usage: node scripts/body/build-female.mjs <"Human Anatomy 3D Models" folder> <female-reproductive-3d-models folder>');
@@ -71,13 +72,21 @@ for (const pair of pairs) if (!pair.source.length) throw new Error(`nothing scan
 const hips = meshes => centreOf(meshes);
 const toHer = register({ pairs, start: startMap(1, 1, hips(bone(/(pubis|ilium|ischium)_compact/)), hips([...hers('Left hip bone'), ...hers('Right hip bone')])) });
 const added = scanned.map(mesh => ({ ...warpMesh(mesh, toHer), name: mesh.name, layer: 'organs', group: 'reproductive' }));
-/* her bladder, rectum and bowel are his, and he had no uterus: where they would pass through hers, they give way */
+/* the close-up pelvic model, placed by the same map; her scanned vagina, cervix and uterus then meet its opening */
+const detail = readDetail(toHer);
+{
+  const correct = meetOpening(added, detail, [...hers('Left hip bone'), ...hers('Right hip bone'), ...hers('Sacrum')]);
+  for (const mesh of added) mesh.positions = warpMesh(mesh, correct).positions;
+}
+/* her bladder, rectum and bowel are his, and he had no uterus: where they would pass through hers, they give way,
+   and so do the muscles of his pelvic floor, which had no opening for a vagina */
+const PELVIC_FLOOR = /levator ani|pubococcygeus|puborectalis|iliococcygeus|anal sphincter/i;
 {
   const uterus = added.filter(mesh => /uterus|cervi|vagina|ovary/i.test(mesh.name)), grid = obstacleOf(uterus), centre = centreOf(uterus);
   const { min, max } = bounds(Float32Array.from(uterus.flatMap(mesh => [...mesh.positions])));
   let cleared = 0;
   for (const structure of structures) {
-    if (structure.layer !== 'organs' && structure.layer !== 'vessels') continue;
+    if (structure.layer !== 'organs' && structure.layer !== 'vessels' && !PELVIC_FLOOR.test(structure.name)) continue;
     const box = bounds(structure.positions);
     if ([0, 1, 2].some(c => box.min[c] > max[c] + 1 || box.max[c] < min[c] - 1)) continue;
     cleared += pushOutOf(structure, grid, centre, { gap: 0.25 });
@@ -117,14 +126,21 @@ for (const [side, word, sign] of [['left', 'Left', 1], ['right', 'Right', -1]]) 
 }
 console.log(`  her scanned parts kept under the skin: ${keepUnder(skin, added, { lining })}`);
 
+/* ---------- Her vulva, clitoris and urethra, modelled ---------- */
+const vulva = vulvaSkin(skin, detail, detail.outward);
+const modelled = [...detailParts(detail), ...vulva.parts];
+console.log(`  urethra drawn ${joinToBladder(modelled.find(part => part.name === 'Urethra'), hers('Urinary bladder')[0]).toFixed(1)} cm up to her bladder`);
+
 /* ---------- Assembly ---------- */
 const assembly = new Assembly('female', HEIGHT);
 for (const structure of structures) {
   const { part } = structure, isSkin = structure.layer === 'skin';
-  assembly.add({ name: structure.name, layer: structure.layer, group: part.group, source: isSkin ? 'MakeHuman' : part.source, fitted: !isSkin, id: part.id, concept: part.concept }, structure, { prepared: true });
+  assembly.add({ name: structure.name, layer: structure.layer, group: part.group, source: isSkin ? 'MakeHuman' : part.source, fitted: !isSkin, id: part.id, concept: part.concept }, isSkin ? vulva.skin : structure, { prepared: true });
 }
 for (const mesh of added) assembly.add({ name: mesh.name, layer: mesh.layer, group: mesh.group, source: 'NIH female' }, mesh);
-console.log(`female: ${structures.length} structures from the male body, ${added.length} scanned`);
+/* the modelled skin comes with its own shading, which simplifying would lose */
+for (const part of modelled) assembly.add({ name: part.name, layer: part.layer, group: part.group, source: 'Wooten Labs' }, part, { prepared: part.layer === 'skin' });
+console.log(`female: ${structures.length} structures from the male body, ${added.length} scanned, ${modelled.length} modelled`);
 await assembly.write(new URL('../../site/body/data/female/', import.meta.url));
 
 /* ---------- Her clothing ---------- */

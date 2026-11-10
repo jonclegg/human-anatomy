@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { ENTRIES } from '../../site/body/parts.mjs';
+import { REGIONS, DETAILS } from '../../site/body/closeups.mjs';
 
 const settle = page => page.waitForFunction(() => !window.bodyModel.busy(), null, { timeout: 30_000 });
 async function open(page, { sex = 'male', view } = {}) {
@@ -281,6 +282,128 @@ test.describe('picking and inspector', () => {
     await page.locator('#body').fill('60');
     const skin = await model(page, () => window.bodyModel.findPart('Skin'));
     expect(await model(page, index => window.bodyModel.opacityOf(index), skin)).toBeCloseTo(0.6, 1);
+  });
+});
+
+test.describe('close-ups', () => {
+  test.use({ reducedMotion: 'reduce' });
+  test.describe.configure({ timeout: 240_000 });
+  test('every close-up has a title, an opening text and a view, and every part of it its notes', () => {
+    expect(Object.keys(REGIONS).length).toBeGreaterThanOrEqual(15);
+    for (const [id, region] of Object.entries(REGIONS)) {
+      for (const field of ['name', 'note', 'title', 'figure']) expect(region[field], `${id} ${field}`).toBeTruthy();
+      expect(region.text.any || (region.text.female && region.text.male) || region.text[region.sex], `${id} text`).toBeTruthy();
+      expect(region.direction, `${id} direction`).toHaveLength(3);
+      expect(region.parts.length, `${id} parts`).toBeGreaterThanOrEqual(6);
+    }
+    for (const [key, entry] of Object.entries(DETAILS)) {
+      for (const field of ['name', 'what', 'does', 'bug']) expect(entry[field], `${key} ${field}`).toBeTruthy();
+      expect(entry.stats, `${key} stats`).toHaveLength(3);
+      for (const text of [entry.what, entry.does, entry.bug]) expect(text, key).not.toMatch(/—/);
+    }
+  });
+  for (const sex of ['female', 'male']) {
+    test(`${sex}: each close-up shows its own numbered parts solid, its context faint and nothing else`, async ({ page }, testInfo) => {
+      desktopOnly(testInfo);
+      const errors = await open(page, { sex });
+      const ids = await model(page, () => window.bodyModel.regions());
+      expect(ids.length).toBeGreaterThanOrEqual(12);
+      expect(ids).toContain(sex === 'female' ? 'vulva' : 'malePelvis');
+      expect(ids).not.toContain(sex === 'female' ? 'malePelvis' : 'vulva');
+      for (const id of ids) {
+        const seen = await model(page, async id => {
+          const m = window.bodyModel; m.setRegion(id); await m.ready();
+          const body = m.body(), around = m.around(), order = m.entries();
+          return { parts: order.length, listed: document.querySelectorAll('#inspector .exits button').length,
+            own: [...around.own].filter(index => body.parts[index].layer !== 'skin' && m.opacityOf(index) < 1).length,
+            context: [...around.context].filter(index => m.opacityOf(index) === 0 || m.opacityOf(index) > 0.5).length,
+            others: body.parts.filter((part, index) => part.layer !== 'skin' && !around.own.has(index) && !around.context.has(index) && m.opacityOf(index) > 0).length,
+            clothing: m.clothing().opacity, coverage: m.coverage(), pressed: document.querySelectorAll('#views [aria-pressed="true"]').length };
+        }, id);
+        expect(seen.parts, id).toBe(REGIONS[id].parts.filter(key => !(DETAILS[key] || ENTRIES[key]).sex || (DETAILS[key] || ENTRIES[key]).sex === sex).length);   // every listed part is in this body
+        expect(seen.listed, id).toBe(seen.parts);
+        expect({ own: seen.own, context: seen.context, others: seen.others, clothing: seen.clothing, pressed: seen.pressed }, id).toEqual({ own: 0, context: 0, others: 0, clothing: 0, pressed: 0 });
+        expect(seen.coverage, id).toBeGreaterThan(0.03);
+      }
+      expect(errors).toEqual([]);
+    });
+  }
+  test('stepping and the tour stay inside a close-up; leaving it brings the whole body back', async ({ page }, testInfo) => {
+    desktopOnly(testInfo);
+    await open(page);
+    await model(page, async () => { window.bodyModel.setRegion('heart'); await window.bodyModel.ready(); });
+    await settle(page);
+    const first = REGIONS.heart.parts.slice(0, 2);
+    await page.keyboard.press('ArrowRight');
+    expect(await model(page, () => window.bodyModel.state.selection.entry)).toBe(first[0]);
+    await expect(page.locator('#inspector .stepper span')).toHaveText(new RegExp(`^1 of ${REGIONS.heart.parts.length}$`));
+    await page.keyboard.press('ArrowRight');
+    expect(await model(page, () => window.bodyModel.state.selection.entry)).toBe(first[1]);
+    expect(await model(page, () => window.bodyModel.state.region)).toBe('heart');
+    await page.locator('#tourBtn').click();
+    await expect(page.locator('#tourCount')).toHaveText(`Tour 1 of ${REGIONS.heart.parts.length}`);
+    await page.locator('#tourBtn').click();
+    await page.keyboard.press('Escape');
+    await page.locator('#inspector [data-leave]').click();
+    await settle(page);
+    expect(await model(page, () => ({ region: window.bodyModel.state.region, femur: window.bodyModel.entries().includes('femur'), numbered: window.bodyModel.entries().length }))).toEqual({ region: null, femur: true, numbered: expect.any(Number) });
+    await expect(page.locator('#views [data-view="body"]')).toHaveAttribute('aria-pressed', 'true');
+  });
+  test('the close-ups menu lists this body\'s close-ups and opens one; it carries over to the other body when that body has it', async ({ page }) => {
+    await open(page, { sex: 'female' });
+    await page.locator('#closeupsBtn').click();
+    await expect(page.locator('#closeupList [data-region="vulva"]')).toBeVisible();
+    await expect(page.locator('#closeupList [data-region="malePelvis"]')).toHaveCount(0);
+    await page.locator('#closeupList [data-region="knee"]').click();
+    await settle(page);
+    await expect(page.locator('#closeups')).toBeHidden();
+    await expect(page.locator('#inspector h2')).toHaveText(REGIONS.knee.title);
+    await page.locator('#sexSwitch [data-sex="male"]').click();
+    await settle(page);
+    expect(await model(page, () => [window.bodyModel.state.sex, window.bodyModel.state.region])).toEqual(['male', 'knee']);
+    await model(page, async () => { await window.bodyModel.switchSex('female'); window.bodyModel.setRegion('vulva'); await window.bodyModel.ready(); await window.bodyModel.switchSex('male'); });
+    expect(await model(page, () => [window.bodyModel.state.sex, window.bodyModel.state.region])).toEqual(['male', null]);
+  });
+  test('the midline cut takes away the body\'s left half', async ({ page }, testInfo) => {
+    desktopOnly(testInfo);
+    await open(page, { view: 'skeleton' });
+    const femurs = await model(page, () => ['Left femur', 'Right femur'].map(name => window.bodyModel.findPart(name)));
+    expect(Math.min(...femurs)).toBeGreaterThanOrEqual(0);
+    await page.locator('#cutBtn').click();
+    await settle(page);
+    await page.waitForTimeout(300);
+    expect(await model(page, femurs => femurs.map(index => window.bodyModel.visibleNow(index)), femurs)).toEqual([false, true]);
+    await page.locator('#cutBtn').click();
+    await settle(page);
+    expect(await model(page, femurs => window.bodyModel.visibleNow(femurs[0]), femurs)).toBe(true);
+  });
+  test('female: the modelled vulva, clitoris and urethra sit in her pelvis and meet her scanned organs', async ({ page }) => {
+    await open(page, { sex: 'female', view: 'organs' });
+    const seen = await model(page, () => {
+      const m = window.bodyModel, parts = m.body().parts, named = name => { const part = parts.find(item => item.name === name); if (!part) throw new Error(`no ${name}`); return part; };
+      const hips = [named('Left hip bone'), named('Right hip bone')], modelled = parts.filter(part => part.source === 'Wooten Labs');
+      const box = { min: [0, 1, 2].map(c => Math.min(...hips.map(hip => hip.min[c]))), max: [0, 1, 2].map(c => Math.max(...hips.map(hip => hip.max[c]))) };
+      const crura = [named('Left crus of clitoris'), named('Right crus of clitoris')], urethra = named('Urethra'), bladder = named('Urinary bladder'), vagina = named('Vagina'), hymen = named('Hymen'), glans = named('Glans of clitoris');
+      return {
+        modelled: modelled.length, sources: [...new Set(modelled.map(part => part.layer))].sort(),
+        outsidePelvis: modelled.filter(part => part.centre[0] < box.min[0] || part.centre[0] > box.max[0] || part.centre[1] > box.max[1] || part.centre[1] < box.min[1] - 6).map(part => part.name),
+        clitorisSpan: Math.max(...crura.map(crus => crus.max[0])) - Math.min(...crura.map(crus => crus.min[0])),
+        glansWidth: glans.max[0] - glans.min[0],
+        urethraLength: Math.hypot(...urethra.max.map((value, c) => value - urethra.min[c])),
+        urethraToBladder: bladder.min[1] - urethra.max[1],
+        vaginaToOpening: Math.hypot(vagina.centre[0] - hymen.centre[0], vagina.min[1] - hymen.centre[1]),
+        midline: Math.abs(glans.centre[0]),
+      };
+    });
+    expect(seen.modelled).toBeGreaterThanOrEqual(24);
+    expect(seen.sources).toEqual(['muscles', 'organs', 'skin']);
+    expect(seen.outsidePelvis).toEqual([]);
+    expect(seen.clitorisSpan).toBeGreaterThan(6); expect(seen.clitorisSpan).toBeLessThan(12);   // across the two crura, along the pubic arch
+    expect(seen.glansWidth).toBeGreaterThan(0.3); expect(seen.glansWidth).toBeLessThan(1);      // 3–10 mm (Lloyd 2005)
+    expect(seen.urethraLength).toBeGreaterThan(3); expect(seen.urethraLength).toBeLessThan(6.5);
+    expect(seen.urethraToBladder).toBeLessThan(0.3);   // it reaches the bladder
+    expect(seen.vaginaToOpening).toBeLessThan(1.5);    // the scanned vagina comes down to the modelled opening
+    expect(seen.midline).toBeLessThan(0.3);
   });
 });
 

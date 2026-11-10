@@ -576,7 +576,7 @@ function toggleMotion() {
 $('figure').addEventListener('click', () => { if ($('figure').classList.contains('live')) toggleMotion(); });
 $('figure').addEventListener('keydown', event => { if ((event.key === 'Enter' || event.key === ' ') && $('figure').classList.contains('live')) { event.preventDefault(); toggleMotion(); } });
 const motionKey = () => (moving() ? `${body.sex}:${state.region}` : null);
-const motion = { for: null, definition: null, rig: null, rigs: {}, phase: 0, clock: 0, caption: '', last: 0, held: null, base: null, touched: new Set(), chosen: new Set() };   // held: a moment of the cycle to stay at (tests and pictures)
+const motion = { for: null, definition: null, rig: null, rigs: {}, phase: 0, clock: 0, caption: '', moment: -1, last: 0, held: null, base: null, touched: new Set(), chosen: new Set() };   // held: a moment of the cycle to stay at (tests and pictures)
 const DROP = (() => { const c = document.createElement('canvas'); c.width = c.height = 32; const g = c.getContext('2d'), fill = g.createRadialGradient(16, 16, 0, 16, 16, 16); fill.addColorStop(0, 'rgba(255,255,255,1)'); fill.addColorStop(0.5, 'rgba(255,255,255,0.9)'); fill.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = fill; g.fillRect(0, 0, 32, 32); return new THREE.CanvasTexture(c); })();
 const WAY = 600;
 const dropHeight = { value: 1 };   // the canvas height in pixels: a drop's size is in cm
@@ -659,15 +659,18 @@ function motionKit() {
    phase, time) in shares of the curve a second, gates [{ at, open(phase) }] that hold the drops behind them when shut,
    place(phase, time) where the head of the stream is, for one that keeps time with the motion instead of flowing freely,
    shown(phase) from 0 to 1 } */
+/* a point somewhere in a ball, more often near its middle */
+const inBall = radius => V(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5).setLength(radius * Math.random() ** 0.6);
 function makeStream(spec) {
   const count = spec.count ?? 160, spread = spec.spread ?? 0.5, geometry = new THREE.BufferGeometry();
   geometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(count * 3), 3));
   geometry.setAttribute('alpha', new THREE.BufferAttribute(new Float32Array(count), 1));
   geometry.setAttribute('tint', new THREE.BufferAttribute(new Float32Array(count * 3), 3));
+  geometry.setAttribute('grain', new THREE.BufferAttribute(Float32Array.from({ length: count }, () => 0.55 + Math.random() ** 2 * 0.9), 1));   // no two drops quite the same size
   const cloud = new THREE.Points(geometry, new THREE.ShaderMaterial({
-    uniforms: { uMap: { value: DROP }, uSize: { value: spec.size ?? 0.8 }, uHeight: dropHeight }, transparent: true, depthTest: false, depthWrite: false,
-    vertexShader: `attribute float alpha; attribute vec3 tint; uniform float uSize; uniform float uHeight; varying float vAlpha; varying vec3 vTint;
-      void main() { vAlpha = alpha; vTint = tint; vec4 seen = modelViewMatrix * vec4(position, 1.0); gl_PointSize = uSize * projectionMatrix[1][1] * uHeight * 0.5 / -seen.z; gl_Position = projectionMatrix * seen; }`,
+    uniforms: { uMap: { value: DROP }, uSize: { value: spec.size ?? 0.8 }, uHeight: dropHeight }, transparent: true, depthTest: false, depthWrite: false, blending: spec.glow ? THREE.AdditiveBlending : THREE.NormalBlending,
+    vertexShader: `attribute float alpha; attribute vec3 tint; attribute float grain; uniform float uSize; uniform float uHeight; varying float vAlpha; varying vec3 vTint;
+      void main() { vAlpha = alpha; vTint = tint; vec4 seen = modelViewMatrix * vec4(position, 1.0); gl_PointSize = uSize * grain * projectionMatrix[1][1] * uHeight * 0.5 / -seen.z; gl_Position = projectionMatrix * seen; }`,
     fragmentShader: `uniform sampler2D uMap; varying float vAlpha; varying vec3 vTint;
       void main() {
         gl_FragColor = vec4(vTint, texture2D(uMap, gl_PointCoord).a * vAlpha);
@@ -678,13 +681,21 @@ function makeStream(spec) {
   root.add(cloud);
   const from = new THREE.Color(spec.colour).lerp(WHITE, 0.25), to = spec.to ? new THREE.Color(spec.to).lerp(WHITE, 0.25) : from;
   return { ...spec, cloud, from, to, gates: spec.gates || [], way: spec.curve.getSpacedPoints(WAY),   // the curve as points evenly spaced along it: quick to look up, drop by drop, frame by frame
-    drops: Array.from({ length: count }, (_, k) => ({ behind: (spec.packed ?? 1) * k / count, where: spec.packed ? spec.packed * k / count : (k + Math.random()) / count, off: V(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5).multiplyScalar(spread * 2) })) };
+    drops: Array.from({ length: count }, (_, k) => ({ label: (k + Math.random()) / count, behind: (spec.packed ?? 1) * k / count, where: spec.packed ? spec.packed * k / count : (k + Math.random()) / count, off: spec.swirl ? inBall(spread) : V(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5).multiplyScalar(spread * 2), other: spec.swirl ? inBall(spread) : null, rate: (0.5 + Math.random()) * (Math.random() < 0.5 ? -1 : 1), turn: Math.random() * 6.283 })) };
+}
+/* The line under a moving close-up. A motion that turns over faster than a line can be read (a heartbeat) names its
+   moments side by side and lights the one it is in: the words stay put. */
+function captionMotion() {
+  const figure = $('figure'), moments = motion.for === motionKey() && motion.definition.moments;
+  if (!moments) { figure.textContent = motion.caption || MOTIONS[state.region].stop; return; }
+  if (figure.children.length !== moments.length) figure.replaceChildren(...moments.map(text => Object.assign(document.createElement('span'), { textContent: text })));
+  [...figure.children].forEach((span, k) => span.classList.toggle('now', k === motion.moment));
 }
 function setMotion() {
   const key = motionKey();
   for (const [name, rig] of Object.entries(motion.rigs)) if (name !== key) for (const stream of rig.streams) stream.cloud.visible = false;
   if (motion.for !== key) {
-    motion.for = null; motion.definition = motion.rig = null; motion.caption = ''; motion.touched.clear();
+    motion.for = null; motion.definition = motion.rig = null; motion.caption = ''; motion.moment = -1; motion.touched.clear();
     stateTexture.moves.image.data.fill(0); stateTexture.moves.needsUpdate = true;
     /* its layers may still be on their way: this runs again when they arrive */
     if (!key || ![...body.around.own, ...body.around.context].every(index => body.layers[body.parts[index].layer]?.group)) return;
@@ -741,8 +752,10 @@ function stepMotion(now) {
     const { position, alpha, tint } = stream.cloud.geometry.attributes, shown = stream.shown ? stream.shown(phase, time) : 1;
     stream.cloud.visible = shown > 0.004;
     if (!stream.cloud.visible) continue;
+    const lay = stream.lay?.(phase, time);   // a stream that knows where each of its drops is, by its place in the queue
     stream.drops.forEach((drop, k) => {
-      if (stream.place) drop.where = THREE.MathUtils.clamp(stream.place(phase, time) - drop.behind, 0, 1);
+      if (lay) drop.where = lay(drop.label);
+      else if (stream.place) drop.where = THREE.MathUtils.clamp(stream.place(phase, time) - drop.behind, 0, 1);
       else {
         let next = drop.where + stream.speed(drop.where, phase, time) * seconds;
         for (const gate of stream.gates) if (drop.where < gate.at && next >= gate.at && !gate.open(phase)) next = drop.where;   // a shut gate holds the stream behind it
@@ -750,17 +763,23 @@ function stepMotion(now) {
       }
       const along = drop.where * WAY, before = Math.min(WAY - 1, Math.floor(along));
       spot.lerpVectors(stream.way[before], stream.way[before + 1], along - before);
-      let narrow = 1;   // the stream narrows through a gate
-      for (const gate of stream.gates) narrow = Math.min(narrow, 0.45 + 6 * Math.abs(drop.where - gate.at));
-      position.setXYZ(k, spot.x + drop.off.x * narrow, spot.y + drop.off.y * narrow, spot.z + drop.off.z * narrow);
-      alpha.setX(k, 0.92 * shown * (stream.place ? 1 - 0.85 * drop.behind / stream.packed : Math.min(1, drop.where / 0.04, (1 - drop.where) / 0.05)));   // a free stream fades in at its start and out at its end; one that keeps time trails off behind its head
+      let narrow = 1, { x, y, z } = drop.off;
+      if (stream.width) narrow = stream.width(drop.where);   // as wide as what it runs through
+      else for (const gate of stream.gates) narrow = Math.min(narrow, 0.45 + 6 * Math.abs(drop.where - gate.at));   // or it narrows through a gate
+      if (stream.swirl) {   // each drop wanders round the middle of the stream, so the whole churns
+        const angle = time * stream.swirl * drop.rate + drop.turn, cos = Math.cos(angle), sin = Math.sin(angle);
+        x = x * cos + drop.other.x * sin; y = y * cos + drop.other.y * sin; z = z * cos + drop.other.z * sin;
+      }
+      position.setXYZ(k, spot.x + x * narrow, spot.y + y * narrow, spot.z + z * narrow);
+      alpha.setX(k, (stream.strength ?? 0.92) * shown * (stream.place ? 1 - 0.85 * drop.behind / stream.packed : Math.min(1, drop.where / 0.04, (1 - drop.where) / 0.05)));   // a free stream fades in at its start and out at its end; one that keeps time trails off behind its head
       tint.setXYZ(k, stream.from.r + (stream.to.r - stream.from.r) * drop.where, stream.from.g + (stream.to.g - stream.from.g) * drop.where, stream.from.b + (stream.to.b - stream.from.b) * drop.where);
     });
     position.needsUpdate = alpha.needsUpdate = tint.needsUpdate = true;
   }
   /* a sound is made as the cycle passes its moment: not while a moment is held, nor on a frame in which no time passed */
   if (sound.on && motion.held === null && phase !== before) for (const [at, make] of rig.sounds || definition.sounds || []) if (before < phase ? before < at && at <= phase : at > before || at <= phase) make(play, rig);
-  if (moment.caption && moment.caption !== motion.caption) { motion.caption = moment.caption; $('figure').textContent = moment.caption; }
+  const which = moment.moment ?? -1;
+  if ((moment.caption && moment.caption !== motion.caption) || which !== motion.moment) { motion.caption = moment.caption || motion.caption; motion.moment = which; captionMotion(); }
   needsRender = true;
 }
 /* the sounds a motion can make: a low thump (a heart sound), a breath, a sung note, a soft chime */
@@ -996,7 +1015,7 @@ function syncUI() {
   if (moves) { $('figure').setAttribute('role', 'button'); $('figure').tabIndex = 0; } else { $('figure').removeAttribute('role'); $('figure').removeAttribute('tabindex'); }
   if (moves && !state.motion) $('figure').textContent = MOTIONS[state.region].start;
   else if (!moves) $('figure').textContent = `${figure}${isolating() ? ', isolated' : ''} · ${state.sex === 'male' ? 'Male' : 'Female'}`;
-  else $('figure').textContent = motion.caption || MOTIONS[state.region].stop;
+  else captionMotion();
   for (const button of $('views').children) button.setAttribute('aria-pressed', String(!state.region && button.dataset.view === state.view));
   $('hint').hidden = state.touched || !!state.selection || !!state.tour || state.dock || state.drawer;
   const xrayOn = state.xray >= 0.02, coverName = viewInfo().xray.map(layer => LAYER_INFO[layer].name.toLowerCase()).join(' and ');

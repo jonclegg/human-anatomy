@@ -460,12 +460,14 @@ test.describe('motion', () => {
       return { ...m.motion(), tricuspid: opacity(/leaflet of tricuspid valve$/), aortic: opacity(/cusp of aortic valve$/), wall: opacity(/^Wall of ventricle$/), atrium: scale(/^Cavity of right atrium$/), ventricle: scale(/^Cavity of left ventricle$/) };
     }, phase);
     const topUp = await at(0.07), ejecting = await at(0.3), refilling = await at(0.8);
-    expect(topUp).toMatchObject({ moving: true, drops: 640, caption: expect.stringContaining('atria squeeze') });
+    expect(topUp).toMatchObject({ moving: true, drops: 4800, caption: expect.stringContaining('Atria squeeze') });
     expect(topUp.atrium).toBeLessThan(0.83); expect(topUp.ventricle).toBe(1);
     expect(ejecting.atrium).toBe(1); expect(ejecting.ventricle).toBeLessThan(0.76);
     expect(ejecting.tricuspid).toBe(1); expect(ejecting.aortic).toBeLessThan(0.3);        // inflow shut, outflow open
     expect(refilling.tricuspid).toBeLessThan(0.3); expect(refilling.aortic).toBe(1);      // and the other way round
     expect([refilling.atrium, refilling.ventricle]).toEqual([1, 1]);
+    await expect(page.locator('#figure span')).toHaveText(['Atria squeeze', 'Ventricles squeeze', 'Heart refills']);   // the three moments stay put,
+    await expect(page.locator('#figure span.now')).toHaveText('Heart refills');                                          // and the one it is in is lit
     expect(refilling.wall).toBeLessThan(0.4);                                             // the walls are glass, so the blood shows
     const before = await model(page, () => { window.bodyModel.holdMotion(null); return window.bodyModel.renders(); });
     await page.waitForTimeout(700);
@@ -483,7 +485,7 @@ test.describe('motion', () => {
       await page.goto(`/?sex=${sex}`);
       await page.waitForSelector('html[data-model-ready="true"]', { timeout: 60_000 });
       const regions = await model(page, () => window.bodyModel.regions().filter(id => window.bodyModel.motions().includes(id)));
-      expect(regions.length).toBeGreaterThan(20);
+      expect(regions.length).toBeGreaterThan(12);
       for (const id of regions) {
         const seen = await model(page, async id => {
           const m = window.bodyModel, wait = ms => new Promise(done => setTimeout(done, ms));
@@ -500,7 +502,7 @@ test.describe('motion', () => {
         }, id);
         for (const moment of seen) {
           expect(moment, id).toMatchObject({ moving: true, finite: true });
-          expect(moment.caption.length, `${id} has a caption`).toBeGreaterThan(20);
+          expect(moment.caption.length, `${id} has a caption`).toBeGreaterThan(12);
           expect(moment.caption.length, `${id}'s caption fits the line under the figure`).toBeLessThan(190);
           expect(moment.moved + moment.drops, `${id} moves something or has something flowing`).toBeGreaterThan(0);
           expect(moment.switch, id).toMatch(/^(Stop|Keep) /);

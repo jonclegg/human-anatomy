@@ -1,1742 +1,1742 @@
 {
- "voice": "en-GB-Chirp3-HD-Charon",
+ "voice": "Algieba",
  "music": "music.mp3",
  "narration": {
   "view:body": {
    "file": "view-body.mp3",
-   "hash": "6ca180c0cb"
+   "hash": "3a5b7fe059"
   },
   "view:muscles": {
    "file": "view-muscles.mp3",
-   "hash": "c6ad0f9214"
+   "hash": "9c1244e696"
   },
   "view:organs": {
    "file": "view-organs.mp3",
-   "hash": "5de2dbde30"
+   "hash": "4dbea7b806"
   },
   "view:vessels": {
    "file": "view-vessels.mp3",
-   "hash": "04585d5531"
+   "hash": "c4043a261c"
   },
   "view:nerves": {
    "file": "view-nerves.mp3",
-   "hash": "0e572d66c8"
+   "hash": "89763bd218"
   },
   "view:skeleton": {
    "file": "view-skeleton.mp3",
-   "hash": "0450db21c1"
+   "hash": "e216e6b8e5"
   },
   "region:heart": {
    "file": "region-heart.mp3",
-   "hash": "c159fbf3f9"
+   "hash": "ed5141c12e"
   },
   "entry:heartRightAtrium": {
    "file": "entry-heartRightAtrium.mp3",
-   "hash": "8dd92dc449"
+   "hash": "63403d6a52"
   },
   "entry:heartTricuspidValve": {
    "file": "entry-heartTricuspidValve.mp3",
-   "hash": "6c692f6f90"
+   "hash": "fc89852100"
   },
   "entry:heartRightVentricle": {
    "file": "entry-heartRightVentricle.mp3",
-   "hash": "f86356b4a2"
+   "hash": "d9354d0151"
   },
   "entry:heartPulmonaryValve": {
    "file": "entry-heartPulmonaryValve.mp3",
-   "hash": "edca28030d"
+   "hash": "2fabf3351a"
   },
   "entry:heartLeftAtrium": {
    "file": "entry-heartLeftAtrium.mp3",
-   "hash": "aa4fa450c0"
+   "hash": "2113c3c1d1"
   },
   "entry:heartMitralValve": {
    "file": "entry-heartMitralValve.mp3",
-   "hash": "4db1baca9e"
+   "hash": "c0f2e1a73a"
   },
   "entry:heartLeftVentricle": {
    "file": "entry-heartLeftVentricle.mp3",
-   "hash": "f530368035"
+   "hash": "0a993c9dc8"
   },
   "entry:heartAorticValve": {
    "file": "entry-heartAorticValve.mp3",
-   "hash": "62e3a4c926"
+   "hash": "48c6aa5a11"
   },
   "region:lungs": {
    "file": "region-lungs.mp3",
-   "hash": "aea57f10e6"
+   "hash": "00b377ffc2"
   },
   "region:digestive": {
    "file": "region-digestive.mp3",
-   "hash": "3c53769695"
+   "hash": "65f4c5e0fa"
   },
   "region:liver": {
    "file": "region-liver.mp3",
-   "hash": "16e8b3e50f"
+   "hash": "76d7c26f96"
   },
   "region:kidney": {
    "file": "region-kidney.mp3",
-   "hash": "f95e52d987"
+   "hash": "ebc37954d7"
   },
   "region:breast": {
    "file": "region-breast.mp3",
-   "hash": "b145016cf9"
+   "hash": "b5d636cc88"
   },
   "region:lymphatic": {
    "file": "region-lymphatic.mp3",
-   "hash": "9a42beda52"
+   "hash": "3491c7fa59"
   },
   "region:brain": {
    "file": "region-brain.mp3",
-   "hash": "f1a2e79e70"
+   "hash": "21ef83c528"
   },
   "region:brainDeep": {
    "file": "region-brainDeep.mp3",
-   "hash": "dae56ee0ab"
+   "hash": "78ada3a815"
   },
   "region:eye": {
    "file": "region-eye.mp3",
-   "hash": "20f4106ee1"
+   "hash": "f510c3e2bb"
   },
   "region:skull": {
    "file": "region-skull.mp3",
-   "hash": "2cf893bc3d"
+   "hash": "3a58368267"
   },
   "region:teeth": {
    "file": "region-teeth.mp3",
-   "hash": "b8a54ae0d9"
+   "hash": "9b04176ffb"
   },
   "region:face": {
    "file": "region-face.mp3",
-   "hash": "55135eab16"
+   "hash": "fe5d324f8b"
   },
   "region:mouth": {
    "file": "region-mouth.mp3",
-   "hash": "687cabff76"
+   "hash": "efe571b4f1"
   },
   "region:larynx": {
    "file": "region-larynx.mp3",
-   "hash": "e94beefd4b"
+   "hash": "21236a95c7"
   },
   "region:cranialNerves": {
    "file": "region-cranialNerves.mp3",
-   "hash": "9d2c10a92e"
+   "hash": "0471c12478"
   },
   "region:shoulder": {
    "file": "region-shoulder.mp3",
-   "hash": "61b4e7ad28"
+   "hash": "76054e0371"
   },
   "region:elbow": {
    "file": "region-elbow.mp3",
-   "hash": "0739d8682f"
+   "hash": "cfac609c05"
   },
   "region:hand": {
    "file": "region-hand.mp3",
-   "hash": "c43187fbbd"
+   "hash": "716ed7d721"
   },
   "region:hip": {
    "file": "region-hip.mp3",
-   "hash": "83b6c2e457"
+   "hash": "06879af131"
   },
   "region:knee": {
    "file": "region-knee.mp3",
-   "hash": "be572df75b"
+   "hash": "7eb2118f2f"
   },
   "region:foot": {
    "file": "region-foot.mp3",
-   "hash": "7800aeb479"
+   "hash": "9d6cf7894c"
   },
   "region:spine": {
    "file": "region-spine.mp3",
-   "hash": "3637768ef9"
+   "hash": "9a84fd682f"
   },
   "region:femalePelvis": {
    "file": "region-femalePelvis.mp3",
-   "hash": "c895af593b"
+   "hash": "1ea60da236"
   },
   "region:vulva": {
    "file": "region-vulva.mp3",
-   "hash": "d2f8c90caa"
+   "hash": "e3320d637c"
   },
   "region:clitoris": {
    "file": "region-clitoris.mp3",
-   "hash": "6b081e0dd4"
+   "hash": "b46ec7b8b9"
   },
   "region:malePelvis": {
    "file": "region-malePelvis.mp3",
-   "hash": "9b3a43d91d"
+   "hash": "bf04a833d2"
   },
   "region:penis": {
    "file": "region-penis.mp3",
-   "hash": "931c5f57c5"
+   "hash": "1d1e194322"
   },
   "entry:vulvaMonsPubis": {
    "file": "entry-vulvaMonsPubis.mp3",
-   "hash": "f7edff01dc"
+   "hash": "a4ba917b28"
   },
   "entry:vulvaLabiaMajora": {
    "file": "entry-vulvaLabiaMajora.mp3",
-   "hash": "fdaf821a5a"
+   "hash": "e583043f27"
   },
   "entry:vulvaLabiaMinora": {
    "file": "entry-vulvaLabiaMinora.mp3",
-   "hash": "ba6da57d6b"
+   "hash": "2a06e31292"
   },
   "entry:clitorisHood": {
    "file": "entry-clitorisHood.mp3",
-   "hash": "f9deef546a"
+   "hash": "440509f91b"
   },
   "entry:clitorisGlans": {
    "file": "entry-clitorisGlans.mp3",
-   "hash": "f1266e5405"
+   "hash": "b3d7cd9322"
   },
   "entry:vulvaVestibule": {
    "file": "entry-vulvaVestibule.mp3",
-   "hash": "024260d390"
+   "hash": "9eef9908a3"
   },
   "entry:vulvaUrethralOpening": {
    "file": "entry-vulvaUrethralOpening.mp3",
-   "hash": "5f97a3c8b5"
+   "hash": "847493a37b"
   },
   "entry:vulvaHymen": {
    "file": "entry-vulvaHymen.mp3",
-   "hash": "9386f17f37"
+   "hash": "3e44728624"
   },
   "entry:clitorisBody": {
    "file": "entry-clitorisBody.mp3",
-   "hash": "3c0aae66b7"
+   "hash": "338c9daa4c"
   },
   "entry:clitorisCrura": {
    "file": "entry-clitorisCrura.mp3",
-   "hash": "d85df85753"
+   "hash": "b2e9efb334"
   },
   "entry:clitorisBulbs": {
    "file": "entry-clitorisBulbs.mp3",
-   "hash": "0f6f26eac9"
+   "hash": "c1c01685b4"
   },
   "entry:clitorisIschiocavernosus": {
    "file": "entry-clitorisIschiocavernosus.mp3",
-   "hash": "47c175f26f"
+   "hash": "ae2d8638b2"
   },
   "entry:clitorisBulbospongiosus": {
    "file": "entry-clitorisBulbospongiosus.mp3",
-   "hash": "4f047b2e0d"
+   "hash": "feb716d737"
   },
   "entry:clitorisVestibularGlands": {
    "file": "entry-clitorisVestibularGlands.mp3",
-   "hash": "3631ba5d25"
+   "hash": "ca71a41dbb"
   },
   "entry:clitorisParaurethralGlands": {
    "file": "entry-clitorisParaurethralGlands.mp3",
-   "hash": "5e16d930eb"
+   "hash": "8b1ff55a5f"
   },
   "entry:clitorisPerinealBody": {
    "file": "entry-clitorisPerinealBody.mp3",
-   "hash": "bea4d31bbd"
+   "hash": "6db96236b5"
   },
   "entry:clitorisPudendalNerve": {
    "file": "entry-clitorisPudendalNerve.mp3",
-   "hash": "1d9bdb2b6f"
+   "hash": "0d8f61454d"
   },
   "entry:clitorisPudendalVessels": {
    "file": "entry-clitorisPudendalVessels.mp3",
-   "hash": "6f27bb70e9"
+   "hash": "04e9b06aa8"
   },
   "entry:vagina": {
    "file": "entry-vagina.mp3",
-   "hash": "396c9ca131"
+   "hash": "d333d67882"
   },
   "entry:cervix": {
    "file": "entry-cervix.mp3",
-   "hash": "4a66327e7f"
+   "hash": "287c35e558"
   },
   "entry:uterus": {
    "file": "entry-uterus.mp3",
-   "hash": "5b3ad05d6b"
+   "hash": "5c25005a7d"
   },
   "entry:uterineTube": {
    "file": "entry-uterineTube.mp3",
-   "hash": "39a6f5c3d9"
+   "hash": "f03a90e799"
   },
   "entry:ovary": {
    "file": "entry-ovary.mp3",
-   "hash": "d2e1d5fdd7"
+   "hash": "baa1c6edcd"
   },
   "entry:femalePelvisRoundLigament": {
    "file": "entry-femalePelvisRoundLigament.mp3",
-   "hash": "cb98707f43"
+   "hash": "79beeab41c"
   },
   "entry:femalePelvisBroadLigament": {
    "file": "entry-femalePelvisBroadLigament.mp3",
-   "hash": "12ebd62ccb"
+   "hash": "2d58bd6c65"
   },
   "entry:femalePelvisOvaryLigaments": {
    "file": "entry-femalePelvisOvaryLigaments.mp3",
-   "hash": "bdae583904"
+   "hash": "ab38a96a92"
   },
   "entry:femalePelvisCervicalLigaments": {
    "file": "entry-femalePelvisCervicalLigaments.mp3",
-   "hash": "1013e5c9c5"
+   "hash": "e1b305af55"
   },
   "entry:bladder": {
    "file": "entry-bladder.mp3",
-   "hash": "5bad727bc4"
+   "hash": "fd696b54ba"
   },
   "entry:femalePelvisUrethra": {
    "file": "entry-femalePelvisUrethra.mp3",
-   "hash": "b308d4e5ea"
+   "hash": "e2d8a06c59"
   },
   "entry:rectum": {
    "file": "entry-rectum.mp3",
-   "hash": "cdc03e17b1"
+   "hash": "6925a2bb7d"
   },
   "entry:femalePelvisLevatorAni": {
    "file": "entry-femalePelvisLevatorAni.mp3",
-   "hash": "70bbdf979c"
+   "hash": "9ed5371a64"
   },
   "entry:femalePelvisCoccygeus": {
    "file": "entry-femalePelvisCoccygeus.mp3",
-   "hash": "b0ce6ec1e8"
+   "hash": "606668602b"
   },
   "entry:femalePelvisAnalSphincter": {
    "file": "entry-femalePelvisAnalSphincter.mp3",
-   "hash": "d78a5d37e9"
+   "hash": "f2f925cb80"
   },
   "entry:penisGlans": {
    "file": "entry-penisGlans.mp3",
-   "hash": "7db198adb5"
+   "hash": "6b858e46fc"
   },
   "entry:penisCorpusCavernosum": {
    "file": "entry-penisCorpusCavernosum.mp3",
-   "hash": "e1a132cc35"
+   "hash": "197d2f201e"
   },
   "entry:penisCorpusSpongiosum": {
    "file": "entry-penisCorpusSpongiosum.mp3",
-   "hash": "8c540515ea"
+   "hash": "1ddb429346"
   },
   "entry:urethra": {
    "file": "entry-urethra.mp3",
-   "hash": "952d905447"
+   "hash": "1a9fa15528"
   },
   "entry:penisDeepArtery": {
    "file": "entry-penisDeepArtery.mp3",
-   "hash": "58848ffc5e"
+   "hash": "5dfccf0301"
   },
   "entry:penisDorsalArtery": {
    "file": "entry-penisDorsalArtery.mp3",
-   "hash": "42a971a9eb"
+   "hash": "89bb4c4be2"
   },
   "entry:penisDeepDorsalVein": {
    "file": "entry-penisDeepDorsalVein.mp3",
-   "hash": "b6e562f661"
+   "hash": "5ba8bac063"
   },
   "entry:penisSuperficialDorsalVein": {
    "file": "entry-penisSuperficialDorsalVein.mp3",
-   "hash": "71890e838c"
+   "hash": "ebe551875c"
   },
   "entry:testis": {
    "file": "entry-testis.mp3",
-   "hash": "2a0ed7dee5"
+   "hash": "828bf0257b"
   },
   "entry:epididymis": {
    "file": "entry-epididymis.mp3",
-   "hash": "1b9be63c63"
+   "hash": "b3c5887cf8"
   },
   "entry:deferentDuct": {
    "file": "entry-deferentDuct.mp3",
-   "hash": "fd9772adaf"
+   "hash": "acd4f7763b"
   },
   "entry:prostate": {
    "file": "entry-prostate.mp3",
-   "hash": "b87aef3501"
+   "hash": "e1ada0418e"
   },
   "entry:seminalVesicle": {
    "file": "entry-seminalVesicle.mp3",
-   "hash": "22041052a4"
+   "hash": "cc23edc079"
   },
   "entry:malePelvisLevatorAni": {
    "file": "entry-malePelvisLevatorAni.mp3",
-   "hash": "3476a1da5b"
+   "hash": "6ff63b3434"
   },
   "entry:malePelvisCoccygeus": {
    "file": "entry-malePelvisCoccygeus.mp3",
-   "hash": "b0ce6ec1e8"
+   "hash": "606668602b"
   },
   "entry:malePelvisAnalSphincter": {
    "file": "entry-malePelvisAnalSphincter.mp3",
-   "hash": "d78a5d37e9"
+   "hash": "f2f925cb80"
   },
   "entry:malePelvisPudendalNerve": {
    "file": "entry-malePelvisPudendalNerve.mp3",
-   "hash": "6c2e5d2585"
+   "hash": "380866189d"
   },
   "entry:malePelvisPudendalVessels": {
    "file": "entry-malePelvisPudendalVessels.mp3",
-   "hash": "5f70e589e3"
+   "hash": "6d4cedfc59"
   },
   "entry:frontalLobe": {
    "file": "entry-frontalLobe.mp3",
-   "hash": "3b690510b3"
+   "hash": "d63bf1bb62"
   },
   "entry:brainPrecentralGyrus": {
    "file": "entry-brainPrecentralGyrus.mp3",
-   "hash": "a42a99c798"
+   "hash": "64dd522cb3"
   },
   "entry:brainInferiorFrontalGyrus": {
    "file": "entry-brainInferiorFrontalGyrus.mp3",
-   "hash": "e0f16c49fb"
+   "hash": "69f999d0db"
   },
   "entry:parietalLobe": {
    "file": "entry-parietalLobe.mp3",
-   "hash": "0c1492d295"
+   "hash": "78293b7044"
   },
   "entry:brainPostcentralGyrus": {
    "file": "entry-brainPostcentralGyrus.mp3",
-   "hash": "754d229926"
+   "hash": "ffa136051f"
   },
   "entry:temporalLobe": {
    "file": "entry-temporalLobe.mp3",
-   "hash": "a52825599f"
+   "hash": "b73d48b126"
   },
   "entry:brainSuperiorTemporalGyrus": {
    "file": "entry-brainSuperiorTemporalGyrus.mp3",
-   "hash": "3dff8d2bb6"
+   "hash": "751aa67555"
   },
   "entry:occipitalLobe": {
    "file": "entry-occipitalLobe.mp3",
-   "hash": "b10f445415"
+   "hash": "23e5884d28"
   },
   "entry:insula": {
    "file": "entry-insula.mp3",
-   "hash": "2628a1fbc0"
+   "hash": "22dee978a3"
   },
   "entry:brainCingulateGyrus": {
    "file": "entry-brainCingulateGyrus.mp3",
-   "hash": "a2acf857e5"
+   "hash": "0190eea022"
   },
   "entry:cerebellum": {
    "file": "entry-cerebellum.mp3",
-   "hash": "10c34697a9"
+   "hash": "9c58887da3"
   },
   "entry:brainMidbrain": {
    "file": "entry-brainMidbrain.mp3",
-   "hash": "d25013b24d"
+   "hash": "f62e80b98a"
   },
   "entry:brainPons": {
    "file": "entry-brainPons.mp3",
-   "hash": "067b9fe04d"
+   "hash": "73e69a9217"
   },
   "entry:brainMedulla": {
    "file": "entry-brainMedulla.mp3",
-   "hash": "7479a501dc"
+   "hash": "0874ef61e3"
   },
   "entry:corpusCallosum": {
    "file": "entry-corpusCallosum.mp3",
-   "hash": "866547464f"
+   "hash": "84b5de9341"
   },
   "entry:brainDeepLateralVentricles": {
    "file": "entry-brainDeepLateralVentricles.mp3",
-   "hash": "e65ebaaf05"
+   "hash": "c72c71e824"
   },
   "entry:brainDeepChoroidPlexus": {
    "file": "entry-brainDeepChoroidPlexus.mp3",
-   "hash": "e0843ac8f8"
+   "hash": "890a4b38a3"
   },
   "entry:brainDeepThirdVentricle": {
    "file": "entry-brainDeepThirdVentricle.mp3",
-   "hash": "9b337494a3"
+   "hash": "0e10485899"
   },
   "entry:brainDeepFourthVentricle": {
    "file": "entry-brainDeepFourthVentricle.mp3",
-   "hash": "60885e4df6"
+   "hash": "d87cff9e77"
   },
   "entry:brainDeepCaudate": {
    "file": "entry-brainDeepCaudate.mp3",
-   "hash": "0ff483c062"
+   "hash": "110285a352"
   },
   "entry:brainDeepPutamen": {
    "file": "entry-brainDeepPutamen.mp3",
-   "hash": "ba8128be43"
+   "hash": "fb1355eeae"
   },
   "entry:brainDeepGlobusPallidus": {
    "file": "entry-brainDeepGlobusPallidus.mp3",
-   "hash": "c91c966c7c"
+   "hash": "48f9767baf"
   },
   "entry:brainDeepInternalCapsule": {
    "file": "entry-brainDeepInternalCapsule.mp3",
-   "hash": "c8378c648e"
+   "hash": "1d4ee8d190"
   },
   "entry:thalamus": {
    "file": "entry-thalamus.mp3",
-   "hash": "50a024c8d7"
+   "hash": "51073ec7dd"
   },
   "entry:hypothalamus": {
    "file": "entry-hypothalamus.mp3",
-   "hash": "849a92d731"
+   "hash": "bf35e8f898"
   },
   "entry:pituitary": {
    "file": "entry-pituitary.mp3",
-   "hash": "b5229b3427"
+   "hash": "3c6e1b2b98"
   },
   "entry:pineal": {
    "file": "entry-pineal.mp3",
-   "hash": "020d6c3984"
+   "hash": "42eadea226"
   },
   "entry:brainDeepHippocampus": {
    "file": "entry-brainDeepHippocampus.mp3",
-   "hash": "d025a88108"
+   "hash": "55de8a728d"
   },
   "entry:brainDeepFornix": {
    "file": "entry-brainDeepFornix.mp3",
-   "hash": "bab6bc8d25"
+   "hash": "3d6c66c79c"
   },
   "entry:brainDeepAmygdala": {
    "file": "entry-brainDeepAmygdala.mp3",
-   "hash": "d229902f04"
+   "hash": "dfd41cc9b2"
   },
   "entry:eyeCornea": {
    "file": "entry-eyeCornea.mp3",
-   "hash": "1e996b6b87"
+   "hash": "f0668c61ab"
   },
   "entry:eyeSclera": {
    "file": "entry-eyeSclera.mp3",
-   "hash": "aca8dcbd0b"
+   "hash": "71e3e7ea82"
   },
   "entry:eyeAnteriorChamber": {
    "file": "entry-eyeAnteriorChamber.mp3",
-   "hash": "8d6c1cfc44"
+   "hash": "c4f68e26b1"
   },
   "entry:eyeIris": {
    "file": "entry-eyeIris.mp3",
-   "hash": "4186b33897"
+   "hash": "5ec5e16808"
   },
   "entry:eyeLens": {
    "file": "entry-eyeLens.mp3",
-   "hash": "c541907ca2"
+   "hash": "e0ad04dee6"
   },
   "entry:eyeChoroid": {
    "file": "entry-eyeChoroid.mp3",
-   "hash": "5cf95c0952"
+   "hash": "500077aab0"
   },
   "entry:eyeRetina": {
    "file": "entry-eyeRetina.mp3",
-   "hash": "ab2eac3fce"
+   "hash": "8df527c511"
   },
   "entry:eyeVitreousBody": {
    "file": "entry-eyeVitreousBody.mp3",
-   "hash": "b13c72c6cb"
+   "hash": "0fd1497ef0"
   },
   "entry:eyeOpticNerve": {
    "file": "entry-eyeOpticNerve.mp3",
-   "hash": "2e14786910"
+   "hash": "40cb0b7238"
   },
   "entry:eyeSuperiorRectus": {
    "file": "entry-eyeSuperiorRectus.mp3",
-   "hash": "7d3dee9f51"
+   "hash": "a026061bc5"
   },
   "entry:eyeInferiorRectus": {
    "file": "entry-eyeInferiorRectus.mp3",
-   "hash": "e40e48e1ec"
+   "hash": "a2a317a957"
   },
   "entry:eyeMedialRectus": {
    "file": "entry-eyeMedialRectus.mp3",
-   "hash": "e63f0805bf"
+   "hash": "b2e2c7fa0a"
   },
   "entry:eyeLateralRectus": {
    "file": "entry-eyeLateralRectus.mp3",
-   "hash": "67db406c2c"
+   "hash": "49cbcce575"
   },
   "entry:eyeObliques": {
    "file": "entry-eyeObliques.mp3",
-   "hash": "27070e68b9"
+   "hash": "054bf1da85"
   },
   "entry:eyeLacrimalApparatus": {
    "file": "entry-eyeLacrimalApparatus.mp3",
-   "hash": "768dbe5ac2"
+   "hash": "f178f3631c"
   },
   "entry:eyeEyelids": {
    "file": "entry-eyeEyelids.mp3",
-   "hash": "4a8817e192"
+   "hash": "b2c920f1e9"
   },
   "entry:skullFrontalBone": {
    "file": "entry-skullFrontalBone.mp3",
-   "hash": "39390aeade"
+   "hash": "39034f729b"
   },
   "entry:skullParietalBone": {
    "file": "entry-skullParietalBone.mp3",
-   "hash": "f0bc0caa43"
+   "hash": "ddc1649c31"
   },
   "entry:skullOccipitalBone": {
    "file": "entry-skullOccipitalBone.mp3",
-   "hash": "7c606b20d5"
+   "hash": "398f915155"
   },
   "entry:skullTemporalBone": {
    "file": "entry-skullTemporalBone.mp3",
-   "hash": "8cd0a8acb4"
+   "hash": "ba431a4d48"
   },
   "entry:skullSphenoidBone": {
    "file": "entry-skullSphenoidBone.mp3",
-   "hash": "19a4765633"
+   "hash": "9c40ed0be8"
   },
   "entry:skullEthmoidBone": {
    "file": "entry-skullEthmoidBone.mp3",
-   "hash": "78be5585c9"
+   "hash": "bcfcd8b7c7"
   },
   "entry:skullNasalBone": {
    "file": "entry-skullNasalBone.mp3",
-   "hash": "2a05ab4cfe"
+   "hash": "c1e29a3b97"
   },
   "entry:skullLacrimalBone": {
    "file": "entry-skullLacrimalBone.mp3",
-   "hash": "1e86667adc"
+   "hash": "047ac04347"
   },
   "entry:skullMaxilla": {
    "file": "entry-skullMaxilla.mp3",
-   "hash": "6c1280ac66"
+   "hash": "c1c36cf218"
   },
   "entry:skullZygomaticBone": {
    "file": "entry-skullZygomaticBone.mp3",
-   "hash": "219a96b616"
+   "hash": "89584e7f18"
   },
   "entry:skullPalatineBone": {
    "file": "entry-skullPalatineBone.mp3",
-   "hash": "bb926c635b"
+   "hash": "533237503c"
   },
   "entry:skullVomer": {
    "file": "entry-skullVomer.mp3",
-   "hash": "e47ce32b8c"
+   "hash": "aed503e120"
   },
   "entry:skullInferiorNasalConcha": {
    "file": "entry-skullInferiorNasalConcha.mp3",
-   "hash": "8eba6ed994"
+   "hash": "9308db631d"
   },
   "entry:mandible": {
    "file": "entry-mandible.mp3",
-   "hash": "3e01653675"
+   "hash": "925a4c9916"
   },
   "entry:teeth": {
    "file": "entry-teeth.mp3",
-   "hash": "b2d3c29b6c"
+   "hash": "78c5c6c94d"
   },
   "entry:hyoid": {
    "file": "entry-hyoid.mp3",
-   "hash": "a8e298f0fb"
+   "hash": "84adc5968f"
   },
   "entry:teethCentralIncisors": {
    "file": "entry-teethCentralIncisors.mp3",
-   "hash": "88afb3ed97"
+   "hash": "b4a5ba37ae"
   },
   "entry:teethLateralIncisors": {
    "file": "entry-teethLateralIncisors.mp3",
-   "hash": "91d3ecb03d"
+   "hash": "a2adbfe483"
   },
   "entry:teethCanines": {
    "file": "entry-teethCanines.mp3",
-   "hash": "57ed6698c2"
+   "hash": "d0dcec192e"
   },
   "entry:teethFirstPremolars": {
    "file": "entry-teethFirstPremolars.mp3",
-   "hash": "30de8d1b54"
+   "hash": "fff026e9a9"
   },
   "entry:teethSecondPremolars": {
    "file": "entry-teethSecondPremolars.mp3",
-   "hash": "f33b86341c"
+   "hash": "df5e676653"
   },
   "entry:teethFirstMolars": {
    "file": "entry-teethFirstMolars.mp3",
-   "hash": "aedd6a86d9"
+   "hash": "8e30afa2b4"
   },
   "entry:teethSecondMolars": {
    "file": "entry-teethSecondMolars.mp3",
-   "hash": "9f94e37f1a"
+   "hash": "a14e95a72d"
   },
   "entry:teethGingiva": {
    "file": "entry-teethGingiva.mp3",
-   "hash": "acff9718b7"
+   "hash": "58b8cc944a"
   },
   "entry:faceOccipitofrontalis": {
    "file": "entry-faceOccipitofrontalis.mp3",
-   "hash": "3309cdb2af"
+   "hash": "846a440ea2"
   },
   "entry:faceOrbicularisOculi": {
    "file": "entry-faceOrbicularisOculi.mp3",
-   "hash": "4d93cbb859"
+   "hash": "6ee6c82d4a"
   },
   "entry:faceCorrugatorProcerus": {
    "file": "entry-faceCorrugatorProcerus.mp3",
-   "hash": "2749f2855d"
+   "hash": "c1c1b34370"
   },
   "entry:faceNasalis": {
    "file": "entry-faceNasalis.mp3",
-   "hash": "94b593fdca"
+   "hash": "2e41565610"
   },
   "entry:faceLevatorLabiiSuperioris": {
    "file": "entry-faceLevatorLabiiSuperioris.mp3",
-   "hash": "3331911ae8"
+   "hash": "84ca672597"
   },
   "entry:faceZygomaticus": {
    "file": "entry-faceZygomaticus.mp3",
-   "hash": "68d52c7046"
+   "hash": "550953ea46"
   },
   "entry:faceLevatorAnguliOris": {
    "file": "entry-faceLevatorAnguliOris.mp3",
-   "hash": "69a8be8e70"
+   "hash": "591fc0e88b"
   },
   "entry:faceRisorius": {
    "file": "entry-faceRisorius.mp3",
-   "hash": "e3e4fd6130"
+   "hash": "bd42bfcd91"
   },
   "entry:faceOrbicularisOris": {
    "file": "entry-faceOrbicularisOris.mp3",
-   "hash": "0d8883f897"
+   "hash": "9f22990be2"
   },
   "entry:faceBuccinator": {
    "file": "entry-faceBuccinator.mp3",
-   "hash": "51258f5267"
+   "hash": "b0047c76c3"
   },
   "entry:faceDepressorAnguliOris": {
    "file": "entry-faceDepressorAnguliOris.mp3",
-   "hash": "52185e1576"
+   "hash": "0219925d5e"
   },
   "entry:faceLowerLipChin": {
    "file": "entry-faceLowerLipChin.mp3",
-   "hash": "00707e8bf8"
+   "hash": "a3e9fe37c1"
   },
   "entry:faceMasseter": {
    "file": "entry-faceMasseter.mp3",
-   "hash": "dc71408af2"
+   "hash": "d8e04131ff"
   },
   "entry:faceTemporalis": {
    "file": "entry-faceTemporalis.mp3",
-   "hash": "23bdf71cd7"
+   "hash": "b2b39465d7"
   },
   "entry:facePterygoids": {
    "file": "entry-facePterygoids.mp3",
-   "hash": "18ec6be09b"
+   "hash": "8a2fb8f3ce"
   },
   "entry:tongue": {
    "file": "entry-tongue.mp3",
-   "hash": "1f603d05db"
+   "hash": "2ada12d022"
   },
   "entry:tongueMuscles": {
    "file": "entry-tongueMuscles.mp3",
-   "hash": "c614b02975"
+   "hash": "397ce1dca3"
   },
   "entry:mouthSoftPalate": {
    "file": "entry-mouthSoftPalate.mp3",
-   "hash": "81dfc966e3"
+   "hash": "39114fad8c"
   },
   "entry:mouthUvula": {
    "file": "entry-mouthUvula.mp3",
-   "hash": "ca3cc2feba"
+   "hash": "eaf5e8c039"
   },
   "entry:tonsils": {
    "file": "entry-tonsils.mp3",
-   "hash": "13c32f4b30"
+   "hash": "4c2ef08bff"
   },
   "entry:mouthParotidGland": {
    "file": "entry-mouthParotidGland.mp3",
-   "hash": "89e69fbd11"
+   "hash": "80969e2e9f"
   },
   "entry:mouthSubmandibularGland": {
    "file": "entry-mouthSubmandibularGland.mp3",
-   "hash": "b58ce5621d"
+   "hash": "dfbe3a3990"
   },
   "entry:mouthSublingualGland": {
    "file": "entry-mouthSublingualGland.mp3",
-   "hash": "5eac196ebd"
+   "hash": "b5f2bcec73"
   },
   "entry:mouthNasopharynx": {
    "file": "entry-mouthNasopharynx.mp3",
-   "hash": "92641ae33f"
+   "hash": "71f4722351"
   },
   "entry:mouthOropharynx": {
    "file": "entry-mouthOropharynx.mp3",
-   "hash": "c92190acf9"
+   "hash": "eae8918c87"
   },
   "entry:mouthLaryngopharynx": {
    "file": "entry-mouthLaryngopharynx.mp3",
-   "hash": "6786368c50"
+   "hash": "d0d2a43071"
   },
   "entry:mouthPharyngealConstrictors": {
    "file": "entry-mouthPharyngealConstrictors.mp3",
-   "hash": "38a240425b"
+   "hash": "a6ab1a36b2"
   },
   "entry:larynxEpiglottis": {
    "file": "entry-larynxEpiglottis.mp3",
-   "hash": "68ff47e69a"
+   "hash": "b305c68aeb"
   },
   "entry:larynxThyrohyoidMembrane": {
    "file": "entry-larynxThyrohyoidMembrane.mp3",
-   "hash": "261c54986f"
+   "hash": "2fb1e962b8"
   },
   "entry:larynxThyroidCartilage": {
    "file": "entry-larynxThyroidCartilage.mp3",
-   "hash": "7b92072e0f"
+   "hash": "03cf954ac7"
   },
   "entry:larynxCricoidCartilage": {
    "file": "entry-larynxCricoidCartilage.mp3",
-   "hash": "b743468ed5"
+   "hash": "d504751773"
   },
   "entry:larynxCricothyroidLigament": {
    "file": "entry-larynxCricothyroidLigament.mp3",
-   "hash": "3f51588f5c"
+   "hash": "7ba5ce5ef5"
   },
   "entry:larynxArytenoidCartilages": {
    "file": "entry-larynxArytenoidCartilages.mp3",
-   "hash": "5a83d3bc80"
+   "hash": "ea096dc5b8"
   },
   "entry:larynxVocalFolds": {
    "file": "entry-larynxVocalFolds.mp3",
-   "hash": "30e8043c12"
+   "hash": "06fb6603ed"
   },
   "entry:larynxQuadrangularMembrane": {
    "file": "entry-larynxQuadrangularMembrane.mp3",
-   "hash": "9e49cc04b7"
+   "hash": "4166ebefeb"
   },
   "entry:larynxCricothyroidMuscle": {
    "file": "entry-larynxCricothyroidMuscle.mp3",
-   "hash": "22ce7de43b"
+   "hash": "ace747cb66"
   },
   "entry:larynxPosteriorCricoarytenoid": {
    "file": "entry-larynxPosteriorCricoarytenoid.mp3",
-   "hash": "fd9508eee5"
+   "hash": "e194389d53"
   },
   "entry:larynxClosingMuscles": {
    "file": "entry-larynxClosingMuscles.mp3",
-   "hash": "66a81bb916"
+   "hash": "354d68e3bc"
   },
   "entry:trachea": {
    "file": "entry-trachea.mp3",
-   "hash": "73983b6f60"
+   "hash": "66afa459de"
   },
   "entry:larynxThyroidGland": {
    "file": "entry-larynxThyroidGland.mp3",
-   "hash": "01b3638a34"
+   "hash": "7af4324394"
   },
   "entry:larynxParathyroidGlands": {
    "file": "entry-larynxParathyroidGlands.mp3",
-   "hash": "c9efd9779f"
+   "hash": "1e5ecc99ca"
   },
   "entry:opticNerve": {
    "file": "entry-opticNerve.mp3",
-   "hash": "1f15c13109"
+   "hash": "bf7da01d50"
   },
   "entry:cranialNervesOculomotor": {
    "file": "entry-cranialNervesOculomotor.mp3",
-   "hash": "a376c2f306"
+   "hash": "b58f6c2c61"
   },
   "entry:cranialNervesTrochlear": {
    "file": "entry-cranialNervesTrochlear.mp3",
-   "hash": "8e663992e2"
+   "hash": "798984b81d"
   },
   "entry:cranialNervesTrigeminal": {
    "file": "entry-cranialNervesTrigeminal.mp3",
-   "hash": "20540f6ebb"
+   "hash": "6c177c43df"
   },
   "entry:cranialNervesOphthalmic": {
    "file": "entry-cranialNervesOphthalmic.mp3",
-   "hash": "19e43905ee"
+   "hash": "79973f3001"
   },
   "entry:cranialNervesCiliaryGanglion": {
    "file": "entry-cranialNervesCiliaryGanglion.mp3",
-   "hash": "518845b630"
+   "hash": "d78b103830"
   },
   "entry:cranialNervesMaxillary": {
    "file": "entry-cranialNervesMaxillary.mp3",
-   "hash": "6037797306"
+   "hash": "46aa0ef52f"
   },
   "entry:cranialNervesMandibular": {
    "file": "entry-cranialNervesMandibular.mp3",
-   "hash": "4110aeb587"
+   "hash": "041ae29114"
   },
   "entry:cranialNervesLingual": {
    "file": "entry-cranialNervesLingual.mp3",
-   "hash": "84f1d1c654"
+   "hash": "24e3f6321b"
   },
   "entry:cranialNervesInferiorAlveolar": {
    "file": "entry-cranialNervesInferiorAlveolar.mp3",
-   "hash": "5c7b70b42d"
+   "hash": "e8cd2d0d76"
   },
   "entry:cranialNervesFacial": {
    "file": "entry-cranialNervesFacial.mp3",
-   "hash": "afd38c9e9a"
+   "hash": "38d45ebd04"
   },
   "entry:cranialNervesGlossopharyngeal": {
    "file": "entry-cranialNervesGlossopharyngeal.mp3",
-   "hash": "19abfc7db5"
+   "hash": "8c3da6fe69"
   },
   "entry:cranialNervesVagus": {
    "file": "entry-cranialNervesVagus.mp3",
-   "hash": "96b322b518"
+   "hash": "bacb26421e"
   },
   "entry:cranialNervesAccessory": {
    "file": "entry-cranialNervesAccessory.mp3",
-   "hash": "d622b38816"
+   "hash": "5b7ab4eb3c"
   },
   "entry:cranialNervesHypoglossal": {
    "file": "entry-cranialNervesHypoglossal.mp3",
-   "hash": "8a738e4d4c"
+   "hash": "4834337307"
   },
   "entry:heartPapillaryMuscles": {
    "file": "entry-heartPapillaryMuscles.mp3",
-   "hash": "64f740657e"
+   "hash": "7e60664885"
   },
   "entry:heartVentricularWall": {
    "file": "entry-heartVentricularWall.mp3",
-   "hash": "9e3225430a"
+   "hash": "837627bc67"
   },
   "entry:heartLeftCoronary": {
    "file": "entry-heartLeftCoronary.mp3",
-   "hash": "1fd0213ee7"
+   "hash": "4fd3edb202"
   },
   "entry:heartAnteriorInterventricular": {
    "file": "entry-heartAnteriorInterventricular.mp3",
-   "hash": "30448fdc2f"
+   "hash": "b5dbb590a1"
   },
   "entry:heartCircumflex": {
    "file": "entry-heartCircumflex.mp3",
-   "hash": "c74c060964"
+   "hash": "67172a8bad"
   },
   "entry:heartRightCoronary": {
    "file": "entry-heartRightCoronary.mp3",
-   "hash": "24a0e12ada"
+   "hash": "e3211da925"
   },
   "entry:cardiacVeins": {
    "file": "entry-cardiacVeins.mp3",
-   "hash": "308d8ad55d"
+   "hash": "a2e7ad47e6"
   },
   "entry:heartGreatVessels": {
    "file": "entry-heartGreatVessels.mp3",
-   "hash": "fdde34e724"
+   "hash": "5d4ba1b5b0"
   },
   "entry:lungsMainBronchi": {
    "file": "entry-lungsMainBronchi.mp3",
-   "hash": "94a7a3fe90"
+   "hash": "107dedc054"
   },
   "entry:lungsSegmentalBronchi": {
    "file": "entry-lungsSegmentalBronchi.mp3",
-   "hash": "6ba3151973"
+   "hash": "6e87a12a33"
   },
   "entry:lungsRightUpperLobe": {
    "file": "entry-lungsRightUpperLobe.mp3",
-   "hash": "ba9f230ce5"
+   "hash": "7ea586aede"
   },
   "entry:lungsRightMiddleLobe": {
    "file": "entry-lungsRightMiddleLobe.mp3",
-   "hash": "336d2c2e2c"
+   "hash": "c358aabee7"
   },
   "entry:lungsRightLowerLobe": {
    "file": "entry-lungsRightLowerLobe.mp3",
-   "hash": "9f2d5d3c7a"
+   "hash": "e9d063f237"
   },
   "entry:lungsLeftUpperLobe": {
    "file": "entry-lungsLeftUpperLobe.mp3",
-   "hash": "0f8d30fa14"
+   "hash": "85b4bdcb0b"
   },
   "entry:lungsLeftLowerLobe": {
    "file": "entry-lungsLeftLowerLobe.mp3",
-   "hash": "79eaca36fc"
+   "hash": "0f7954574a"
   },
   "entry:lungsPulmonaryArteries": {
    "file": "entry-lungsPulmonaryArteries.mp3",
-   "hash": "46b4f115a7"
+   "hash": "d777735183"
   },
   "entry:lungsPulmonaryVeins": {
    "file": "entry-lungsPulmonaryVeins.mp3",
-   "hash": "48a046079a"
+   "hash": "1b39a561be"
   },
   "entry:lungsBronchialArteries": {
    "file": "entry-lungsBronchialArteries.mp3",
-   "hash": "330a44b9c0"
+   "hash": "a61642715f"
   },
   "entry:lungsTracheobronchialNodes": {
    "file": "entry-lungsTracheobronchialNodes.mp3",
-   "hash": "371d3ddbbb"
+   "hash": "e533133462"
   },
   "entry:diaphragm": {
    "file": "entry-diaphragm.mp3",
-   "hash": "0a3511f34c"
+   "hash": "966665f969"
   },
   "entry:esophagus": {
    "file": "entry-esophagus.mp3",
-   "hash": "97a55d59e4"
+   "hash": "a3a6d1ef98"
   },
   "entry:stomach": {
    "file": "entry-stomach.mp3",
-   "hash": "ece60b11c8"
+   "hash": "6f3a2494d1"
   },
   "entry:duodenum": {
    "file": "entry-duodenum.mp3",
-   "hash": "db1bba3459"
+   "hash": "35b5c9ad7b"
   },
   "entry:digestiveJejunum": {
    "file": "entry-digestiveJejunum.mp3",
-   "hash": "c3047ac8f6"
+   "hash": "4a5457ce70"
   },
   "entry:digestiveIleum": {
    "file": "entry-digestiveIleum.mp3",
-   "hash": "d301cc4084"
+   "hash": "5dd7cc24b0"
   },
   "entry:mesentery": {
    "file": "entry-mesentery.mp3",
-   "hash": "5440dd578d"
+   "hash": "0a80ddd9d0"
   },
   "entry:digestiveIleocecalJunction": {
    "file": "entry-digestiveIleocecalJunction.mp3",
-   "hash": "6fb9e00ed4"
+   "hash": "3df8ea86e6"
   },
   "entry:appendix": {
    "file": "entry-appendix.mp3",
-   "hash": "f569595cde"
+   "hash": "6ae87a341e"
   },
   "entry:digestiveAscendingColon": {
    "file": "entry-digestiveAscendingColon.mp3",
-   "hash": "5535e718f6"
+   "hash": "2004e547ba"
   },
   "entry:digestiveTransverseColon": {
    "file": "entry-digestiveTransverseColon.mp3",
-   "hash": "7f17ef6334"
+   "hash": "4ba1eb3d32"
   },
   "entry:digestiveDescendingColon": {
    "file": "entry-digestiveDescendingColon.mp3",
-   "hash": "8f6e8bb05c"
+   "hash": "9566a88d52"
   },
   "entry:digestiveTaeniaeColi": {
    "file": "entry-digestiveTaeniaeColi.mp3",
-   "hash": "9851c9a2e2"
+   "hash": "28aa96e76c"
   },
   "entry:digestiveSuperiorMesenteric": {
    "file": "entry-digestiveSuperiorMesenteric.mp3",
-   "hash": "49a03504b2"
+   "hash": "30794b7f8f"
   },
   "entry:digestiveInferiorMesenteric": {
    "file": "entry-digestiveInferiorMesenteric.mp3",
-   "hash": "d18bebdd5e"
+   "hash": "ef91422ce8"
   },
   "entry:liverRightLiver": {
    "file": "entry-liverRightLiver.mp3",
-   "hash": "93fb809555"
+   "hash": "8996ad0d67"
   },
   "entry:liverLeftLiver": {
    "file": "entry-liverLeftLiver.mp3",
-   "hash": "7d25cf57f4"
+   "hash": "609abb1810"
   },
   "entry:liverCaudateLobe": {
    "file": "entry-liverCaudateLobe.mp3",
-   "hash": "58dbac298e"
+   "hash": "eb99892257"
   },
   "entry:liverHepaticDucts": {
    "file": "entry-liverHepaticDucts.mp3",
-   "hash": "46b8a4ab8d"
+   "hash": "209baed030"
   },
   "entry:liverGallbladder": {
    "file": "entry-liverGallbladder.mp3",
-   "hash": "b4bed331e2"
+   "hash": "c04a46fe39"
   },
   "entry:liverCysticDuct": {
    "file": "entry-liverCysticDuct.mp3",
-   "hash": "40790e87e7"
+   "hash": "fbf5833fd4"
   },
   "entry:liverPancreas": {
    "file": "entry-liverPancreas.mp3",
-   "hash": "20a053204b"
+   "hash": "8b533e05eb"
   },
   "entry:liverPancreaticDuct": {
    "file": "entry-liverPancreaticDuct.mp3",
-   "hash": "fc78f1691b"
+   "hash": "f5a58d7e2d"
   },
   "entry:spleen": {
    "file": "entry-spleen.mp3",
-   "hash": "107fda0d56"
+   "hash": "ee8a52bfdb"
   },
   "entry:liverCeliacTrunk": {
    "file": "entry-liverCeliacTrunk.mp3",
-   "hash": "85612560c3"
+   "hash": "23f156adb0"
   },
   "entry:liverHepaticArtery": {
    "file": "entry-liverHepaticArtery.mp3",
-   "hash": "3dd2591425"
+   "hash": "12d676a86d"
   },
   "entry:liverSplenicVessels": {
    "file": "entry-liverSplenicVessels.mp3",
-   "hash": "c12861b87c"
+   "hash": "10826d3c30"
   },
   "entry:liverPortalVein": {
    "file": "entry-liverPortalVein.mp3",
-   "hash": "393d871081"
+   "hash": "752b6e3e3f"
   },
   "entry:liverHepaticVeins": {
    "file": "entry-liverHepaticVeins.mp3",
-   "hash": "9b69c51e13"
+   "hash": "5363f59aea"
   },
   "entry:kidneyKidney": {
    "file": "entry-kidneyKidney.mp3",
-   "hash": "3dfb98fc5e"
+   "hash": "61a0dee942"
   },
   "entry:kidneyAdrenalGland": {
    "file": "entry-kidneyAdrenalGland.mp3",
-   "hash": "fda9385b32"
+   "hash": "b21cb6395f"
   },
   "entry:kidneyAbdominalAorta": {
    "file": "entry-kidneyAbdominalAorta.mp3",
-   "hash": "4bf60233da"
+   "hash": "c9b811e1a3"
   },
   "entry:kidneyRenalArtery": {
    "file": "entry-kidneyRenalArtery.mp3",
-   "hash": "1ff5bf38f7"
+   "hash": "215a40526d"
   },
   "entry:kidneySegmentalArteries": {
    "file": "entry-kidneySegmentalArteries.mp3",
-   "hash": "64c29df523"
+   "hash": "47a6d5426f"
   },
   "entry:kidneySuprarenalVessels": {
    "file": "entry-kidneySuprarenalVessels.mp3",
-   "hash": "a3c45a7c4f"
+   "hash": "232eeb752a"
   },
   "entry:kidneyInferiorVenaCava": {
    "file": "entry-kidneyInferiorVenaCava.mp3",
-   "hash": "c696293aa6"
+   "hash": "0dd119ca19"
   },
   "entry:kidneyRenalVein": {
    "file": "entry-kidneyRenalVein.mp3",
-   "hash": "998b76f1f2"
+   "hash": "c7f4ba06ea"
   },
   "entry:kidneyUreter": {
    "file": "entry-kidneyUreter.mp3",
-   "hash": "a4f95a9a8b"
+   "hash": "71fa8059d0"
   },
   "entry:breastNipple": {
    "file": "entry-breastNipple.mp3",
-   "hash": "e35c6640a8"
+   "hash": "0b59b7e6ca"
   },
   "entry:breastAreola": {
    "file": "entry-breastAreola.mp3",
-   "hash": "bc601daf13"
+   "hash": "7fb4fb70cd"
   },
   "entry:breastAreolarTubercles": {
    "file": "entry-breastAreolarTubercles.mp3",
-   "hash": "4121851a3b"
+   "hash": "10a90fb74b"
   },
   "entry:breastLactiferousSinuses": {
    "file": "entry-breastLactiferousSinuses.mp3",
-   "hash": "b4a634a2de"
+   "hash": "2d0110c6c2"
   },
   "entry:breastLactiferousDucts": {
    "file": "entry-breastLactiferousDucts.mp3",
-   "hash": "9eac1d2291"
+   "hash": "3bbb4a41d7"
   },
   "entry:breastLobes": {
    "file": "entry-breastLobes.mp3",
-   "hash": "c31b7639f2"
+   "hash": "c7ea0c193e"
   },
   "entry:breastFat": {
    "file": "entry-breastFat.mp3",
-   "hash": "9b2677f539"
+   "hash": "c7eccd7f55"
   },
   "entry:breastSuspensoryLigaments": {
    "file": "entry-breastSuspensoryLigaments.mp3",
-   "hash": "100f131dca"
+   "hash": "7e6870f412"
   },
   "entry:breastPectoralisMajor": {
    "file": "entry-breastPectoralisMajor.mp3",
-   "hash": "a71ed915ff"
+   "hash": "066b9e1952"
   },
   "entry:breastAxillaryNodes": {
    "file": "entry-breastAxillaryNodes.mp3",
-   "hash": "2b80b7ea19"
+   "hash": "51cb1a459a"
   },
   "entry:lymphaticHeadNodes": {
    "file": "entry-lymphaticHeadNodes.mp3",
-   "hash": "192ac04627"
+   "hash": "4ee83f60d5"
   },
   "entry:lymphaticCervicalNodes": {
    "file": "entry-lymphaticCervicalNodes.mp3",
-   "hash": "feb836c6dc"
+   "hash": "c4694541ce"
   },
   "entry:thymus": {
    "file": "entry-thymus.mp3",
-   "hash": "97c410135e"
+   "hash": "6f302ad4ba"
   },
   "entry:lymphaticAxillaryNodes": {
    "file": "entry-lymphaticAxillaryNodes.mp3",
-   "hash": "3c24b0e919"
+   "hash": "83cb0b47be"
   },
   "entry:lymphaticCubitalNodes": {
    "file": "entry-lymphaticCubitalNodes.mp3",
-   "hash": "8649910f5d"
+   "hash": "b218c24e65"
   },
   "entry:lymphaticThoracicNodes": {
    "file": "entry-lymphaticThoracicNodes.mp3",
-   "hash": "ecb489e150"
+   "hash": "ebff5260c8"
   },
   "entry:lymphaticVisceralNodes": {
    "file": "entry-lymphaticVisceralNodes.mp3",
-   "hash": "6b99ddbaa6"
+   "hash": "c8ecf9fa50"
   },
   "entry:lymphaticLumbarNodes": {
    "file": "entry-lymphaticLumbarNodes.mp3",
-   "hash": "e9e9f61299"
+   "hash": "85d6bdb396"
   },
   "entry:lymphaticPelvicNodes": {
    "file": "entry-lymphaticPelvicNodes.mp3",
-   "hash": "6354d6d940"
+   "hash": "8c069f0dcf"
   },
   "entry:lymphaticInguinalNodes": {
    "file": "entry-lymphaticInguinalNodes.mp3",
-   "hash": "508899f3b0"
+   "hash": "fa80b4eee7"
   },
   "entry:lymphaticPoplitealNodes": {
    "file": "entry-lymphaticPoplitealNodes.mp3",
-   "hash": "2a2098eeeb"
+   "hash": "79d19e81d5"
   },
   "entry:shoulderClavicle": {
    "file": "entry-shoulderClavicle.mp3",
-   "hash": "9d31176e52"
+   "hash": "267fce218d"
   },
   "entry:shoulderScapula": {
    "file": "entry-shoulderScapula.mp3",
-   "hash": "76fb910be9"
+   "hash": "b41138f463"
   },
   "entry:shoulderHumerus": {
    "file": "entry-shoulderHumerus.mp3",
-   "hash": "1e65c242b5"
+   "hash": "2f576db8ff"
   },
   "entry:shoulderSubacromialBursa": {
    "file": "entry-shoulderSubacromialBursa.mp3",
-   "hash": "047a7a4f84"
+   "hash": "a3c4051319"
   },
   "entry:shoulderSupraspinatus": {
    "file": "entry-shoulderSupraspinatus.mp3",
-   "hash": "27d662f07c"
+   "hash": "c1d3b98c88"
   },
   "entry:shoulderInfraspinatus": {
    "file": "entry-shoulderInfraspinatus.mp3",
-   "hash": "f7eb579c77"
+   "hash": "7fea0dc0e7"
   },
   "entry:shoulderTeresMinor": {
    "file": "entry-shoulderTeresMinor.mp3",
-   "hash": "9a8ad1e050"
+   "hash": "83f1a843af"
   },
   "entry:shoulderSubscapularis": {
    "file": "entry-shoulderSubscapularis.mp3",
-   "hash": "fb7edf4e14"
+   "hash": "f953c03f68"
   },
   "entry:shoulderDeltoid": {
    "file": "entry-shoulderDeltoid.mp3",
-   "hash": "6ef462a11c"
+   "hash": "15133d037a"
   },
   "entry:shoulderBicepsLongHead": {
    "file": "entry-shoulderBicepsLongHead.mp3",
-   "hash": "6bc733495a"
+   "hash": "f99bcc2c9f"
   },
   "entry:shoulderTeresMajor": {
    "file": "entry-shoulderTeresMajor.mp3",
-   "hash": "8b277320bf"
+   "hash": "4f13c092ab"
   },
   "entry:shoulderBrachialPlexus": {
    "file": "entry-shoulderBrachialPlexus.mp3",
-   "hash": "7a4c09b350"
+   "hash": "8adfe1e45d"
   },
   "entry:shoulderAxillaryNerve": {
    "file": "entry-shoulderAxillaryNerve.mp3",
-   "hash": "b7f5cec34c"
+   "hash": "e1ad02498c"
   },
   "entry:shoulderSuprascapularNerve": {
    "file": "entry-shoulderSuprascapularNerve.mp3",
-   "hash": "98c97509dd"
+   "hash": "fb92b1c0cb"
   },
   "entry:shoulderAxillaryArtery": {
    "file": "entry-shoulderAxillaryArtery.mp3",
-   "hash": "2a4d734178"
+   "hash": "843d1f2ca2"
   },
   "entry:shoulderCircumflexArteries": {
    "file": "entry-shoulderCircumflexArteries.mp3",
-   "hash": "470e8f14e0"
+   "hash": "705bbcc1c8"
   },
   "entry:elbowHumerus": {
    "file": "entry-elbowHumerus.mp3",
-   "hash": "00a712c2f9"
+   "hash": "a37a029d64"
   },
   "entry:elbowRadius": {
    "file": "entry-elbowRadius.mp3",
-   "hash": "ef77057fa9"
+   "hash": "7a8c39d1d9"
   },
   "entry:elbowUlna": {
    "file": "entry-elbowUlna.mp3",
-   "hash": "d62321f927"
+   "hash": "7895b16508"
   },
   "entry:elbowCapsule": {
    "file": "entry-elbowCapsule.mp3",
-   "hash": "80aaac4de5"
+   "hash": "af6bd2f32e"
   },
   "entry:elbowInterosseousMembrane": {
    "file": "entry-elbowInterosseousMembrane.mp3",
-   "hash": "c014103ba3"
+   "hash": "498bca7d5d"
   },
   "entry:elbowBiceps": {
    "file": "entry-elbowBiceps.mp3",
-   "hash": "52903dd763"
+   "hash": "f74f72d56c"
   },
   "entry:elbowBrachialis": {
    "file": "entry-elbowBrachialis.mp3",
-   "hash": "b093ef46cb"
+   "hash": "db8440777d"
   },
   "entry:elbowTriceps": {
    "file": "entry-elbowTriceps.mp3",
-   "hash": "68732842ef"
+   "hash": "f40ece4dfb"
   },
   "entry:elbowBrachioradialis": {
    "file": "entry-elbowBrachioradialis.mp3",
-   "hash": "4f41c2b0f7"
+   "hash": "6d18f48458"
   },
   "entry:elbowRotators": {
    "file": "entry-elbowRotators.mp3",
-   "hash": "6d433d107d"
+   "hash": "f48aac5c0a"
   },
   "entry:elbowFlexors": {
    "file": "entry-elbowFlexors.mp3",
-   "hash": "d6c36a12b1"
+   "hash": "efc35d7adc"
   },
   "entry:elbowExtensors": {
    "file": "entry-elbowExtensors.mp3",
-   "hash": "830dc412ff"
+   "hash": "8d25c38b8a"
   },
   "entry:elbowBrachialArtery": {
    "file": "entry-elbowBrachialArtery.mp3",
-   "hash": "75560b42ca"
+   "hash": "22f014661a"
   },
   "entry:elbowMedianNerve": {
    "file": "entry-elbowMedianNerve.mp3",
-   "hash": "972f3ceeb9"
+   "hash": "c32cf4e69a"
   },
   "entry:elbowUlnarNerve": {
    "file": "entry-elbowUlnarNerve.mp3",
-   "hash": "ca9df53b58"
+   "hash": "d842c2a884"
   },
   "entry:elbowRadialNerve": {
    "file": "entry-elbowRadialNerve.mp3",
-   "hash": "3b802b1cf0"
+   "hash": "685c8a4306"
   },
   "entry:handScaphoid": {
    "file": "entry-handScaphoid.mp3",
-   "hash": "a0e45c3179"
+   "hash": "4d8e8079ab"
   },
   "entry:handLunate": {
    "file": "entry-handLunate.mp3",
-   "hash": "1beef379f0"
+   "hash": "f5d8d618f9"
   },
   "entry:handTriquetrum": {
    "file": "entry-handTriquetrum.mp3",
-   "hash": "9f66fcead8"
+   "hash": "cb044f6540"
   },
   "entry:handPisiform": {
    "file": "entry-handPisiform.mp3",
-   "hash": "4957641407"
+   "hash": "b6a485f073"
   },
   "entry:handTrapezium": {
    "file": "entry-handTrapezium.mp3",
-   "hash": "c392785572"
+   "hash": "ccb38838a7"
   },
   "entry:handTrapezoid": {
    "file": "entry-handTrapezoid.mp3",
-   "hash": "a69131a52b"
+   "hash": "e008b56b9c"
   },
   "entry:handCapitate": {
    "file": "entry-handCapitate.mp3",
-   "hash": "06bae6c447"
+   "hash": "4d4c67d000"
   },
   "entry:handHamate": {
    "file": "entry-handHamate.mp3",
-   "hash": "0cef5ed0e7"
+   "hash": "99456e3ff9"
   },
   "entry:handMetacarpals": {
    "file": "entry-handMetacarpals.mp3",
-   "hash": "9787980b0a"
+   "hash": "e02c8bd885"
   },
   "entry:handFingerBones": {
    "file": "entry-handFingerBones.mp3",
-   "hash": "e91ab9b080"
+   "hash": "f6de33c406"
   },
   "entry:handFlexorRetinaculum": {
    "file": "entry-handFlexorRetinaculum.mp3",
-   "hash": "aab7a9304d"
+   "hash": "bd041855fc"
   },
   "entry:handPalmarAponeurosis": {
    "file": "entry-handPalmarAponeurosis.mp3",
-   "hash": "b24666ea30"
+   "hash": "09a28d2685"
   },
   "entry:handThenar": {
    "file": "entry-handThenar.mp3",
-   "hash": "2c2a26e28e"
+   "hash": "719de58268"
   },
   "entry:handHypothenar": {
    "file": "entry-handHypothenar.mp3",
-   "hash": "579e4ff6b7"
+   "hash": "c5166ea05f"
   },
   "entry:handLumbricals": {
    "file": "entry-handLumbricals.mp3",
-   "hash": "ccb27a1311"
+   "hash": "6804a078ba"
   },
   "entry:handInterossei": {
    "file": "entry-handInterossei.mp3",
-   "hash": "299eecb228"
+   "hash": "83e9dc1afc"
   },
   "entry:handMedianNerve": {
    "file": "entry-handMedianNerve.mp3",
-   "hash": "992e6169eb"
+   "hash": "d4bc17789f"
   },
   "entry:handUlnarNerve": {
    "file": "entry-handUlnarNerve.mp3",
-   "hash": "4e90da9904"
+   "hash": "ebb6eda7ed"
   },
   "entry:handPalmarArches": {
    "file": "entry-handPalmarArches.mp3",
-   "hash": "6911c2e84b"
+   "hash": "04a2b5c368"
   },
   "entry:hipHipBone": {
    "file": "entry-hipHipBone.mp3",
-   "hash": "252527d5fb"
+   "hash": "f69b9eb08a"
   },
   "entry:hipFemur": {
    "file": "entry-hipFemur.mp3",
-   "hash": "62f90ae7af"
+   "hash": "a7b84b68ca"
   },
   "entry:hipCapsule": {
    "file": "entry-hipCapsule.mp3",
-   "hash": "4fab266e62"
+   "hash": "685197c7c2"
   },
   "entry:hipPubofemoral": {
    "file": "entry-hipPubofemoral.mp3",
-   "hash": "e116efdf04"
+   "hash": "3dc061fce9"
   },
   "entry:hipBursae": {
    "file": "entry-hipBursae.mp3",
-   "hash": "886ccc7e01"
+   "hash": "81cfef945f"
   },
   "entry:hipGluteusMaximus": {
    "file": "entry-hipGluteusMaximus.mp3",
-   "hash": "21da4d30c5"
+   "hash": "1eb42687c6"
   },
   "entry:hipGluteusMedius": {
    "file": "entry-hipGluteusMedius.mp3",
-   "hash": "1e8b8ffd36"
+   "hash": "da4f71072c"
   },
   "entry:hipGluteusMinimus": {
    "file": "entry-hipGluteusMinimus.mp3",
-   "hash": "8fe1f20754"
+   "hash": "9330bad511"
   },
   "entry:hipTensorFasciaeLatae": {
    "file": "entry-hipTensorFasciaeLatae.mp3",
-   "hash": "1eb815cdc8"
+   "hash": "cbd7d1e32f"
   },
   "entry:hipPiriformis": {
    "file": "entry-hipPiriformis.mp3",
-   "hash": "df964381d5"
+   "hash": "5febc04a98"
   },
   "entry:hipDeepRotators": {
    "file": "entry-hipDeepRotators.mp3",
-   "hash": "c0d6d53eeb"
+   "hash": "f0ff71d2ce"
   },
   "entry:hipIliopsoas": {
    "file": "entry-hipIliopsoas.mp3",
-   "hash": "cd1c9082ee"
+   "hash": "a1bfa4a3d0"
   },
   "entry:hipSciaticNerve": {
    "file": "entry-hipSciaticNerve.mp3",
-   "hash": "dcc4c24b78"
+   "hash": "1b62bf02e6"
   },
   "entry:hipFemoralNerve": {
    "file": "entry-hipFemoralNerve.mp3",
-   "hash": "97e1686dc9"
+   "hash": "7a035b76b6"
   },
   "entry:hipFemoralArtery": {
    "file": "entry-hipFemoralArtery.mp3",
-   "hash": "fe14e9bb96"
+   "hash": "67d6136c2b"
   },
   "entry:hipFemoralVein": {
    "file": "entry-hipFemoralVein.mp3",
-   "hash": "3474f8aeb2"
+   "hash": "b82a45ebe7"
   },
   "entry:kneeFemur": {
    "file": "entry-kneeFemur.mp3",
-   "hash": "1e542e5fc5"
+   "hash": "c74ab3faef"
   },
   "entry:kneeTibia": {
    "file": "entry-kneeTibia.mp3",
-   "hash": "598237e941"
+   "hash": "6c39981f5c"
   },
   "entry:kneeFibula": {
    "file": "entry-kneeFibula.mp3",
-   "hash": "841774c98f"
+   "hash": "8f17fe0a7e"
   },
   "entry:kneePatella": {
    "file": "entry-kneePatella.mp3",
-   "hash": "d242ef8fbd"
+   "hash": "418a1ef597"
   },
   "entry:kneeAnteriorCruciate": {
    "file": "entry-kneeAnteriorCruciate.mp3",
-   "hash": "e2813a16da"
+   "hash": "7105531dd5"
   },
   "entry:kneeArcuateLigament": {
    "file": "entry-kneeArcuateLigament.mp3",
-   "hash": "ffa32ed9d5"
+   "hash": "f89c635320"
   },
   "entry:kneeBursae": {
    "file": "entry-kneeBursae.mp3",
-   "hash": "8ac13cc75b"
+   "hash": "ae356f2608"
   },
   "entry:kneeQuadriceps": {
    "file": "entry-kneeQuadriceps.mp3",
-   "hash": "8689bbb71f"
+   "hash": "e7ab3b3413"
   },
   "entry:kneeHamstrings": {
    "file": "entry-kneeHamstrings.mp3",
-   "hash": "d9b1fc87fb"
+   "hash": "faee0e4587"
   },
   "entry:kneeGastrocnemius": {
    "file": "entry-kneeGastrocnemius.mp3",
-   "hash": "bc983a8eb9"
+   "hash": "f5d31d3cc4"
   },
   "entry:kneePopliteus": {
    "file": "entry-kneePopliteus.mp3",
-   "hash": "f442d63cd3"
+   "hash": "680f7ff543"
   },
   "entry:kneePoplitealArtery": {
    "file": "entry-kneePoplitealArtery.mp3",
-   "hash": "df227ac175"
+   "hash": "646820a70b"
   },
   "entry:kneeGenicularArteries": {
    "file": "entry-kneeGenicularArteries.mp3",
-   "hash": "3bc7413029"
+   "hash": "4244135c69"
   },
   "entry:kneePoplitealVein": {
    "file": "entry-kneePoplitealVein.mp3",
-   "hash": "ccc3bf56d4"
+   "hash": "f48fd04394"
   },
   "entry:kneeTibialNerve": {
    "file": "entry-kneeTibialNerve.mp3",
-   "hash": "088971d961"
+   "hash": "a0a19d0705"
   },
   "entry:kneeCommonFibularNerve": {
    "file": "entry-kneeCommonFibularNerve.mp3",
-   "hash": "1d980bdca9"
+   "hash": "c434e65a1f"
   },
   "entry:footCalcaneus": {
    "file": "entry-footCalcaneus.mp3",
-   "hash": "db89df75ea"
+   "hash": "bbe6f4b284"
   },
   "entry:footTalus": {
    "file": "entry-footTalus.mp3",
-   "hash": "35ac61fecb"
+   "hash": "6a4bf1ae4b"
   },
   "entry:footNavicular": {
    "file": "entry-footNavicular.mp3",
-   "hash": "aebac7a49a"
+   "hash": "995c1ce718"
   },
   "entry:footCuboid": {
    "file": "entry-footCuboid.mp3",
-   "hash": "2994206517"
+   "hash": "c9dfc20f24"
   },
   "entry:footMedialCuneiform": {
    "file": "entry-footMedialCuneiform.mp3",
-   "hash": "6e1fe982fb"
+   "hash": "9d923ed278"
   },
   "entry:footIntermediateCuneiform": {
    "file": "entry-footIntermediateCuneiform.mp3",
-   "hash": "5b74d7b095"
+   "hash": "fce3403224"
   },
   "entry:footLateralCuneiform": {
    "file": "entry-footLateralCuneiform.mp3",
-   "hash": "f0db2eec09"
+   "hash": "2947575e2d"
   },
   "entry:footMetatarsals": {
    "file": "entry-footMetatarsals.mp3",
-   "hash": "592b381684"
+   "hash": "baddea7cff"
   },
   "entry:footToeBones": {
    "file": "entry-footToeBones.mp3",
-   "hash": "63d4f65c38"
+   "hash": "bad4b95f2f"
   },
   "entry:footLongPlantarLigament": {
    "file": "entry-footLongPlantarLigament.mp3",
-   "hash": "4c99e8cd33"
+   "hash": "ce65849de9"
   },
   "entry:footCalcanealTendon": {
    "file": "entry-footCalcanealTendon.mp3",
-   "hash": "83da4946aa"
+   "hash": "d31773d53e"
   },
   "entry:footSoleMuscles": {
    "file": "entry-footSoleMuscles.mp3",
-   "hash": "cea210c729"
+   "hash": "93ef70f694"
   },
   "entry:footDorsalMuscles": {
    "file": "entry-footDorsalMuscles.mp3",
-   "hash": "8f8a7febd0"
+   "hash": "c10092e352"
   },
   "entry:footPlantarNerves": {
    "file": "entry-footPlantarNerves.mp3",
-   "hash": "067add5edd"
+   "hash": "ce8d3643f0"
   },
   "entry:footDorsalisPedis": {
    "file": "entry-footDorsalisPedis.mp3",
-   "hash": "dedee6b5a4"
+   "hash": "dcb3e31784"
   },
   "entry:footPlantarArteries": {
    "file": "entry-footPlantarArteries.mp3",
-   "hash": "753eae080f"
+   "hash": "4d001d114e"
   },
   "entry:spineAtlas": {
    "file": "entry-spineAtlas.mp3",
-   "hash": "42d4a36735"
+   "hash": "27294924c7"
   },
   "entry:spineAxis": {
    "file": "entry-spineAxis.mp3",
-   "hash": "fcd940da8f"
+   "hash": "dddc1e55c1"
   },
   "entry:spineCervical": {
    "file": "entry-spineCervical.mp3",
-   "hash": "5edd526cde"
+   "hash": "44d5b6be36"
   },
   "entry:thoracicVertebrae": {
    "file": "entry-thoracicVertebrae.mp3",
-   "hash": "a231cbe220"
+   "hash": "6c9340d2cd"
   },
   "entry:lumbarVertebrae": {
    "file": "entry-lumbarVertebrae.mp3",
-   "hash": "28ca833333"
+   "hash": "0a8a55c65f"
   },
   "entry:sacrum": {
    "file": "entry-sacrum.mp3",
-   "hash": "765c86dc2e"
+   "hash": "1d384fd320"
   },
   "entry:discs": {
    "file": "entry-discs.mp3",
-   "hash": "0b615e4f2e"
+   "hash": "3c4396a37c"
   },
   "entry:spineAnteriorLongitudinal": {
    "file": "entry-spineAnteriorLongitudinal.mp3",
-   "hash": "e0392d2d02"
+   "hash": "cf28cd8536"
   },
   "entry:spineInterspinous": {
    "file": "entry-spineInterspinous.mp3",
-   "hash": "763d6d508d"
+   "hash": "2a56d81b94"
   },
   "entry:spineNuchal": {
    "file": "entry-spineNuchal.mp3",
-   "hash": "09fb2d3888"
+   "hash": "48f287eaf5"
   },
   "entry:spinalCord": {
    "file": "entry-spinalCord.mp3",
-   "hash": "7bbf833613"
+   "hash": "ccad3d4169"
   },
   "entry:spineCaudaEquina": {
    "file": "entry-spineCaudaEquina.mp3",
-   "hash": "a3cd5fd8e1"
+   "hash": "9c99a50370"
   },
   "entry:spineNerveRoots": {
    "file": "entry-spineNerveRoots.mp3",
-   "hash": "3dc30fab18"
+   "hash": "2f37bdda49"
   },
   "entry:spineDura": {
    "file": "entry-spineDura.mp3",
-   "hash": "7572be4831"
+   "hash": "75954a7e98"
   },
   "entry:erectorSpinae": {
    "file": "entry-erectorSpinae.mp3",
-   "hash": "ed79586e54"
+   "hash": "9d374159be"
   },
   "entry:spineTransversospinal": {
    "file": "entry-spineTransversospinal.mp3",
-   "hash": "9094d8ae5f"
+   "hash": "bf2e34f56e"
   },
   "entry:skull": {
    "file": "entry-skull.mp3",
-   "hash": "c86829d425"
+   "hash": "abd5848bb0"
   },
   "entry:ribs": {
    "file": "entry-ribs.mp3",
-   "hash": "004ea0620a"
+   "hash": "e07e63917c"
   },
   "entry:hipBone": {
    "file": "entry-hipBone.mp3",
-   "hash": "389ef0e558"
+   "hash": "c118ebc3fe"
   },
   "entry:femur": {
    "file": "entry-femur.mp3",
-   "hash": "c1a5cc18f4"
+   "hash": "9ccbb3ac55"
   },
   "entry:deltoid": {
    "file": "entry-deltoid.mp3",
-   "hash": "dcd56eb8e0"
+   "hash": "b3688c3d24"
   },
   "entry:pectoralisMajor": {
    "file": "entry-pectoralisMajor.mp3",
-   "hash": "2c6bcd9e54"
+   "hash": "ad5ae64d3b"
   },
   "entry:rectusAbdominis": {
    "file": "entry-rectusAbdominis.mp3",
-   "hash": "0f2a8114a8"
+   "hash": "b1f0d199d8"
   },
   "entry:latissimusDorsi": {
    "file": "entry-latissimusDorsi.mp3",
-   "hash": "0301c49081"
+   "hash": "9fd42c0a00"
   },
   "entry:bicepsBrachii": {
    "file": "entry-bicepsBrachii.mp3",
-   "hash": "37f8aee2ca"
+   "hash": "85f75a9f2e"
   },
   "entry:gluteusMaximus": {
    "file": "entry-gluteusMaximus.mp3",
-   "hash": "20a8ffbc43"
+   "hash": "1b489019e7"
   },
   "entry:rectusFemoris": {
    "file": "entry-rectusFemoris.mp3",
-   "hash": "309205e816"
+   "hash": "541e7d812d"
   },
   "entry:gastrocnemius": {
    "file": "entry-gastrocnemius.mp3",
-   "hash": "7fd22c7c63"
+   "hash": "a81ae548fc"
   },
   "entry:thyroid": {
    "file": "entry-thyroid.mp3",
-   "hash": "839cd97c09"
+   "hash": "8830fc7da2"
   },
   "entry:heart": {
    "file": "entry-heart.mp3",
-   "hash": "5f2f6f9650"
+   "hash": "76d1ebc79b"
   },
   "entry:lungs": {
    "file": "entry-lungs.mp3",
-   "hash": "fbced57c5a"
+   "hash": "4c7aab5ad2"
   },
   "entry:liver": {
    "file": "entry-liver.mp3",
-   "hash": "23f51d6ce7"
+   "hash": "e837b6f105"
   },
   "entry:smallIntestine": {
    "file": "entry-smallIntestine.mp3",
-   "hash": "ea9173341c"
+   "hash": "fa35e27ddf"
   },
   "entry:kidney": {
    "file": "entry-kidney.mp3",
-   "hash": "5e57149c73"
+   "hash": "30b9810437"
   },
   "entry:aorta": {
    "file": "entry-aorta.mp3",
-   "hash": "f780fa9254"
+   "hash": "a0dc5ba741"
   },
   "entry:venaCava": {
    "file": "entry-venaCava.mp3",
-   "hash": "ed853f7c9f"
+   "hash": "ea4b2438bc"
   },
   "entry:brachialPlexus": {
    "file": "entry-brachialPlexus.mp3",
-   "hash": "2f53e0e270"
+   "hash": "a1f61f15c1"
   },
   "entry:legNerves": {
    "file": "entry-legNerves.mp3",
-   "hash": "6758f0cdf1"
+   "hash": "396cb3c3b6"
   }
  }
 }

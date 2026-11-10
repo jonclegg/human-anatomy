@@ -1,9 +1,10 @@
 // What the voice says. A key names where it is said: "view:<view>" on a whole-body view, "region:<close-up>" on a
 // close-up's opening, "entry:<part>" on a part. What is written here is written for the ear. Every other part of a
 // close-up or of the main tour is read from its own note (its name, what it is, what it does).
-// scripts/body/make-audio.mjs turns each into audio/<file>.mp3 with Google text-to-speech and lists them in
+// scripts/body/make-audio.mjs turns each into audio/<file>.mp3 with Google's Gemini speech model and lists them in
 // audio/manifest.json; the app plays whichever belongs to what is on show.
-export const VOICE = { languageCode: 'en-GB', name: 'en-GB-Chirp3-HD-Charon' };
+/* the model, which of its voices, and how it is asked to speak (the style is a direction: it is not read out) */
+export const VOICE = { model: 'gemini-3.8-flash-tts', name: 'Algieba', style: 'A natural history documentary narrator in a science museum: warm, unhurried, quietly amazed, speaking to one curious visitor. British English. Natural pauses. Never a news reader or an advert.' };
 /* the music, made once with ElevenLabs from this description */
 export const MUSIC = { prompt: 'Slow, warm ambient music for a science documentary about the human body. Soft sustained synth pads and a gentle felt piano, a very slow pulse like a resting heartbeat, calm and full of wonder. No drums, no vocals, no melody that draws attention. It must loop seamlessly.', seconds: 90 };
 export const NARRATION = {

@@ -1,8 +1,8 @@
-// Makes the site's sound: the voice (site/body/narration.mjs) with Google Cloud text-to-speech, and the music with
+// Makes the site's sound: the voice (site/body/narration.mjs) with Google's Gemini speech model, and the music with
 // ElevenLabs. Writes site/body/audio/<name>.mp3 and audio/manifest.json, which lists what the app can play.
-// The voice needs gcloud signed in and a project with the Text-to-Speech API on; the music needs an ElevenLabs API key
-// in the environment as ELEVENLABS_API_KEY. A clip whose text has not changed is not made again; the music is made once.
-// Usage: node scripts/body/make-audio.mjs <google project> [music]     ("music" makes the music again)
+// The voice needs a Gemini API key in the environment as GEMINI_API_KEY, and ffmpeg; the music needs an ElevenLabs API
+// key as ELEVENLABS_API_KEY. A clip whose text and voice have not changed is not made again; the music is made once.
+// Usage: node scripts/body/make-audio.mjs [music]     ("music" makes the music again)
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
@@ -10,8 +10,9 @@ import { NARRATION, VOICE, MUSIC } from '../../site/body/narration.mjs';
 import { REGIONS, ALL } from '../../site/body/closeups.mjs';
 import { TOUR } from '../../site/body/parts.mjs';
 
-const [project, again] = process.argv.slice(2);
-if (!project) throw new Error('usage: node scripts/body/make-audio.mjs <google project> [music]');
+const [again] = process.argv.slice(2);
+const geminiKey = process.env.GEMINI_API_KEY;
+if (!geminiKey) throw new Error('GEMINI_API_KEY is not set');
 const folder = new URL('../../site/body/audio/', import.meta.url);
 mkdirSync(folder, { recursive: true });
 const manifestFile = new URL('manifest.json', folder);
@@ -22,23 +23,26 @@ const manifest = { voice: VOICE.name, music: previous.music || null, narration: 
 const lines = { ...NARRATION };
 for (const key of [...Object.values(REGIONS).flatMap(region => region.parts), ...TOUR.map(([key]) => key)]) lines[`entry:${key}`] ||= `${ALL[key].name}. ${ALL[key].what} ${ALL[key].does}`;
 
-const token = execFileSync('gcloud', ['auth', 'print-access-token'], { encoding: 'utf8' }).trim();
 async function say([key, text]) {
-  const hash = createHash('sha256').update(`${VOICE.name}|${text}`).digest('hex').slice(0, 10);
+  const hash = createHash('sha256').update(`${VOICE.model}|${VOICE.name}|${VOICE.style}|${text}`).digest('hex').slice(0, 10);
   const file = `${key.replace(/[^a-zA-Z0-9]+/g, '-')}.mp3`, was = previous.narration[key];
   if (was?.hash === hash && existsSync(new URL(was.file, folder))) { manifest.narration[key] = was; return; }
   /* the service is sometimes busy for a moment (429, 5xx): ask again a few times, waiting longer each time */
   let response;
   for (let attempt = 1; ; attempt++) {
-    response = await fetch('https://texttospeech.googleapis.com/v1/text:synthesize', {
-      method: 'POST', headers: { authorization: `Bearer ${token}`, 'x-goog-user-project': project, 'content-type': 'application/json' },
-      body: JSON.stringify({ input: { text }, voice: VOICE, audioConfig: { audioEncoding: 'MP3', speakingRate: 0.96 } }),
+    response = await fetch('https://generativelanguage.googleapis.com/v1beta/interactions', {
+      method: 'POST', headers: { 'x-goog-api-key': geminiKey, 'content-type': 'application/json' },
+      body: JSON.stringify({ model: VOICE.model, input: [{ type: 'user_input', content: [{ type: 'text', text, annotations: [{ type: 'speech_metadata', style: VOICE.style }] }] }],
+        response_format: { type: 'audio' }, generation_config: { speech_config: [{ voice: VOICE.name }] } }),
     });
     if (response.ok) break;
-    if (attempt === 6 || (response.status !== 429 && response.status < 500)) throw new Error(`text-to-speech for ${key}: ${response.status} ${await response.text()}`);
+    if (attempt === 6 || (response.status !== 429 && response.status < 500)) throw new Error(`speech for ${key}: ${response.status} ${await response.text()}`);
     await new Promise(done => setTimeout(done, 2000 * attempt));
   }
-  const audio = Buffer.from((await response.json()).audioContent, 'base64');
+  const spoken = (await response.json()).steps.flatMap(step => step.content || []).find(content => content.type === 'audio');
+  if (!spoken) throw new Error(`speech for ${key}: no audio came back`);
+  /* it comes as a WAV: kept as a small mono MP3 */
+  const audio = execFileSync('ffmpeg', ['-loglevel', 'error', '-i', 'pipe:0', '-ac', '1', '-b:a', '48k', '-f', 'mp3', 'pipe:1'], { input: Buffer.from(spoken.data, 'base64'), maxBuffer: 1 << 26 });
   writeFileSync(new URL(file, folder), audio);
   manifest.narration[key] = { file, hash };
   console.log(`voice: ${key} (${(audio.length / 1024).toFixed(0)} KB)`);

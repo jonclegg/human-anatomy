@@ -23,9 +23,11 @@ for (const [name, list] of byName) {
   if (!twins) { lone.push(`${name} (${list[0].source})`); continue; }
   if (!/\bleft\b/i.test(name)) continue;
   const volume = group => group.reduce((sum, structure) => sum + structure.volume, 0), a = volume(list), b = volume(twins);
-  const centre = group => [0, 1, 2].map(c => group.reduce((sum, structure) => sum + structure.centre[c] * structure.volume, 0) / (volume(group) || 1));
+  /* weighted by volume, with a little weight for a thread of a nerve or vessel whose volume rounds to nothing */
+  const weight = structure => structure.volume + 0.01;
+  const centre = group => [0, 1, 2].map(c => group.reduce((sum, structure) => sum + structure.centre[c] * weight(structure), 0) / group.reduce((sum, structure) => sum + weight(structure), 0));
   const p = centre(list), q = centre(twins), apart = Math.hypot(p[0] + q[0], p[1] - q[1], p[2] - q[2]);
-  if (list.length !== twins.length || Math.max(a, b) / Math.max(1e-6, Math.min(a, b)) > 1.6 || apart > 2) uneven.push(`${sideless(name)}: ${list.length} left / ${twins.length} right pieces, volume ${a.toFixed(1)} / ${b.toFixed(1)} cm³, ${apart.toFixed(1)} cm from mirrored`);
+  if (list.length !== twins.length || (Math.max(a, b) > 0.3 && Math.max(a, b) / Math.max(1e-6, Math.min(a, b)) > 1.6) || apart > 2) uneven.push(`${sideless(name)}: ${list.length} left / ${twins.length} right pieces, volume ${a.toFixed(1)} / ${b.toFixed(1)} cm³, ${apart.toFixed(1)} cm from mirrored`);
 }
 console.log(`NO TWIN on the other side (${lone.length}):\n  ${lone.sort().join('\n  ')}\n`);
 console.log(`UNEVEN twins (${uneven.length}):\n  ${uneven.join('\n  ')}\n`);

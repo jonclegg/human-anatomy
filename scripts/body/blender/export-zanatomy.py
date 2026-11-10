@@ -5,9 +5,11 @@ import bpy, re, sys
 out = sys.argv[sys.argv.index('--') + 1]
 NOT_ALLOWED = re.compile(r'kidney|renal|cochle|vestib|semicircular|labyrinth|tympan|malleus|incus|stapes|ossicle|endolymph|perilymph|utricle|saccule|spiral|auditory tube|ear\b|auricul', re.I)
 BRAIN = re.compile(r'sulcus|sulci|gyrus|gyri|lobule|fasciculus|tract|white matter|cortex|lobe\b|pole|fissure|lat_fis|vermis|culmen|declive|folium|flocculus|lingula of cerebellum|nodule|pyramis|uvula of vermis|tuber of vermis|central lobule|commissure|septum pellucidum|fornix|nucleus|body|peduncle|olive|aqueduct|ventricle|choroid|falx|tentorium|capsule|claustrum|thalam|amygdal|hippocamp|insula|precuneus|cuneus|operculum|pyramid of medulla|red nucleus|septal', re.I)
+# three tendon sheets are kept: the one over the top of the skull, and those of the palm and the sole
+TENDON_SHEETS = re.compile(r'^(epicranial|palmar|plantar) aponeurosis', re.I)
 SHEETS = re.compile(r'fascia|intermuscular septum|aponeurosis|investing|pleura|omentum|peritone|mesocolon|meso-appendix|region|\.g$', re.I)
 WANTED = {
-  '4: Muscular system': lambda n, t: not SHEETS.search(n),
+  '4: Muscular system': lambda n, t: TENDON_SHEETS.search(n) is not None or not SHEETS.search(n),
   '3: Joints': lambda n, t: not re.search(r'intervertebral disc|nucleus pulposus', n, re.I),
   '7: Nervous system & Sense organs': lambda n, t: (t == 'CURVE' or re.search(r'nerve|ganglion|plexus|spinal|dura|horn of spinal|cauda', n, re.I)) and not BRAIN.search(n) or (t == 'CURVE'),
   '8: Visceral systems': lambda n, t: re.search(r'thyroid|parathyroid|parotid|pharynx|soft palate|uvula|nasal cavity|pineal|hypophysis|duct|bronch|trachea|oesophag|esophag|larynx', n, re.I) is not None,
@@ -35,7 +37,7 @@ for obj in bpy.data.objects:
     if obj.type not in ('MESH', 'CURVE'): continue
     group = top(obj)
     if not group or NOT_ALLOWED.search(obj.name): continue
-    if obj.type == 'MESH' and len(obj.data.vertices) < 30: continue
+    if obj.type == 'MESH' and len(obj.data.vertices) < (8 if re.search(r'parathyroid gland\.[lr]$', obj.name, re.I) else 30): continue   # the parathyroids are tiny
     if obj.type == 'CURVE' and (obj.data.bevel_depth <= 0 and not obj.data.bevel_object): continue
     if not WANTED[group](obj.name, obj.type): continue
     if obj.type == 'CURVE': obj.data.resolution_u = 3; obj.data.bevel_resolution = 1

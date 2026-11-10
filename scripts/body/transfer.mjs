@@ -188,7 +188,9 @@ export function keepUnder(skin, structures, { gap = 0.2, reach = 5, lining = nul
       /* a finger or a toe is all bone under a millimetre or two of skin: there, everything keeps close under it */
       const under = at.index >= 0 && thin?.[samples.corners[3 * at.index]] ? (structure.layer === 'skeleton' ? THIN : 2.5 * THIN) : deep;
       if (at.index < 0) { left++; continue; }
-      if (structure.ownSkin && !at.inside && at.distance > OWN) continue;
+      /* a structure scanned with this skin is only ever pressed, as a whole and smoothly: putting its few stray
+         points in place one by one would leave the tip of a nose cartilage jagged */
+      if (structure.ownSkin && !at.inside) continue;
       if (share(p[k], p[k + 1], p[k + 2]) < 1) continue;
       const { index } = at;
       /* outside: straight to its place beneath the nearest skin point (on a toe or a finger, moving it down to the

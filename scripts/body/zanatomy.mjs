@@ -24,6 +24,8 @@ export function zName(raw) {
 function placeOf(name, group) {
   /* what Z-Anatomy files with the joints or muscles but is not either */
   if (/quadrangular membrane/i.test(name)) return { layer: 'organs', group: 'respiratory' };
+  if (/parathyroid/i.test(name)) return { layer: 'organs', group: 'endocrine' };
+  if (/pharynx$/i.test(name)) return { layer: 'organs', group: 'digestive' };
   if (/\btarsus\b/i.test(name)) return { layer: 'organs', group: 'senses' };
   if (group === '4: Muscular system') return { layer: 'muscles', group: null };
   if (group === '3: Joints' || group === '1: Skeletal system') return { layer: 'skeleton', group: null };
@@ -115,6 +117,10 @@ export async function zanatomyAdditions(folder, his, log = console.log) {
     [/suprarenal gland/, 'adrenal gland'], [/vermiform appendix/, 'appendix'], [/oesophagus/, 'esophagus'], [/bucinator/, 'buccinator'], [/pineal gland/, 'pineal body']];
   const plain = name => { let n = name.toLowerCase().replace(/\b(left|right)\b/g, '').replace(/\bmuscles?\b/g, '').replace(/\s+/g, ' ').trim(); for (const [pattern, to] of SYNONYMS) n = n.replace(pattern, to); return n.replace(/s$/, ''); };
   const hisNames = new Set(his.map(structure => plain(structure.name)));
+  /* structures he lacks that lie right on ones he has, so the test above would take them for repeats: the middle and
+     lower pharynx (inside its muscles, against the tongue and larynx), the tendon sheet over the skull (on the scalp
+     muscles it joins), the parathyroid glands (on the thyroid) */
+  const NEW_HOWEVER_CLOSE = /^(Oropharynx|Laryngopharynx)$|epicranial aponeurosis|parathyroid gland/i;
   const out = [], seen = new Set();
   let duplicates = 0;
   for (const mesh of await readOrgan(`${folder}/zanatomy.glb`, METRES)) {
@@ -124,7 +130,7 @@ export async function zanatomyAdditions(folder, his, log = console.log) {
     if (hisNames.has(plain(name))) { duplicates++; continue; }
     const placed = simplify(weld(warpMesh(mesh, warp)), ERROR[place.layer], MINIMUM_SHARE[place.layer]);
     if (placed.indices.length === 0) continue;
-    if (repeats(placed, place.layer)) { duplicates++; continue; }
+    if (!NEW_HOWEVER_CLOSE.test(name) && repeats(placed, place.layer)) { duplicates++; continue; }
     const key = name.toLowerCase();
     if (seen.has(key)) continue;
     seen.add(key);

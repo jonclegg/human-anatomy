@@ -137,7 +137,10 @@ for (const structure of structures) {
   const { part } = structure, isSkin = structure.layer === 'skin';
   assembly.add({ name: structure.name, layer: structure.layer, group: part.group, source: isSkin ? 'MakeHuman' : part.source, fitted: !isSkin, id: part.id, concept: part.concept }, isSkin ? vulva.skin : structure, { prepared: true });
 }
-for (const mesh of added) assembly.add({ name: mesh.name, layer: mesh.layer, group: mesh.group, source: 'NIH female' }, mesh);
+/* her scanned vagina is not drawn: the scan took in the tissue round it, and gives a slab 6 cm wide where the vagina
+   is a flattened tube about half that. The modelled one is drawn in its place; the scanned one has still set where
+   the cervix and uterus sit, and what the organs round it keep clear of. */
+for (const mesh of added) if (mesh.name !== 'Vagina') assembly.add({ name: mesh.name, layer: mesh.layer, group: mesh.group, source: 'NIH female' }, mesh);
 /* the modelled skin comes with its own shading, which simplifying would lose */
 for (const part of modelled) assembly.add({ name: part.name, layer: part.layer, group: part.group, source: 'Wooten Labs' }, part, { prepared: part.layer === 'skin' });
 console.log(`female: ${structures.length} structures from the male body, ${added.length} scanned, ${modelled.length} modelled`);

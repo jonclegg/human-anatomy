@@ -15,7 +15,7 @@ const FILE = new URL('../../build/pelvic-detail.json', import.meta.url);
 const TAKEN = [
   ['glans', 'Glans of clitoris'], ['clitBody', 'Body of clitoris'], ['crura', 'crus of clitoris', 'sides'], ['bulbs', 'bulb of vestibule', 'sides'],
   ['hood', 'Prepuce of clitoris'], ['labiaMinora', 'labium minus', 'sides'], ['vestibule', 'Vestibule of vagina'], ['hymen', 'Hymen'],
-  ['meatus', 'External urethral orifice'], ['urethra', 'Urethra', null, 'organs', 'urinary'],
+  ['meatus', 'External urethral orifice'], ['urethra', 'Urethra', null, 'organs', 'urinary'], ['vagina', 'Vagina'],
   ['bartholin', 'greater vestibular gland', 'sides'], ['skene', 'paraurethral gland', 'sides'],
   ['bulbospongiosus', 'bulbospongiosus', 'sides', 'muscles', 'pelvis'], ['ischiocavernosus', 'ischiocavernosus', 'sides', 'muscles', 'pelvis'], ['perinealBody', 'Perineal body', null, 'muscles', 'pelvis'],
 ];

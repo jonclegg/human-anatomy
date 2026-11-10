@@ -259,7 +259,7 @@ test.describe('picking and inspector', () => {
     if (!isPhone(page)) { await page.locator('#isolateChip').click(); expect(await model(page, () => window.bodyModel.state.selection)).toBeNull(); }
   });
 
-  test('‹ › and the arrow keys step through the main parts in number order', async ({ page }) => {
+  test('Back, Next and the arrow keys step through the main parts in number order', async ({ page }) => {
     await open(page, { view: 'skeleton' });
     await model(page, () => window.bodyModel.selectEntry('skull'));
     await page.locator('#inspector [data-step="1"]').click();
@@ -314,7 +314,7 @@ test.describe('close-ups', () => {
         const seen = await model(page, async id => {
           const m = window.bodyModel; m.setRegion(id); await m.ready();
           const body = m.body(), around = m.around(), order = m.entries();
-          return { parts: order.length, listed: document.querySelectorAll('#inspector .exits button').length,
+          return { parts: order.length, listed: document.querySelectorAll('#side .stops button').length,
             own: [...around.own].filter(index => body.parts[index].layer !== 'skin' && m.opacityOf(index) < 1).length,
             context: [...around.context].filter(index => m.opacityOf(index) === 0 || m.opacityOf(index) > 0.5).length,
             others: body.parts.filter((part, index) => part.layer !== 'skin' && !around.own.has(index) && !around.context.has(index) && m.opacityOf(index) > 0).length,
@@ -404,6 +404,44 @@ test.describe('close-ups', () => {
     expect(seen.urethraToBladder).toBeLessThan(0.3);   // it reaches the bladder
     expect(seen.vaginaToOpening).toBeLessThan(1.5);    // the scanned vagina comes down to the modelled opening
     expect(seen.midline).toBeLessThan(0.3);
+  });
+});
+
+test.describe('peel and glowing points', () => {
+  test.use({ reducedMotion: 'reduce' });
+  test('the peel fades the body from skin to muscles with no jump, and lands on each layer\'s view', async ({ page }) => {
+    await open(page);
+    const sweep = await model(page, async () => {
+      const m = window.bodyModel, skin = m.findPart('Skin'), out = [];
+      for (let k = 0; k <= 10; k++) { m.setPeel(k / 10); await m.ready(); out.push({ skin: m.opacityOf(skin), clothing: m.clothing().opacity, view: m.state.view, blended: !!m.state.blend }); }
+      return out;
+    });
+    expect(sweep[0]).toEqual({ skin: 1, clothing: 1, view: 'body', blended: false });
+    expect(sweep[10]).toMatchObject({ skin: 0, clothing: 0, view: 'muscles', blended: false });
+    for (let k = 1; k <= 10; k++) {
+      expect(sweep[k].skin, `skin at ${k / 10}`).toBeLessThanOrEqual(sweep[k - 1].skin);
+      expect(sweep[k - 1].skin - sweep[k].skin, `skin step at ${k / 10}`).toBeLessThan(0.16);   // even steps: no jump anywhere along the way
+      expect(sweep[k].clothing, `clothing at ${k / 10}`).toBeLessThanOrEqual(sweep[k - 1].clothing);
+    }
+    await page.locator('#peel').fill('500');
+    await settle(page);
+    expect(await model(page, () => window.bodyModel.state.view)).toBe('skeleton');
+    await expect(page.locator('#views [data-view="skeleton"]')).toHaveAttribute('aria-pressed', 'true');
+  });
+  test('glowing points on the whole body open a close-up\'s card, and the card starts its tour', async ({ page }, testInfo) => {
+    desktopOnly(testInfo);
+    await open(page);
+    const spots = await model(page, () => { window.bodyModel.frame(performance.now()); return window.bodyModel.spots(); });
+    expect(spots).toEqual(expect.arrayContaining(['brain', 'heart', 'hand', 'knee', 'foot']));
+    await expect(page.locator('#side .card h3')).toHaveText(REGIONS.heart.title);
+    await page.locator('.spot[aria-label="Open the knee"]').click();
+    await expect(page.locator('#side .card h3')).toHaveText(REGIONS.knee.title);
+    await page.locator('#side [data-tour-region="knee"]').click();
+    await settle(page);
+    expect(await model(page, () => [window.bodyModel.state.region, !!window.bodyModel.state.tour, window.bodyModel.state.selection?.entry])).toEqual(['knee', true, REGIONS.knee.parts[0]]);
+    await expect(page.locator('#tourCount')).toHaveText(`Tour 1 of ${REGIONS.knee.parts.length}`);
+    await expect(page.locator('#side .stops button[aria-current="true"]')).toHaveCount(1);
+    expect(await model(page, () => window.bodyModel.spots())).toEqual([]);   // the points belong to the whole body
   });
 });
 

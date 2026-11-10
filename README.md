@@ -75,7 +75,9 @@ npm test             # Playwright: desktop Safari, desktop Chrome and iPhone
 | | |
 |---|---|
 | **Male and female** | Switch bodies at the top right. A selected part carries over, or jumps to its equivalent (testes and ovaries). |
-| **Views per system** | Body, Skeleton, Muscles, Organs, Vessels and Nerves, each with the rest as faint context. |
+| **Peel the body** | One line under the body fades it from skin to muscles, organs, vessels, nerves and skeleton, with no jump between them; each name under the line glides there. |
+| **Glowing points** | Points on the whole body (brain, eye, heart, shoulder, gut, hand, knee, foot) open a close-up's card: Start the tour, or explore it freely. |
+| **Tours as stories** | A part's notes read down the left, Back and a Next named for the stop it leads to sit under them, and a close-up's stops are listed on the right. |
 | **Every structure** | Every structure can be picked on the model, found by name in the parts list, and isolated. 188 main parts have a description, a common misconception, published measurements and the other sex's equivalent. Step through them with ‹ › or the arrow keys. |
 | **Clothed by default** | Both bodies open with the skin solid and clothes on (a short top and shorts for her, shorts for him), as a safe-for-work first view. The Clothing switch takes it off; in the system views it fades with the skin but still covers. |
 | **Close-ups** | A region on its own, from the Close-ups menu: the vulva, the clitoris, the pelvic organs of each sex, the heart, the brain, the eye, the knee, the hand and others. Each has its own numbered parts with notes, its own callouts, stepping and tour, and the rest of the body as faint context. `?closeup=<id>` opens on one. |

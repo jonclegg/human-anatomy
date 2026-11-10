@@ -47,7 +47,7 @@ export function colourOf(part) {
 export const VIEW_INFO = {
   body: {
     title: 'The body', figure: 'Fig. 0 · The whole body', main: 'organs',
-    text: { any: 'The whole body, from the outside. Choose a system below to look inside, fade the skin under X-ray & body, or step through the parts one by one.' },
+    text: { any: 'The body as you know it. Drag the line below to peel it, layer by layer, or tap a glowing point to dive in.' },
     layers: { skeleton: 'solid', muscles: 'off', organs: 'solid', vessels: 'off', nerves: 'solid', skin: 'ghost' }, body: 1, xray: ['skeleton'], isolate: true,
     items: [['heart', 'pumps about 5 litres a minute'], ['liver', 'the largest internal organ'], ['femur', 'the longest bone']],
     labels: { any: ['frontalLobe', 'heart', 'lungs', 'liver', 'stomach', 'kidney', 'smallIntestine', 'colon', 'bladder', 'skull', 'femur', 'hipBone', 'ribs', 'spleen', 'uterus'] },

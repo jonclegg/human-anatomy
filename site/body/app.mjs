@@ -197,10 +197,10 @@ function partMaterial(pass) {
   totalEmissiveRadiance += diffuseColor.rgb * vec3(0.5, 0.2, 0.14) * pow(edge, 2.5) * 0.7;   // light through thin edges, a cheap subsurface glow
   if (vFlags.a > 0.5) totalEmissiveRadiance += vec3(1.0, 0.69, 0.0) * 0.16;`)
       .replace('#include <opaque_fragment>', `#include <opaque_fragment>
-  if (vState.a < 0.5) {   /* a faded part keeps its silhouette and loses its middle, so faded context stays readable */
+  if (vState.a < 0.999) {   /* a faded part keeps its silhouette and loses its middle, so faded context stays readable; the more solid it is, the more of its middle it keeps, with no jump on the way */
     float rim = 1.0 - abs(dot(normal, normalize(vViewPosition)));
-    gl_FragColor.a = clamp(vState.a * (0.3 + 3.2 * rim * rim), 0.0, 0.85);
-    if (vFlags.g > 0.5) gl_FragColor.rgb = mix(gl_FragColor.rgb, vec3(0.52, 0.55, 0.58), 0.75);
+    gl_FragColor.a = mix(clamp(vState.a * (0.3 + 3.2 * rim * rim), 0.0, 0.85), vState.a, smoothstep(0.3, 0.95, vState.a));
+    if (vFlags.g > 0.5 && vState.a < 0.5) gl_FragColor.rgb = mix(gl_FragColor.rgb, vec3(0.52, 0.55, 0.58), 0.75);
   }
   ${pass === 0 ? '' : ''}`);
   };
@@ -331,7 +331,7 @@ const revealed = () => selectedParts().some(index => body.parts[index].group ===
 function clothingOpacity() {
   if (!state.clothed || state.layers.skin === 'off' || revealed() || state.region) return 0;   // a close-up is of what lies under it
   if (isolating()) return 0.12;
-  return state.body >= 0.999 ? 1 : Math.min(0.9, 0.35 + 1.5 * state.body);
+  return Math.min(1, state.body / 0.05) * (0.35 + 0.65 * state.body);   // solid on solid skin; fainter with it but still covering; gone only as the skin goes
 }
 
 /* a label's dot sits on a vertex of its part: the one nearest the middle of the part's box */
@@ -346,7 +346,7 @@ function measureAnchors(body, geometry) {
 
 /* ---------- State ---------- */
 const state = {
-  sex: 'male', view: 'body', region: null, layers: {}, xray: 0, body: 0.25, labels: true, clothed: true, cut: false, tone: 0,
+  sex: 'male', view: 'body', peel: 0, blend: null, spot: 'heart', region: null, layers: {}, xray: 0, body: 0.25, labels: true, clothed: true, cut: false, tone: 0,
   selection: null, hovered: -1, drawer: false, dock: false, closeups: false, inspectorOpen: true, sheet: 'peek', tour: null, touched: false, search: '',
 };
 try { const saved = JSON.parse(localStorage.getItem('wl-body') || '{}'); if (saved.tonePicked && Number.isInteger(saved.tone)) state.tone = saved.tone; if (saved.sex === 'female' || saved.sex === 'male') state.sex = saved.sex; } catch (error) { /* storage unavailable */ }
@@ -388,10 +388,10 @@ function applyVisibility() {
   const chosen = new Set(selectedParts()), isolate = isolating(), colour = new THREE.Color();
   body.parts.forEach((part, index) => {
     const mode = state.layers[part.layer];
-    let opacity = mode === 'solid' ? 1 : mode === 'ghost' ? GHOST : 0;
+    let opacity = state.blend ? state.blend[part.layer] : mode === 'solid' ? 1 : mode === 'ghost' ? GHOST : 0;
     if (part.layer === 'skin') opacity = mode === 'off' || (state.clothed && !revealed() && !state.region && /pubic hair/i.test(part.name)) ? 0 : state.body;
     else if (around) opacity = around.own.has(index) ? 1 : around.context.has(index) ? GHOST : 0;   // a close-up: its parts, and its context faint
-    if (mode === 'solid' && view.xray.includes(part.layer)) opacity = 1 - (1 - GHOST) * state.xray;
+    if (mode === 'solid' && !state.blend && view.xray.includes(part.layer)) opacity = 1 - (1 - GHOST) * state.xray;
     if (SHOWN_WHEN_CHOSEN.test(part.name) && !chosen.has(index)) opacity = 0;
     if (isolate) opacity = chosen.has(index) ? 1 : Math.min(opacity, part.layer === 'skin' ? 0.05 : 0.12);
     if (chosen.has(index) && !isolate) opacity = Math.max(opacity, 1);
@@ -569,15 +569,17 @@ function renderInspector() {
   if (!selection) {
     const intro = viewInfo();
     const items = body ? intro.items.filter(([key]) => body.entries[key]) : [];
+    const eyebrow = state.region ? `Close-up · ${body.order.length} parts` : `Layer ${String(Math.round(state.peel) + 1).padStart(2, '0')} / ${String(PEEL.length).padStart(2, '0')}`;
     el.innerHTML = `${handle}
-      ${state.region ? '<button type="button" class="btn leave" data-leave>← Whole body</button>' : ''}
+      ${state.region ? '<button type="button" class="quiet leave" data-leave>←  Whole body</button>' : ''}
+      <div class="eyebrow">${eyebrow}</div>
       <div class="welcome"><h2>${escapeHtml(intro.title)}</h2></div>
-      <p>${escapeHtml(intro.text[state.sex] || intro.text.any)}</p>
-      <div class="exits">${items.map(([key, note]) => `
-        <button type="button" data-entry="${key}"><i>${entryNumber(key)}</i><b>${escapeHtml(ALL[key].name)}</b><span>${escapeHtml(note)}</span></button>`).join('')}
-      </div>
-      <button type="button" class="btn primary step-start" data-step="1">Step through the parts →</button>
-      <p class="small">Drag to turn. Pinch or the mouse wheel zooms; a two-finger swipe, right-drag or the ruler on the left moves up and down the body (so do the ↑ ↓ keys). ← → step from part to part.</p>`;
+      <p class="lead">${escapeHtml(intro.text[state.sex] || intro.text.any)}</p>
+      ${state.region ? `<div class="nav-row"><button type="button" class="go" data-tour-start>Start the tour  →</button></div>` : `<div class="exits">${items.map(([key, note]) => `
+        <button type="button" data-entry="${key}"><i>${String(entryNumber(key)).padStart(2, '0')}</i><b>${escapeHtml(ALL[key].name)}</b><span>${escapeHtml(note)}</span></button>`).join('')}
+      </div>`}
+      <button type="button" class="quiet step-start" data-step="1">${state.region ? 'Or step through the parts yourself' : 'Step through the parts  →'}</button>
+      <p class="small">Drag to turn · scroll or pinch to zoom · ↑ ↓ move along the body · ← → step from part to part</p>`;
     return;
   }
   const key = selection.entry, entry = key ? ALL[key] : null, part = body.parts[selection.part ?? selection.parts[0]];
@@ -585,7 +587,7 @@ function renderInspector() {
   const picked = selection.part !== undefined ? body.parts[selection.part].name : null;
   const aka = !entry ? `${LAYER_INFO[part.layer].name} · ${GROUP_INFO[part.group]?.name || part.group}`
     : title !== entry.name ? `Part of: ${entry.name}` : picked && picked !== entry.name ? `Selected piece: ${picked}` : entry.aka;
-  const stepper = state.tour || !key || !entryNumber(key) ? '' : `<div class="stepper"><button type="button" data-step="-1" aria-label="Previous part">‹</button><span>${body.order.indexOf(key) + 1} of ${body.order.length}</span><button type="button" data-step="1" aria-label="Next part">›</button></div>`;
+  const stepper = state.tour || !key || !entryNumber(key) ? '' : `<div class="stepper"><span>${body.order.indexOf(key) + 1} of ${body.order.length}</span></div>`;   // Back and Next are under the story
   const size = part.max.map((value, axis) => value - part.min[axis]);
   const facts = entry ? entry.stats : [['Size (this model)', `${Math.max(...size).toFixed(1)} cm across`], ['Layer', LAYER_INFO[part.layer].name]];
   const equivalent = entry && (entry.other?.[otherSex()] ?? entry.other?.any);
@@ -595,12 +597,46 @@ function renderInspector() {
     ${entry ? `<p>${escapeHtml(entry.what)}</p><p>${escapeHtml(entry.does)}</p><div class="bug"><b>Common misconception</b>${escapeHtml(entry.bug)}</div>` : `<p>One of the ${body.parts.length} structures in this model, in the ${escapeHtml((GROUP_INFO[part.group]?.name || part.group).toLowerCase())}. The main parts have full notes; step through them with ‹ ›.</p>`}
     <dl class="stats">${facts.map(([k, v]) => `<dt>${escapeHtml(k)}</dt><dd>${escapeHtml(v)}</dd>`).join('')}</dl>
     ${equivalent ? `<div class="homolog">${state.sex === 'male' ? 'Female' : 'Male'} equivalent: <b>${escapeHtml(equivalent)}</b></div>` : ''}
+    ${storyNav(key)}
     ${sourceNote(selection.parts)}`;
 }
+/* Back, and Next named for the stop it leads to: the numbered parts in order */
+function storyNav(key) {
+  const at = key ? body.order.indexOf(key) : -1;
+  if (at < 0) return '';
+  const next = body.order[(at + 1) % body.order.length];
+  return `<div class="nav-row"><button type="button" class="back" data-step="-1">Back</button><button type="button" class="go" data-step="1">Next: ${escapeHtml(ALL[next].short || ALL[next].name)}  →</button></div>`;
+}
+/* The right column (desktop). On the whole body: the card of the close-up whose glowing point was chosen. In a close-up:
+   its stops, numbered, the one on show marked. */
+const HOTSPOTS = [['brain', 'frontalLobe', null], ['eye', 'eye', 'right'], ['heart', 'heart', null], ['shoulder', 'scapula', 'right'], ['digestive', 'smallIntestine', null], ['hand', 'carpals', 'right'], ['knee', 'patella', 'right'], ['foot', 'talus', 'right']];
+const atHome = () => !state.region && !state.selection && !state.tour;
+let sideShown = null;
+function renderSide() {
+  const el = $('side');
+  if (!body || phone.matches) { el.hidden = true; return; }
+  const key = state.region ? `stops ${state.region} ${body.sex} ${state.selection?.entry || ''}` : atHome() && REGIONS[state.spot] ? `card ${state.spot}` : '';
+  if (key === sideShown) return;
+  sideShown = key;
+  el.hidden = !key;
+  if (state.region) {
+    el.innerHTML = `<div class="hint-line">${escapeHtml(REGIONS[state.region].name)}: ${body.order.length} stops</div><div class="stops">${body.order.map((entry, k) =>
+      `<button type="button" data-entry="${entry}" aria-current="${entry === state.selection?.entry}"><i>${String(k + 1).padStart(2, '0')}</i>${escapeHtml(ALL[entry].short || ALL[entry].name)}</button>`).join('')}</div>`;
+  } else if (key) {
+    const region = REGIONS[state.spot];
+    el.innerHTML = `<div class="hint-line">Tap a glowing point on the body</div>
+      <div class="card"><div class="shot"><img src="img/close-${region.id}.webp" alt="${escapeHtml(region.name)}, close up"></div>
+      <div class="body"><div class="meta">${region.parts.length} parts · about ${Math.max(2, Math.round(region.parts.length * 7 / 60))} min</div><h3>${escapeHtml(region.title)}</h3><p>${escapeHtml(region.note.charAt(0).toUpperCase() + region.note.slice(1))}.</p>
+      <button type="button" class="go" data-tour-region="${region.id}">Start the tour  →</button><button type="button" class="quiet" data-region="${region.id}">Or explore it freely</button></div></div>`;
+  }
+  requestAnimationFrame(resize);
+}
 document.addEventListener('click', event => {
-  const target = event.target.closest('[data-entry],[data-tour],[data-close],[data-sheet],[data-step],[data-show-all],[data-route],[data-leave],[data-region]');
+  const target = event.target.closest('[data-entry],[data-tour],[data-close],[data-sheet],[data-step],[data-show-all],[data-route],[data-leave],[data-region],[data-tour-region],[data-tour-start]');
   if (!target || target.closest('#views') || target.closest('#partGroups')) return;
   if (target.hasAttribute('data-leave')) { stopTour(); setView(state.view); }
+  if (target.dataset.tourRegion) { setRegion(target.dataset.tourRegion); startTour(); return; }
+  if (target.hasAttribute('data-tour-start')) { startTour(); return; }
   if (target.dataset.region) { stopTour(); state.closeups = false; setRegion(target.dataset.region); }
   if (target.dataset.step) stepPart(Number(target.dataset.step));
   if (target.hasAttribute('data-show-all')) { select(null); resetView(); }
@@ -635,6 +671,9 @@ function syncUI() {
   $('tourBtn').querySelector('span').textContent = state.tour ? 'End tour' : 'Guided tour';
   $('dock').classList.toggle('open', state.dock);
   $('dockBtn').setAttribute('aria-expanded', String(state.dock));
+  $('peel').value = Math.round(state.peel * 100);
+  $('peel').parentElement.hidden = !!state.region;   // the peel is of the whole body
+  renderSide();
   $('closeups').hidden = !state.closeups;
   $('closeupsBtn').setAttribute('aria-expanded', String(state.closeups));
   for (const button of $('closeupList').children) button.setAttribute('aria-current', String(button.dataset.region === state.region));
@@ -707,17 +746,52 @@ function ensureLayers() {
 function applyView(name) {
   if (isolating() && !state.tour) state.selection = null;
   if (state.region) { state.selection = null; state.region = null; useIndex(body, null); buildPartsList(); buildTags(); measureTags(); }
-  state.view = name;
+  state.view = name; state.peel = PEEL.indexOf(name); state.blend = null;
   const view = VIEW_INFO[name];
   Object.assign(state.layers, view.layers);
   state.xray = 0; state.body = view.body;
   ensureLayers(); applyVisibility(); renderInspector(); syncUI();
 }
+/* The peel: the views in order from the outside in. Between two of them every layer is as solid as its share of the way
+   from one to the other, so the body fades from skin to skeleton without a jump. */
+const PEEL = ['body', 'muscles', 'organs', 'vessels', 'nerves', 'skeleton'];
+const layerLevel = (view, layer) => (layer === 'skin' ? (view.layers.skin === 'off' ? 0 : view.body) : { solid: 1, ghost: GHOST, off: 0 }[view.layers[layer]]);
+function setPeel(value) {
+  value = THREE.MathUtils.clamp(value, 0, PEEL.length - 1);
+  const low = Math.min(PEEL.length - 2, Math.floor(value)), share = value - low;
+  if (share < 0.01 || share > 0.99) { const name = PEEL[Math.round(value)]; if (state.blend || state.region || state.view !== name) applyView(name); return; }
+  if (state.region || state.selection) applyView(state.view);
+  const from = VIEW_INFO[PEEL[low]], to = VIEW_INFO[PEEL[low + 1]];
+  state.peel = value; state.view = PEEL[Math.round(value)]; state.xray = 0; state.blend = {};
+  for (const layer of LAYERS) {
+    state.blend[layer] = layerLevel(from, layer) + (layerLevel(to, layer) - layerLevel(from, layer)) * share;
+    state.layers[layer] = state.blend[layer] > 0.002 ? (layer === 'skin' ? 'ghost' : 'solid') : 'off';
+  }
+  state.body = state.blend.skin;
+  ensureLayers(); applyVisibility(); renderInspector(); syncUI();
+}
+/* a layer's name under the line glides the body there */
+let glide = null;
+function glideTo(name) {
+  const target = PEEL.indexOf(name);
+  if (reducedMotion() || state.region || Math.abs(target - state.peel) < 0.01) { glide = null; setView(name); return; }
+  glide = { from: state.peel, to: target, start: performance.now(), duration: 380 + 160 * Math.abs(target - state.peel) };
+  invalidate();
+}
+function stepGlide(now) {
+  if (!glide) return;
+  const t = Math.min(1, (now - glide.start) / glide.duration), eased = t < 0.5 ? 2 * t * t : 1 - (-2 * t + 2) ** 2 / 2;
+  const { to } = glide;
+  if (t >= 1) glide = null;
+  setPeel(t >= 1 ? to : glide.from + (to - glide.from) * eased);
+  invalidate();
+}
+$('peel').addEventListener('input', event => { glide = null; stopTour(); setPeel(event.target.value / 100); });
 /* a close-up: its own numbered parts, and only the layers its parts and context are in */
 function applyRegion(id) {
   const region = REGIONS[id];
   if (region.sex && region.sex !== body.sex) throw new Error(`the ${body.sex} body has no ${id} close-up`);
-  state.selection = null; state.region = id;
+  state.selection = null; state.region = id; state.blend = null; glide = null;
   useIndex(body, region);
   buildPartsList(); buildTags(); measureTags();
   for (const layer of LAYERS) state.layers[layer] = 'off';
@@ -737,11 +811,16 @@ const resetView = () => (state.region ? setRegion(state.region) : setView(state.
 function freeRect() {
   const box = stage.getBoundingClientRect(), rect = el => el.getBoundingClientRect();
   const inspector = $('inspector'), sheetOpen = !inspector.hidden && !inspector.classList.contains('empty');
-  if (phone.matches) return { left: 12, right: box.width - 12, top: rect($('views')).bottom - box.top + 16,
+  if (phone.matches) return { left: 12, right: box.width - 12, top: (state.region ? rect(document.querySelector('.top-right')).bottom : rect($('views')).bottom) - box.top + 16,
     bottom: rect(sheetOpen ? inspector : document.querySelector('.rail')).top - box.top - 28 };
-  return { left: Math.max(rect(document.querySelector('.rail')).right, $('dock').classList.contains('open') ? rect($('dock')).right : 0) - box.left + 24,
-    right: (inspector.hidden ? box.right - 24 : rect(inspector).left) - box.left - 24,
-    top: rect(document.querySelector('.masthead')).bottom - box.top + 12, bottom: rect($('views')).top - box.top - 28 };
+  const { left, right } = insets();
+  return { left: left + 24, right: box.width - right - 24, top: rect(document.querySelector('.masthead')).bottom - box.top + 24, bottom: state.region ? box.height - 56 : rect($('peel')).top - box.top - 34 };
+}
+/* how much of the stage the columns take on each side (desktop): the tools and the story on the left, the card or the stops on the right */
+function insets() {
+  const box = stage.getBoundingClientRect(), inspector = $('inspector'), side = $('side');
+  const left = Math.max(document.querySelector('.rail').getBoundingClientRect().right, inspector.hidden ? 0 : inspector.getBoundingClientRect().right) - box.left;
+  return { left, right: side.hidden ? 24 : box.right - side.getBoundingClientRect().left };
 }
 const corner = new THREE.Vector3();
 function boxPoints(parts, margin = 0) {
@@ -800,7 +879,7 @@ function focusSelection(fromView = null) {
   const frame = fitFrame(boxPoints(parts, Math.max(4, size * 0.25)), direction, V(0, 1, 0), 0.7);
   flyTo(frame.position, frame.target, V(0, 1, 0));
 }
-for (const button of $('views').children) button.addEventListener('click', () => { stopTour(); setView(button.dataset.view); });
+for (const button of $('views').children) button.addEventListener('click', () => { stopTour(); glideTo(button.dataset.view); });
 $('resetBtn').addEventListener('click', () => { stopTour(); resetView(); });
 $('isolateChip').addEventListener('click', () => { select(null); resetView(); });
 $('manualBtn').addEventListener('click', () => document.querySelector('.manual-wrap').scrollIntoView({ behavior: reducedMotion() ? 'auto' : 'smooth' }));
@@ -831,7 +910,7 @@ async function switchSex(sex) {
   body = await loadBody(sex);
   makeStateTextures(body.parts.length);
   state.selection = null; state.search = ''; $('search').value = '';
-  buildHeightRuler(); buildCloseupList();
+  buildHeightRuler(); buildCloseupList(); buildSpots();
   /* a close-up carries over when the other body has it */
   const region = state.region && (!REGIONS[state.region].sex || REGIONS[state.region].sex === sex) ? state.region : null;
   state.region = null;
@@ -861,9 +940,37 @@ function buildTags() {
     labelsEl.append(tag); tagEls[key] = tag;
   }
 }
+/* the glowing points: one per close-up worth diving into from the whole body, at the middle of a part that marks it */
+let spotEls = [];
+function buildSpots() {
+  for (const { el } of spotEls) el.remove();
+  spotEls = [];
+  for (const [id, entry, side] of HOTSPOTS) {
+    const parts = (body.entries[entry] || []).filter(index => !side || sideOf(index) === side);
+    if (!REGIONS[id] || !parts.length) continue;
+    const box = new THREE.Box3();
+    for (const index of parts) box.expandByPoint(V(...body.parts[index].min)).expandByPoint(V(...body.parts[index].max));
+    const el = document.createElement('button');
+    el.type = 'button'; el.className = 'spot'; el.hidden = true; el.innerHTML = '<b></b><i></i>';
+    el.setAttribute('aria-label', `Open ${REGIONS[id].title.toLowerCase()}`);
+    el.addEventListener('click', () => { if (phone.matches) { setRegion(id); return; } state.spot = id; syncUI(); });
+    labelsEl.append(el); spotEls.push({ id, el, point: box.getCenter(new THREE.Vector3()) });
+  }
+}
+function placeSpots(width, height) {
+  const shown = atHome() && !isolating();
+  for (const { id, el, point } of spotEls) {
+    projected.copy(point).project(camera);
+    const visible = shown && projected.z < 1 && Math.abs(projected.x) < 1 && Math.abs(projected.y) < 1;
+    el.hidden = !visible;
+    if (!visible) continue;
+    el.style.transform = `translate(${((projected.x + 1) / 2 * width).toFixed(1)}px, ${((1 - projected.y) / 2 * height).toFixed(1)}px)`;
+    el.setAttribute('aria-pressed', String(id === state.spot));
+  }
+}
 function measureTags() { for (const [key, tag] of Object.entries(tagEls)) { tag.hidden = false; tagWidths[key] = tag.offsetWidth; tag.hidden = true; } invalidate(); }
 const projected = new THREE.Vector3();
-const OVERLAYS = ['#inspector', '#dock', '#drawer', '#closeups', '.masthead h1', '.top-right', '.rail', '.views', '.hint', '.figure', '#isolateChip', '#fetching'];
+const OVERLAYS = ['#inspector', '#side', '.peel', '#dock', '#drawer', '#closeups', '.masthead h1', '.top-right', '.rail', '.views', '.hint', '.figure', '#isolateChip', '#fetching'];
 const leaders = document.createElementNS('http://www.w3.org/2000/svg', 'svg'); leaders.id = 'leaders'; labelsEl.prepend(leaders);
 const overlaps = (a, b) => a[0] < b[2] && a[2] > b[0] && a[1] < b[3] && a[3] > b[1];
 /* a label's anchor: of an entry's parts, the one whose dot shows on screen and sits nearest the camera */
@@ -882,12 +989,13 @@ function anchorOf(key) {
   return best;
 }
 function updateLabels(width, height) {
+  placeSpots(width, height);
   const origin = stage.getBoundingClientRect();
   const placed = [...document.querySelectorAll(OVERLAYS.join(','))].filter(el => !el.hidden && el.offsetParent).map(el => el.getBoundingClientRect())
     .map(r => [r.left - origin.left, r.top - origin.top, r.right - origin.left, r.bottom - origin.top]);
   const panels = placed.slice();
   const selectedKey = state.selection?.entry, hoveredKey = state.hovered >= 0 && body.entryOf[state.hovered] >= 0 ? body.keys[body.entryOf[state.hovered]] : null;
-  const priority = viewInfo().labels[state.sex] || viewInfo().labels.any;
+  const priority = atHome() && spotEls.length && !state.blend && state.peel === 0 ? [] : viewInfo().labels[state.sex] || viewInfo().labels.any;   // on the opening view the glowing points invite; callouts come with the layers
   const order = (isolating() ? [selectedKey, hoveredKey] : [selectedKey, hoveredKey, ...priority]).filter((key, k, list) => key && body.entries[key] && list.indexOf(key) === k);
   for (const [key, tag] of Object.entries(tagEls)) if (!order.includes(key)) tag.hidden = true;
   const shown = [];
@@ -1076,16 +1184,14 @@ function resize() {
   outlineResolution.value.set(width, height);
   const inspector = $('inspector'), box = stage.getBoundingClientRect();
   const sheetOpen = !inspector.hidden && inspector.offsetParent && !inspector.classList.contains('empty');
-  const right = phone.matches || inspector.hidden ? 0 : inspector.offsetWidth + 20;
-  const left = phone.matches ? 0 : document.querySelector('.rail').offsetWidth + 20;
-  const shiftX = (right - left) / 2;
-  const top = phone.matches ? $('views').getBoundingClientRect().bottom - box.top : 0;
+  const columns = phone.matches ? { left: 0, right: 0 } : insets();
+  const shiftX = (columns.right - columns.left) / 2;
+  const top = phone.matches ? (state.region ? document.querySelector('.top-right') : $('views')).getBoundingClientRect().bottom - box.top : 0;
   const bottom = phone.matches ? box.bottom - (sheetOpen ? inspector : document.querySelector('.rail')).getBoundingClientRect().top : 0;
   const shiftY = (top - bottom) / 2;
   camera.aspect = (width + 2 * Math.abs(shiftX)) / (height + 2 * Math.abs(shiftY));
   camera.fov = width / height < 1.2 ? 2 * Math.atan(Math.tan(THREE.MathUtils.degToRad(16)) * 1.2 * (height + 2 * Math.abs(shiftY)) / width) * 180 / Math.PI : 32;
   camera.setViewOffset(width + 2 * Math.abs(shiftX), height + 2 * Math.abs(shiftY), shiftX > 0 ? 2 * shiftX : 0, shiftY < 0 ? -2 * shiftY : 0, width, height);
-  if (!phone.matches) { const rail = document.querySelector('.rail'); heightRuler.style.top = `${rail.offsetTop + rail.offsetHeight + 12}px`; }
   updateHeightRuler();
   invalidate();
 }
@@ -1104,6 +1210,7 @@ function animate(now) {
 let visibilityDue = true;
 function frame(now) {
   stepTour(now);
+  stepGlide(now);
   if (flight) {
     const t = flight.duration ? Math.min(1, (now - flight.start) / flight.duration) : 1;
     const e = t < 0.5 ? 4 * t * t * t : 1 - (-2 * t + 2) ** 3 / 2;
@@ -1136,14 +1243,14 @@ function frame(now) {
 
 /* Test and debugging hook: read-only views of the model plus the same actions the UI uses. */
 window.bodyModel = {
-  state, camera, controls, setView, setRegion, freeRect, switchSex, selectEntry, selectPart, stepPart, startTour, stopTour, frame, pick,
+  state, camera, controls, setView, setRegion, setPeel, spots: () => spotEls.filter(spot => !spot.el.hidden).map(spot => spot.id), freeRect, switchSex, selectEntry, selectPart, stepPart, startTour, stopTour, frame, pick,
   regions: () => Object.values(REGIONS).filter(region => !region.sex || region.sex === body.sex).map(region => region.id), around: () => body.around,
   body: () => body, entries: () => body.order, entryParts: key => body.entries[key] || [],
   part: index => body.parts[index], findPart: name => body.parts.find(part => part.name === name)?.index ?? -1,
   ready: () => Promise.all(LAYERS.filter(layer => state.layers[layer] !== 'off').map(layer => body.layers[layer]?.promise)),
   loaded: () => LAYERS.filter(layer => body.layers[layer]?.group),
   clothing: () => ({ shown: !!body.clothing?.group?.visible, opacity: clothingOpacity(), triangles: body.clothing?.group ? (() => { let n = 0; body.clothing.group.traverse(o => { if (o.isMesh) n += o.geometry.index.count / 3; }); return n; })() : 0 }),
-  busy: () => !!flight || !$('fetching').hidden,
+  busy: () => !!flight || !!glide || !$('fetching').hidden,
   renders: () => renderCount,
   opacityOf: index => stateTexture.colour.image.data[index * 4 + 3] / 255,
   visibleNow: index => { refreshVisibility(); const part = body.parts[index]; return !!part.anchor && visibleAt(V(...part.anchor), [index]); },
@@ -1230,7 +1337,7 @@ $('systemRoute').innerHTML = Object.entries(VIEW_INFO).filter(([view]) => view !
 }).join('');
 body = await loadBody(state.sex);
 makeStateTextures(body.parts.length);
-buildPartsList(); buildTags(); buildHeightRuler(); buildCloseupList();
+buildPartsList(); buildTags(); buildSpots(); buildHeightRuler(); buildCloseupList();
 Object.assign(state.layers, VIEW_INFO[state.view].layers); state.body = VIEW_INFO[state.view].body;
 /* ?closeup=<id> opens on a close-up, when this body has it */
 { const wanted = params.get('closeup'); if (wanted && REGIONS[wanted] && (!REGIONS[wanted].sex || REGIONS[wanted].sex === state.sex)) applyRegion(wanted); }

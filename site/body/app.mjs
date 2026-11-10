@@ -588,7 +588,7 @@ function toggleMotion() {
 $('figure').addEventListener('click', () => { if ($('figure').classList.contains('live')) toggleMotion(); });
 $('figure').addEventListener('keydown', event => { if ((event.key === 'Enter' || event.key === ' ') && $('figure').classList.contains('live')) { event.preventDefault(); toggleMotion(); } });
 const motionKey = () => (moving() ? `${body.sex}:${state.region}` : null);
-const motion = { for: null, definition: null, rig: null, rigs: {}, phase: 0, clock: 0, caption: '', moment: -1, told: null, into: 0, last: 0, held: null, base: null, touched: new Set(), chosen: new Set() };   // held: a moment of the cycle to stay at (tests and pictures)
+const motion = { for: null, definition: null, rig: null, rigs: {}, phase: 0, clock: 0, caption: '', moment: -1, told: null, kept: null, into: 0, last: 0, held: null, base: null, touched: new Set(), chosen: new Set() };   // held: a moment of the cycle to stay at (tests and pictures)
 const DROP = (() => { const c = document.createElement('canvas'); c.width = c.height = 32; const g = c.getContext('2d'), fill = g.createRadialGradient(16, 16, 0, 16, 16, 16); fill.addColorStop(0, 'rgba(255,255,255,1)'); fill.addColorStop(0.5, 'rgba(255,255,255,0.9)'); fill.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = fill; g.fillRect(0, 0, 32, 32); return new THREE.CanvasTexture(c); })();
 const WAY = 600;
 const dropHeight = { value: 1 };   // the canvas height in pixels: a drop's size is in cm
@@ -754,7 +754,11 @@ function stepMotion(now) {
   const seconds = THREE.MathUtils.clamp((now - motion.last) / 1000, 0, 0.05); motion.last = now;   // frames can arrive out of order by a hair: nothing steps back
   /* a story's step plays one stretch of the cycle, slowed, over and over, with a breath between: the drops fade out and in across the join */
   const step = telling(), span = motion.held === null && step?.span ? step : null;
-  if (motion.told !== step) { motion.told = step; motion.clock = 0; }
+  if (motion.told !== step) {
+    motion.told = step; motion.clock = 0;
+    /* what a step is about: the parts it frames, names and labels. The rest stands back while it is told. */
+    motion.kept = step?.frame ? new Set([...step.frame, ...(step.labels || []), step.entry].flatMap(key => body.entries[key] || [])) : null;
+  }
   if (motion.held === null) motion.clock += seconds;
   let time = motion.held === null ? motion.clock : motion.held * cycle, join = 1, rejoined = false;
   if (span) {
@@ -768,6 +772,11 @@ function stepMotion(now) {
   motion.touched.clear(); motion.chosen = new Set(selectedParts());
   const moment = definition.step(rig, phase, act, time) || {};
   if (span) for (const index of body.entries[step.entry] || []) act.glow(body.parts[index], 0.3);   // what the step is about, gently lit
+  if (motion.kept) {
+    const away = Math.min(1, motion.clock / 0.7);   // eased out over the first moments of the step
+    for (const index of body.around.own) if (!motion.kept.has(index)) act.fade(body.parts[index], motion.base[index * 4 + 3] / 255 * (1 - 0.85 * away));
+    for (const index of body.around.context) act.fade(body.parts[index], motion.base[index * 4 + 3] / 255 * (1 - 0.6 * away));
+  }
   stateTexture.moves.needsUpdate = true; stateTexture.colour.needsUpdate = true;
   dropHeight.value = renderer.domElement.height;
   rig.streams.forEach((stream, which) => {

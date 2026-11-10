@@ -473,14 +473,16 @@ test.describe('motion', () => {
       const m = window.bodyModel, parts = m.body().parts, find = pattern => parts.findIndex(part => pattern.test(part.name)), opacity = pattern => m.opacityOf(find(pattern));
       m.holdMotion(phase); m.frame(performance.now());
       const scale = pattern => m.moveOf(find(pattern))[12];   // how far a part is drawn in toward its pivot: 1 is not at all
-      return { ...m.motion(), tricuspid: opacity(/leaflet of tricuspid valve$/), aortic: opacity(/cusp of aortic valve$/), wall: opacity(/^Wall of ventricle$/), atrium: scale(/^Cavity of right atrium$/), ventricle: scale(/^Cavity of left ventricle$/) };
+      const swing = pattern => { const move = m.moveOf(find(pattern)); return move[3] === 4 ? move[7] * 180 / Math.PI : NaN; };   // how far a leaflet is swung open on its ring, in degrees
+      return { ...m.motion(), tricuspid: swing(/leaflet of tricuspid valve$/), aortic: swing(/cusp of aortic valve$/), leaflet: opacity(/leaflet of mitral valve$/), wall: opacity(/^Wall of ventricle$/), atrium: scale(/^Cavity of right atrium$/), ventricle: scale(/^Cavity of left ventricle$/) };
     }, phase);
     const topUp = await at(0.07), ejecting = await at(0.3), refilling = await at(0.8);
     expect(topUp).toMatchObject({ moving: true, drops: 4800, caption: expect.stringContaining('Atria squeeze') });
     expect(topUp.atrium).toBeLessThan(0.83); expect(topUp.ventricle).toBe(1);
     expect(ejecting.atrium).toBe(1); expect(ejecting.ventricle).toBeLessThan(0.76);
-    expect(ejecting.tricuspid).toBe(1); expect(ejecting.aortic).toBeLessThan(0.3);        // inflow shut, outflow open
-    expect(refilling.tricuspid).toBeLessThan(0.3); expect(refilling.aortic).toBe(1);      // and the other way round
+    expect(ejecting.tricuspid).toBe(0); expect(ejecting.aortic).toBeGreaterThan(45);      // inflow shut, outflow swung open
+    expect(refilling.tricuspid).toBeGreaterThan(55); expect(refilling.aortic).toBe(0);    // and the other way round
+    expect([ejecting.leaflet, refilling.leaflet]).toEqual([1, 1]);                        // a valve is always there to see: it swings, it does not fade
     expect([refilling.atrium, refilling.ventricle]).toEqual([1, 1]);
     await expect(page.locator('#figure span')).toHaveText(['Atria squeeze', 'Ventricles squeeze', 'Heart refills']);   // the three moments stay put,
     await expect(page.locator('#figure span.now')).toHaveText('Heart refills');                                          // and the one it is in is lit
@@ -544,12 +546,31 @@ test.describe('motion', () => {
     await page.locator('#side [data-story="3"]').click();
     await page.waitForTimeout(500);
     const phases = await page.evaluate(async () => { const seen = []; for (let k = 0; k < 30; k++) { seen.push(window.bodyModel.motion().phase); await new Promise(done => setTimeout(done, 100)); } return seen; });
-    expect(Math.min(...phases)).toBeGreaterThan(0.129); expect(Math.max(...phases)).toBeLessThan(0.581);
+    const [from, to] = STORIES.heart[3].span;
+    expect(Math.min(...phases)).toBeGreaterThan(from - 0.001); expect(Math.max(...phases)).toBeLessThan(to + 0.001);
     expect(new Set(phases).size).toBeGreaterThan(10);   // and it moves through it
+    /* the step cuts the heart open: the walls solid, the chambers emptied, the valves inside to be seen */
+    await expect.poll(() => model(page, () => window.bodyModel.motion().open)).toBe(1);
+    expect(await model(page, () => { const m = window.bodyModel; return ['Wall of ventricle', 'Cavity of right ventricle', 'Anterior leaflet of tricuspid valve'].map(name => m.opacityOf(m.findPart(name))); })).toEqual([1, 0, 1]);
+    /* the line under the heart is the tour's pause button, not the beat's caption: paused, the motion and the voice both wait */
+    await expect(page.locator('#figure')).toHaveText('Pause');
+    await page.locator('#figure').click();
+    await expect(page.locator('#figure')).toHaveText('Play');
+    await expect(page.locator('#inspector [data-tour="play"]')).toHaveText('Play');
+    const held = await page.evaluate(async () => { const seen = new Set(); for (let k = 0; k < 8; k++) { seen.add(window.bodyModel.motion().phase); await new Promise(done => setTimeout(done, 100)); } return seen.size; });
+    expect(held).toBe(1);
+    expect(await model(page, () => window.bodyModel.sound())).toMatchObject({ key: 'story:heart:3', voicePaused: true, musicPlaying: false });
+    await page.locator('#inspector [data-tour="play"]').click();
+    await expect(page.locator('#figure')).toHaveText('Pause');
+    const resumed = await page.evaluate(async () => { const seen = new Set(); for (let k = 0; k < 8; k++) { seen.add(window.bodyModel.motion().phase); await new Promise(done => setTimeout(done, 100)); } return seen.size; });
+    expect(resumed).toBeGreaterThan(3);
+    expect(await model(page, () => window.bodyModel.sound())).toMatchObject({ key: 'story:heart:3', voicePaused: false, musicPlaying: true });
     await page.locator('#inspector [data-tour="stop"]').click();
     await page.waitForTimeout(1500);
     const free = await page.evaluate(async () => { const seen = []; for (let k = 0; k < 14; k++) { seen.push(window.bodyModel.motion().phase); await new Promise(done => setTimeout(done, 100)); } return seen; });
-    expect(Math.max(...free) - Math.min(...free)).toBeGreaterThan(0.7);   // the tour over, the heart beats on at its own pace
+    expect(Math.max(...free) - Math.min(...free)).toBeGreaterThan(0.7);   // the tour over, the heart beats on at its own pace,
+    expect(await model(page, () => window.bodyModel.motion().open)).toBe(0);   // closed up again,
+    await expect(page.locator('#figure span')).toHaveCount(3);                  // and the line says what the beat is doing
   });
   test('with reduced motion nothing moves until it is asked to', async ({ browser }, testInfo) => {
     desktopOnly(testInfo);

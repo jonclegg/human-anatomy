@@ -1,18 +1,19 @@
 // The beating heart: what moves, when, and where the blood goes.
 // One cycle, slowed to about 46 beats a minute so each step can be followed:
 //   0.00-0.13  the atria squeeze and top up the ventricles
-//   0.14       the tricuspid and mitral valves shut (the first heart sound)
+//   0.14       the tricuspid and mitral valves swing shut (the first heart sound)
 //   0.19-0.47  the ventricles squeeze, the pulmonary and aortic valves are open, blood leaves
-//   0.48       the pulmonary and aortic valves shut (the second heart sound)
+//   0.48       the pulmonary and aortic valves swing shut (the second heart sound)
 //   0.58-1.00  the heart relaxes, the tricuspid and mitral valves open, and it refills
+// A step of its story (stories.mjs) cuts it open, so the valves and the blood are seen from inside.
 import { smooth, SPENT, FRESH } from './shared.mjs';
-const FIRST_SOUND = 0.14, SECOND_SOUND = 0.48, CYCLE = 1.3;   // CYCLE: one beat, in seconds
+const FIRST_SOUND = 0.14, SECOND_SOUND = 0.48, CYCLE = 1.3, RADIANS = Math.PI / 180;   // CYCLE: one beat, in seconds
 export function beatAt(phase) {
   return {
     atria: phase < 0.13 ? Math.sin(Math.PI * phase / 0.13) ** 2 : 0,           // how far the atria are squeezed, 0 to 1
     ventricles: smooth(0.14, 0.27, phase) * (1 - smooth(0.42, 0.57, phase)),    // and the ventricles
-    inflowOpen: phase < 0.13 || phase > 0.58,                                   // tricuspid and mitral
-    outflowOpen: phase > 0.19 && phase < 0.47,                                  // pulmonary and aortic
+    inflow: phase < 0.2 ? 1 - smooth(0.13, 0.17, phase) : smooth(0.58, 0.68, phase),   // how far open the tricuspid and mitral valves are, 0 to 1
+    outflow: smooth(0.19, 0.25, phase) * (1 - smooth(0.44, 0.49, phase)),               // and the pulmonary and aortic
     moment: phase < 0.14 ? 0 : phase < 0.5 ? 1 : 2,
   };
 }
@@ -21,7 +22,15 @@ export function beatAt(phase) {
 const MOVES = [[/^Wall of (left|right) atrium$/, 1], [/^Wall of ventricle$|papillary muscle/i, 2], [/^Cavity of (left|right) atrium$/, 3], [/^Cavity of (left|right) ventricle$/, 4]];
 const SQUEEZE = [0, 0.07, 0.09, 0.2, 0.26];
 const RIDES_THE_WALL = ['heartLeftCoronary', 'heartAnteriorInterventricular', 'heartCircumflex', 'heartRightCoronary', 'cardiacVeins'];
-const INFLOW_VALVE = /leaflet of (tricuspid|mitral) valve$/i, OUTFLOW_VALVE = /cusp of (pulmonary|aortic) valve$/i;
+/* The four valves. The model has them shut. Each leaflet swings open on the ring it hangs from: `from` is the chamber
+   the blood comes from and `to` the one it goes to, which give the way through; `swing` is how far it opens, in degrees;
+   `cords` is how deep, in cm past the ring, a leaflet's cords run before they reach the muscle that anchors them (their far ends do not move) */
+const VALVES = [
+  { leaflets: /leaflet of tricuspid valve$/i, from: 'Cavity of right atrium', to: 'Cavity of right ventricle', inflow: true, swing: 62, cords: [0.9, 3.2] },
+  { leaflets: /leaflet of mitral valve$/i, from: 'Cavity of left atrium', to: 'Cavity of left ventricle', inflow: true, swing: 62, cords: [0.9, 3.2] },
+  { leaflets: /cusp of pulmonary valve$/i, from: 'Cavity of right ventricle', swing: 52 },
+  { leaflets: /cusp of aortic valve$/i, from: 'Cavity of left ventricle', swing: 52 },
+];
 const SPENT_CELLS = '#8fb0ff', FRESH_CELLS = '#ff9a8c';   // the blood in motion: paler than the chamber it runs through, so it shows
 /* The two streams, as the structures each passes through, in order */
 const STREAMS = [
@@ -63,6 +72,13 @@ export const heart = {
     if (/^Cavity of left/.test(name)) return { colour: FRESH, opacity: 0.62 };
     return null;
   },
+  /* and cut open (a step of its story): the walls solid, the chambers emptied but for their blood, the valves and the muscles that hold them as they are */
+  opened(name) {
+    if (/^Wall of /.test(name)) return 1;
+    if (/^Cavity of /.test(name)) return 0;
+    if (/valve$|papillary muscle/i.test(name)) return 1;
+    return undefined;
+  },
   build(kit) {
     const valves = kit.find(/leaflet of (tricuspid|mitral) valve$|cusp of (pulmonary|aortic) valve$/i);
     const base = kit.centre(valves);   // the plane of the four valves: the ventricles shorten toward it
@@ -90,13 +106,24 @@ export const heart = {
       const width = where => { const found = stops.findIndex(stop => stop >= where), k = found < 0 ? stops.length - 1 : Math.max(1, found); return widths[k - 1] + (widths[k] - widths[k - 1]) * smooth(stops[k - 1], stops[k], where); };
       return { curve: line.curve, colour, count: 2400, size: 0.13, spread: 1, width, swirl: 1.1, strength: 0.7, lay: (phase, time) => layBlood(places, time, CYCLE) };
     });
-    return { movers, valves: valves.map(part => ({ part, inflow: INFLOW_VALVE.test(part.name) })), streams };
+    /* each valve's ring: round the way through, as wide as its leaflets reach, at the level where they hang from it */
+    const rings = VALVES.map(({ leaflets, from, to, inflow = false, swing, cords }) => {
+      const parts = kit.find(leaflets), points = kit.points(parts), middle = kit.centre(parts), start = kit.centre(kit.one(exact(from)));
+      const onward = (to ? kit.centre(kit.one(exact(to))).sub(start) : middle.clone().sub(start)).normalize();   // roughly the way through
+      /* an inflow valve's leaflets are the part nearest the atrium, and its cords run on below them */
+      const first = Math.min(...points.map(point => point.dot(onward))), leaf = inflow ? points.filter(point => point.dot(onward) < first + 1.5) : points;
+      const axis = kit.thin(leaf, onward);   // shut, the leaflets lie across the way through
+      const deep = point => point.clone().sub(middle).dot(axis), wide = point => point.clone().sub(middle).addScaledVector(axis, -deep(point)).length();
+      const reach = leaf.map(wide).sort((a, b) => a - b), radius = reach[Math.floor(reach.length * 0.85)];
+      const rim = leaf.filter(point => wide(point) > radius * 0.8), level = inflow ? rim.reduce((sum, point) => sum + deep(point), 0) / rim.length : Math.min(...leaf.map(deep));
+      return { parts, inflow, axis, radius, pivot: middle.clone().addScaledVector(axis, level), angle: RADIANS * swing, slack: cords };
+    });
+    return { movers, rings, streams };
   },
   step(rig, phase, act) {
     const beat = beatAt(phase), squeeze = [0, beat.atria, beat.ventricles, beat.atria, beat.ventricles];
     for (const { part, kind, pivot } of rig.movers) act.rigid(part, { pivot, scale: 1 - squeeze[kind] * SQUEEZE[kind] });
-    /* a valve shows solid when shut and faint when open */
-    for (const { part, inflow } of rig.valves) act.fade(part, (inflow ? beat.inflowOpen : beat.outflowOpen) ? 0.18 : 1);
+    for (const { parts, inflow, pivot, axis, radius, angle, slack } of rig.rings) for (const part of parts) act.hinge(part, { pivot, axis, radius, angle: angle * (inflow ? beat.inflow : beat.outflow), slack });
     return { caption: MOMENTS[beat.moment], moment: beat.moment };
   },
   sounds: [[FIRST_SOUND, play => play.thump(58, 0.13, 0.5)], [SECOND_SOUND, play => play.thump(74, 0.09, 0.36)]],

@@ -173,7 +173,7 @@ const outlineResolution = { value: new THREE.Vector2(1, 1) };
 const VERTEX_STATE = `
 attribute float _part;
 uniform sampler2D uColour; uniform sampler2D uFlags; uniform highp sampler2D uMoves;
-varying vec4 vState; varying vec4 vFlags; varying float vCutX;
+varying vec4 vState; varying vec4 vFlags; varying float vCutX; varying vec3 vPlace;
 vec3 turned(vec4 turn, vec3 arm) { return arm + 2.0 * cross(turn.xyz, cross(turn.xyz, arm) + turn.w * arm); }
 `;
 const FETCH_STATE = `
@@ -186,12 +186,23 @@ const FETCH_STATE = `
    2 bent: turned about its pivot by a share that grows along a direction (texel 2), from none to all across a band
      (texel 3: where the band starts and ends, in cm from the pivot), as a muscle that crosses a bending joint
    3 held at one end: turned in full near the pivot and not at all far from it (texel 2: the two distances), as the
-     muscles of the eye, fixed to the orbit behind and to the turning eyeball in front */
+     muscles of the eye, fixed to the orbit behind and to the turning eyeball in front
+   4 hinged on a ring, as a valve's leaflet on the ring it hangs from: each point swings about the nearest point of a
+     ring round an axis (texel 1: the axis, and the angle; texel 2: the ring's radius, and the depths along the axis
+     between which the swing dies away, as the cords that tie a leaflet's edge to the wall stay tied) */
 const MOVE = (point, normal) => `
   vec4 move = texelFetch(uMoves, ivec2(cell.x * 4, cell.y), 0);
   if (move.w > 0.5) {
     vec4 turn = texelFetch(uMoves, ivec2(cell.x * 4 + 1, cell.y), 0), more = texelFetch(uMoves, ivec2(cell.x * 4 + 2, cell.y), 0);
     vec3 arm = ${point} - move.xyz;
+    if (move.w > 3.5) {
+      float deep = dot(arm, turn.xyz); vec3 out_ = arm - turn.xyz * deep; float far = length(out_); out_ /= max(far, 1e-4);
+      float angle = turn.w * (1.0 - smoothstep(more.y, more.z, deep)), c = cos(angle), s = sin(angle), off = far - more.x;
+      float off2 = min(off * c + deep * s, max(off, 0.0)), deep2 = deep * c - off * s;   // it never swings out through the ring it hangs from
+      ${point} = move.xyz + out_ * (more.x + off2) + turn.xyz * deep2;
+      float across = dot(${normal}, out_), along_ = dot(${normal}, turn.xyz);
+      ${normal} += out_ * (across * c + along_ * s - across) + turn.xyz * (along_ * c - across * s - along_);
+    } else {
     if (move.w < 1.5) { arm *= texelFetch(uMoves, ivec2(cell.x * 4 + 3, cell.y), 0).xyz; ${point} = move.xyz + turned(turn, arm) + more.xyz; }
     else {
       vec4 band = texelFetch(uMoves, ivec2(cell.x * 4 + 3, cell.y), 0);
@@ -200,22 +211,28 @@ const MOVE = (point, normal) => `
       ${point} = move.xyz + turned(turn, arm);
     }
     ${normal} = turned(turn, ${normal});
+    }
   }
 `;
 /* the midline cut: everything on the body's left of the cut (x beyond it) is not drawn */
 const cutUniform = { value: 1e6 };
-const CUT_FRAGMENT = 'varying float vCutX; uniform float uCut;\n', CUT_TEST = 'if (vCutX > uCut) discard;';
+/* a close-up opened to show its inside (a step of a story): within a ball round it, whatever lies beyond a plane, on the
+   viewer's side, is not drawn. plane: its normal, and how far along it the plane lies; ball: its middle and radius (none: not open) */
+const opened = { plane: { value: new THREE.Vector4(0, 0, 1, 0) }, ball: { value: new THREE.Vector4(0, 0, 0, 0) } };
+const CUT_FRAGMENT = 'varying float vCutX; varying vec3 vPlace; uniform float uCut; uniform vec4 uOpen; uniform vec4 uOpenBall;\n';
+const CUT_AWAY = 'uOpenBall.w > 0.0 && dot(vPlace, uOpen.xyz) > uOpen.w && distance(vPlace, uOpenBall.xyz) < uOpenBall.w';
+const CUT_TEST = `if (vCutX > uCut) discard; if (${CUT_AWAY}) discard;`;
 /* pass 0 draws the solid parts, pass 1 the see-through ones (rim-lit "X-ray" ghosts below half opacity) */
 function partMaterial(pass) {
   const material = new THREE.MeshStandardMaterial({ roughness: 0.6, metalness: 0, side: pass === 0 ? THREE.FrontSide : THREE.DoubleSide, transparent: pass === 1, depthWrite: pass === 0 });
   material.envMapIntensity = 0.55;
-  const uniforms = { uColour: { value: stateTexture.colour }, uFlags: { value: stateTexture.flags }, uMoves: { value: stateTexture.moves }, uCut: cutUniform };
+  const uniforms = { uColour: { value: stateTexture.colour }, uFlags: { value: stateTexture.flags }, uMoves: { value: stateTexture.moves }, uCut: cutUniform, uOpen: opened.plane, uOpenBall: opened.ball };
   shaderUniforms.push(uniforms);
   material.customProgramCacheKey = () => `body-part-${pass}`;
   material.onBeforeCompile = shader => {
     Object.assign(shader.uniforms, uniforms);
     shader.vertexShader = VERTEX_STATE + shader.vertexShader
-      .replace('#include <beginnormal_vertex>', `#include <beginnormal_vertex>\n${FETCH_STATE} vec3 moved = position; ${MOVE('moved', 'objectNormal')}`)
+      .replace('#include <beginnormal_vertex>', `#include <beginnormal_vertex>\n${FETCH_STATE} vec3 moved = position; ${MOVE('moved', 'objectNormal')} vPlace = moved;`)
       .replace('#include <begin_vertex>', '#include <begin_vertex>\n  transformed = moved;');
     shader.fragmentShader = 'varying vec4 vState; varying vec4 vFlags;\n' + CUT_FRAGMENT + shader.fragmentShader
       .replace('vec4 diffuseColor = vec4( diffuse, opacity );', `
@@ -233,7 +250,8 @@ function partMaterial(pass) {
     gl_FragColor.a = mix(clamp(vState.a * (0.3 + 3.2 * rim * rim), 0.0, 0.85), vState.a, smoothstep(0.3, 0.95, vState.a));
     if (vFlags.g > 0.5 && vState.a < 0.5) gl_FragColor.rgb = mix(gl_FragColor.rgb, vec3(0.52, 0.55, 0.58), 0.75);
   }
-  ${pass === 0 ? '' : ''}`);
+  ${pass === 0 ? `/* where a solid part is cut open, its inside faces show as the flat face of the cut */
+  if (!gl_FrontFacing && uOpenBall.w > 0.0 && distance(vPlace, uOpenBall.xyz) < uOpenBall.w) gl_FragColor.rgb = mix(diffuseColor.rgb, vec3(0.85, 0.36, 0.33), 0.5);` : ''}`);
   };
   return material;
 }
@@ -241,12 +259,12 @@ function partMaterial(pass) {
    faces only, in a darker shade of each part's colour (ink for the selected part). Only solid parts get a line. */
 function outlineMaterial() {
   const material = new THREE.MeshBasicMaterial({ side: THREE.BackSide });
-  const uniforms = { uColour: { value: stateTexture.colour }, uFlags: { value: stateTexture.flags }, uMoves: { value: stateTexture.moves }, uCut: cutUniform };
+  const uniforms = { uColour: { value: stateTexture.colour }, uFlags: { value: stateTexture.flags }, uMoves: { value: stateTexture.moves }, uCut: cutUniform, uOpen: opened.plane, uOpenBall: opened.ball };
   shaderUniforms.push(uniforms);
   material.customProgramCacheKey = () => 'body-outline';
   material.onBeforeCompile = shader => {
     Object.assign(shader.uniforms, uniforms, { uResolution: outlineResolution });
-    shader.vertexShader = VERTEX_STATE + 'uniform vec2 uResolution;\n' + shader.vertexShader.replace('#include <begin_vertex>', `#include <begin_vertex>\n${FETCH_STATE} vec3 movedNormal = normal; ${MOVE('transformed', 'movedNormal')}`).replace('#include <project_vertex>', `#include <project_vertex>
+    shader.vertexShader = VERTEX_STATE + 'uniform vec2 uResolution;\n' + shader.vertexShader.replace('#include <begin_vertex>', `#include <begin_vertex>\n${FETCH_STATE} vec3 movedNormal = normal; ${MOVE('transformed', 'movedNormal')} vPlace = transformed;`).replace('#include <project_vertex>', `#include <project_vertex>
   vec4 clipNormal = projectionMatrix * modelViewMatrix * vec4(movedNormal, 0.0);
   float width = vFlags.r > 0.5 ? 2.0 : 1.2;
   gl_Position.xy += normalize(clipNormal.xy + 1e-6) / uResolution * 2.0 * width * gl_Position.w;`);
@@ -260,13 +278,13 @@ function outlineMaterial() {
 /* the pick pass writes each part's index + 1 as a colour; parts fainter than a threshold are skipped */
 const pickThreshold = { value: 0.35 };
 function pickMaterial() {
-  const uniforms = { uColour: { value: stateTexture.colour }, uFlags: { value: stateTexture.flags }, uThreshold: pickThreshold, uMoves: { value: stateTexture.moves }, uCut: cutUniform };
+  const uniforms = { uColour: { value: stateTexture.colour }, uFlags: { value: stateTexture.flags }, uThreshold: pickThreshold, uMoves: { value: stateTexture.moves }, uCut: cutUniform, uOpen: opened.plane, uOpenBall: opened.ball };
   shaderUniforms.push(uniforms);
   return new THREE.ShaderMaterial({
     uniforms, side: THREE.DoubleSide,
     vertexShader: `${VERTEX_STATE} varying float vPart;
-      void main() { ${FETCH_STATE} vec3 moved = position, movedNormal = normal; ${MOVE('moved', 'movedNormal')} vPart = _part + 1.0; gl_Position = projectionMatrix * modelViewMatrix * vec4(moved, 1.0); }`,
-    fragmentShader: `uniform float uThreshold; uniform float uCut; varying vec4 vState; varying vec4 vFlags; varying float vPart; varying float vCutX;
+      void main() { ${FETCH_STATE} vec3 moved = position, movedNormal = normal; ${MOVE('moved', 'movedNormal')} vPlace = moved; vPart = _part + 1.0; gl_Position = projectionMatrix * modelViewMatrix * vec4(moved, 1.0); }`,
+    fragmentShader: `${CUT_FRAGMENT} uniform float uThreshold; varying vec4 vState; varying vec4 vFlags; varying float vPart;
       void main() { ${CUT_TEST} if (vState.a < uThreshold) discard; float id = vPart; gl_FragColor = vec4(mod(id, 256.0) / 255.0, mod(floor(id / 256.0), 256.0) / 255.0, 0.0, 1.0); }`,
   });
 }
@@ -398,6 +416,12 @@ const TONES = ['#ebc2aa', '#c9966f', '#8f5f3d', '#5b3926'];
 const selectedParts = () => state.selection ? state.selection.parts : [];
 const isolating = () => !!state.selection && state.selection.isolate;
 
+/* a cut, of either kind, opens every shell: the inside faces are drawn too, and the ink line (drawn on back faces) is left out */
+function openShells() {
+  const open = state.cut || opened.ball.value.w > 0, side = open ? THREE.DoubleSide : THREE.FrontSide;
+  if (MATERIALS.solid.side !== side) { MATERIALS.solid.side = side; MATERIALS.solid.needsUpdate = true; }
+  MATERIALS.outline.visible = !open;
+}
 function applyVisibility() {
   if (!body) return;
   const view = viewInfo(), around = body.around;
@@ -409,10 +433,8 @@ function applyVisibility() {
     const opacity = clothingOpacity();
     CLOTH.opacity = opacity; CLOTH.transparent = opacity < 1; CLOTH.depthWrite = opacity >= 1;
   }
-  /* the midline cut opens every shell, so the inside faces are drawn too, and the ink line (drawn on back faces) is left out */
   cutUniform.value = state.cut ? 0 : 1e6;
-  if (MATERIALS.solid.side !== (state.cut ? THREE.DoubleSide : THREE.FrontSide)) { MATERIALS.solid.side = state.cut ? THREE.DoubleSide : THREE.FrontSide; MATERIALS.solid.needsUpdate = true; }
-  MATERIALS.outline.visible = !state.cut;
+  openShells();
   if ((CLOTH.clippingPlanes?.length || 0) !== (state.cut ? 1 : 0)) { CLOTH.clippingPlanes = state.cut ? [CUT_PLANE] : []; CLOTH.needsUpdate = true; }
   const colours = stateTexture.colour.image.data, flags = stateTexture.flags.image.data;
   const chosen = new Set(selectedParts()), isolate = isolating(), colour = new THREE.Color(), live = moving() ? MOTIONS[state.region] : null;
@@ -535,7 +557,9 @@ const telling = () => state.tour?.step || null;   // the step of a story being t
 const TOUR_STEP_MS = 7000;
 function goTour(index) {
   const stops = tourStops(), [key, view, step = null] = stops[index];
-  state.tour = { index, playing: state.tour?.playing ?? true, stepStart: performance.now(), step };
+  const held = paused();
+  state.tour = { index, playing: true, stepStart: performance.now(), step };   // moving on, by hand or not, plays
+  if (held && sound.on && sound.manifest.music) sound.music.play().catch(refused);
   if (view) applyView(view);
   state.inspectorOpen = true;
   /* a story's step picks nothing out: the part it is about stays as it is drawn in motion (glass, with its blood showing), labelled and gently lit */
@@ -545,7 +569,7 @@ function goTour(index) {
 function focusStep(step) {
   if (!step.frame) { const frame = viewFrame(); flyTo(frame.position, frame.target, V(0, 1, 0)); return; }
   const parts = step.frame.flatMap(key => body.entries[key] || []);
-  const frame = fitFrame(boxPoints(parts, 1), step.from ? V(...step.from).normalize() : viewInfo().direction || FRONT, V(0, 1, 0), 0.82);
+  const frame = fitFrame(boxPoints(parts, 1), step.from ? V(...step.from).normalize() : viewInfo().direction || FRONT, V(0, 1, 0), step.fill || 0.82);
   flyTo(frame.position, frame.target, V(0, 1, 0), 1400);
 }
 /* step through the main parts by hand, in number order; each is shown in the view of its layer */
@@ -564,6 +588,19 @@ function stepPart(delta) {
 const viewForLayer = layer => ({ skeleton: 'skeleton', muscles: 'muscles', organs: 'organs', vessels: 'vessels', nerves: 'nerves', skin: 'body' })[layer];
 /* a tour is told aloud: starting one turns the sound on */
 function startTour(index = 0) { setSound(true); state.tour = { index, playing: true }; goTour(index); }
+/* A tour held where it is: its voice, its music, its motion and its clock all wait, and all go on from where they were.
+   A tour that has played to its end is not held: it plays again from the top. */
+const paused = () => !!state.tour && !state.tour.playing && !state.tour.done;
+function playTour(playing) {
+  if (!state.tour || state.tour.playing === playing) return;
+  if (state.tour.done) { startTour(0); return; }
+  const now = performance.now();
+  state.tour.playing = playing;
+  if (playing) state.tour.stepStart = now - state.tour.spent; else state.tour.spent = now - state.tour.stepStart;
+  if (!playing) { sound.voice.pause(); sound.music.pause(); }
+  else if (sound.on) { if (sound.speaking) sound.voice.play().catch(refused); if (sound.manifest.music) sound.music.play().catch(refused); }
+  renderInspector(); syncUI();
+}
 function stopTour() { if (!state.tour) return; state.tour = null; renderInspector(); syncUI(); }
 function stepTour(now) {
   if (!state.tour?.playing) return;
@@ -571,7 +608,7 @@ function stepTour(now) {
   const unspoken = telling() ? Math.max(TOUR_STEP_MS, telling().say.length * 60) : TOUR_STEP_MS;   // a story's step, read, takes as long as its words
   if (sound.on && sound.clip ? sound.speaking || now - sound.endedAt < AFTER_VOICE_MS : now - state.tour.stepStart < unspoken) return;
   if (state.tour.index + 1 < tourStops().length) goTour(state.tour.index + 1);
-  else { state.tour.playing = false; renderInspector(); syncUI(); }
+  else { state.tour.playing = false; state.tour.done = true; renderInspector(); syncUI(); }
 }
 $('tourBtn').addEventListener('click', () => state.tour ? stopTour() : startTour());
 
@@ -585,10 +622,12 @@ function toggleMotion() {
   if (state.motion && state.selection) state.selection.isolate = false;   // a moving close-up stays whole
   applyVisibility(); renderInspector(); syncUI();
 }
-$('figure').addEventListener('click', () => { if ($('figure').classList.contains('live')) toggleMotion(); });
-$('figure').addEventListener('keydown', event => { if ((event.key === 'Enter' || event.key === ' ') && $('figure').classList.contains('live')) { event.preventDefault(); toggleMotion(); } });
+/* the line under a moving close-up is its switch: it stops and starts the motion, or, while a story is told, the telling */
+const pressFigure = () => { if (!$('figure').classList.contains('live')) return; if (telling()) playTour(!state.tour.playing); else toggleMotion(); };
+$('figure').addEventListener('click', pressFigure);
+$('figure').addEventListener('keydown', event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); event.stopPropagation(); pressFigure(); } });
 const motionKey = () => (moving() ? `${body.sex}:${state.region}` : null);
-const motion = { for: null, definition: null, rig: null, rigs: {}, phase: 0, clock: 0, caption: '', moment: -1, told: null, kept: null, into: 0, last: 0, held: null, base: null, touched: new Set(), chosen: new Set() };   // held: a moment of the cycle to stay at (tests and pictures)
+const motion = { for: null, definition: null, rig: null, rigs: {}, phase: 0, clock: 0, caption: '', moment: -1, told: null, kept: null, opening: null, open: { amount: 0, normal: V(0, 0, 1), depth: 0, ball: new THREE.Vector4() }, into: 0, last: 0, held: null, base: null, touched: new Set(), chosen: new Set() };   // held: a moment of the cycle to stay at (tests and pictures)
 const DROP = (() => { const c = document.createElement('canvas'); c.width = c.height = 32; const g = c.getContext('2d'), fill = g.createRadialGradient(16, 16, 0, 16, 16, 16); fill.addColorStop(0, 'rgba(255,255,255,1)'); fill.addColorStop(0.5, 'rgba(255,255,255,0.9)'); fill.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = fill; g.fillRect(0, 0, 32, 32); return new THREE.CanvasTexture(c); })();
 const WAY = 600;
 const dropHeight = { value: 1 };   // the canvas height in pixels: a drop's size is in cm
@@ -660,6 +699,16 @@ function motionKit() {
       const curve = new THREE.CatmullRomCurve3(through, false, 'centripetal'), spot = V(0, 0, 0);
       return { curve, length: curve.getLength(), whereOf(place) { let best = 0, least = Infinity; for (let k = 0; k <= 300; k++) { const d = curve.getPointAt(k / 300, spot).distanceTo(place); if (d < least) { least = d; best = k / 300; } } return best; } };
     },
+    /* the direction in which a flat cloud of points is thinnest (the way through a ring, or a valve), on the side of `toward` */
+    thin(cloud, toward) {
+      const middle = mean(cloud.map(point => point.clone())), spread = [[0, 0, 0], [0, 0, 0], [0, 0, 0]];
+      for (const point of cloud) { const d = point.clone().sub(middle).toArray(); for (let i = 0; i < 3; i++) for (let j = 0; j < 3; j++) spread[i][j] += d[i] * d[j] / cloud.length; }
+      /* its least principal axis: the greatest of what is left when the spread is taken from its own total */
+      const total = spread[0][0] + spread[1][1] + spread[2][2];
+      let axis = toward.clone().normalize();
+      for (let pass = 0; pass < 60; pass++) axis = V(...[0, 1, 2].map(i => total * axis.getComponent(i) - spread[i][0] * axis.x - spread[i][1] * axis.y - spread[i][2] * axis.z)).normalize();
+      return axis.dot(toward) < 0 ? axis.negate() : axis;
+    },
     turn: (axis, degrees) => new THREE.Quaternion().setFromAxisAngle(axis, THREE.MathUtils.degToRad(degrees)),
     /* the axis that swings a limb, hanging from a pivot in one direction, toward another */
     swing: (along, toward) => along.clone().cross(toward).normalize(),
@@ -680,9 +729,9 @@ function makeStream(spec) {
   geometry.setAttribute('tint', new THREE.BufferAttribute(new Float32Array(count * 3), 3));
   geometry.setAttribute('grain', new THREE.BufferAttribute(Float32Array.from({ length: count }, () => 0.55 + Math.random() ** 2 * 0.9), 1));   // no two drops quite the same size
   const cloud = new THREE.Points(geometry, new THREE.ShaderMaterial({
-    uniforms: { uMap: { value: DROP }, uSize: { value: spec.size ?? 0.8 }, uHeight: dropHeight }, transparent: true, depthTest: false, depthWrite: false, blending: spec.glow ? THREE.AdditiveBlending : THREE.NormalBlending,
-    vertexShader: `attribute float alpha; attribute vec3 tint; attribute float grain; uniform float uSize; uniform float uHeight; varying float vAlpha; varying vec3 vTint;
-      void main() { vAlpha = alpha; vTint = tint; vec4 seen = modelViewMatrix * vec4(position, 1.0); gl_PointSize = uSize * grain * projectionMatrix[1][1] * uHeight * 0.5 / -seen.z; gl_Position = projectionMatrix * seen; }`,
+    uniforms: { uMap: { value: DROP }, uSize: { value: spec.size ?? 0.8 }, uHeight: dropHeight, uOpen: opened.plane, uOpenBall: opened.ball }, transparent: true, depthTest: false, depthWrite: false, blending: spec.glow ? THREE.AdditiveBlending : THREE.NormalBlending,
+    vertexShader: `attribute float alpha; attribute vec3 tint; attribute float grain; uniform float uSize; uniform float uHeight; uniform vec4 uOpen; uniform vec4 uOpenBall; varying float vAlpha; varying vec3 vTint;
+      void main() { vec3 vPlace = position; vAlpha = ${CUT_AWAY} ? 0.0 : alpha; vTint = tint; vec4 seen = modelViewMatrix * vec4(position, 1.0); gl_PointSize = uSize * grain * projectionMatrix[1][1] * uHeight * 0.5 / -seen.z; gl_Position = projectionMatrix * seen; }`,
     fragmentShader: `uniform sampler2D uMap; varying float vAlpha; varying vec3 vTint;
       void main() {
         gl_FragColor = vec4(vTint, texture2D(uMap, gl_PointCoord).a * vAlpha);
@@ -698,6 +747,7 @@ function makeStream(spec) {
 /* The line under a moving close-up. A motion that turns over faster than a line can be read (a heartbeat) names its
    moments side by side and lights the one it is in: the words stay put. */
 function captionMotion() {
+  if (telling()) return;   // a story says what is happening in its own words: the line is its pause button (syncUI)
   const figure = $('figure'), moments = motion.for === motionKey() && motion.definition.moments;
   if (!moments) { figure.textContent = motion.caption || MOTIONS[state.region].stop; return; }
   if (figure.children.length !== moments.length) figure.replaceChildren(...moments.map(text => Object.assign(document.createElement('span'), { textContent: text })));
@@ -708,11 +758,18 @@ function setMotion() {
   for (const [name, rig] of Object.entries(motion.rigs)) if (name !== key) for (const stream of rig.streams) stream.cloud.visible = false;
   if (motion.for !== key) {
     motion.for = null; motion.definition = motion.rig = null; motion.caption = ''; motion.moment = -1; motion.touched.clear();
+    motion.open.amount = 0; opened.ball.value.w = 0; openShells();
     stateTexture.moves.image.data.fill(0); stateTexture.moves.needsUpdate = true;
     /* its layers may still be on their way: this runs again when they arrive */
     if (!key || ![...body.around.own, ...body.around.context].every(index => body.layers[body.parts[index].layer]?.group)) return;
     motion.definition = MOTIONS[state.region];
-    if (!motion.rigs[key]) { const rig = motion.definition.build(motionKit()); rig.streams = (rig.streams || []).map(makeStream); motion.rigs[key] = rig; }
+    if (!motion.rigs[key]) {
+      const kit = motionKit(), rig = motion.definition.build(kit);
+      rig.streams = (rig.streams || []).map(makeStream);
+      /* how each of its parts looks when the close-up is cut open (a step of its story): solid walls, say, round emptied chambers */
+      rig.opened = new Map(kit.own.map(part => [part.index, motion.definition.opened?.(part.name)]).filter(([, opacity]) => opacity !== undefined));
+      motion.rigs[key] = rig;
+    }
     motion.rig = motion.rigs[key]; motion.for = key; motion.clock = 0; motion.phase = 0;   // each motion starts from its beginning
   }
   if (key) motion.base = stateTexture.colour.image.data.slice();   // how each part looks before the moment's fades and glows
@@ -721,7 +778,7 @@ function setMotion() {
 const STILL = new THREE.Quaternion(), NONE = [0, 0, 0, 0], FOUR = [0, 0, 0, 0], MORE = [0, 0, 0, 0];
 const four = (into, x, y, z, w) => { into[0] = x; into[1] = y; into[2] = z; into[3] = w; return into; };
 function writeMove(part, kind, pivot, turn, more, last) {
-  const sign = turn.w < 0 ? -1 : 1;   // the short way round, for a share of the turn
+  const sign = kind < 4 && turn.w < 0 ? -1 : 1;   // the short way round, for a share of the turn
   const moves = stateTexture.moves.image.data, k = part.index * 16;
   moves[k] = pivot.x; moves[k + 1] = pivot.y; moves[k + 2] = pivot.z; moves[k + 3] = kind;
   moves[k + 4] = turn.x * sign; moves[k + 5] = turn.y * sign; moves[k + 6] = turn.z * sign; moves[k + 7] = turn.w * sign;
@@ -734,6 +791,8 @@ const act = {
   bend(part, { pivot, turn, along, from, to }) { writeMove(part, 2, pivot, turn, four(MORE, along.x, along.y, along.z, 0), four(FOUR, from, to, 0, 0)); },
   /* turned in full within `near` cm of the pivot, not at all beyond `far` */
   held(part, { pivot, turn, near, far }) { writeMove(part, 3, pivot, turn, four(MORE, near, far, 0, 0), NONE); },
+  /* swung by an angle (radians) about a ring: its middle (the pivot), the axis through it, and its radius. slack: the depths along the axis between which the swing dies away */
+  hinge(part, { pivot, axis, radius, angle, slack = [1e5, 1e6] }) { writeMove(part, 4, pivot, { x: axis.x, y: axis.y, z: axis.z, w: angle }, four(MORE, radius, slack[0], slack[1], 0), NONE); },
   fade(part, opacity) {
     if (motion.chosen.has(part.index)) return;
     stateTexture.colour.image.data[part.index * 4 + 3] = Math.round(THREE.MathUtils.clamp(opacity, 0, 1) * 255); motion.touched.add(part.index);
@@ -746,19 +805,43 @@ const act = {
     motion.touched.add(part.index);
   },
 };
+/* Where a step of a story cuts the close-up open: a plane that faces the way the step is seen from, through the middle
+   of the parts its `open` names (or `lift` cm nearer the viewer); all within a ball round the parts that open. */
+function openingOf(step, rig) {
+  const normal = V(...(step.from || (viewInfo().direction || FRONT).toArray())).normalize();
+  const through = new THREE.Box3().setFromPoints(boxPoints(step.open.flatMap(key => body.entries[key] || []))).getCenter(V(0, 0, 0));
+  const round = new THREE.Box3().setFromPoints(boxPoints([...rig.opened.keys()])).getBoundingSphere(new THREE.Sphere());
+  return { normal, depth: through.dot(normal) + (step.lift || 0), ball: new THREE.Vector4(round.center.x, round.center.y, round.center.z, round.radius * 1.02) };
+}
+/* The cut sweeps in from the viewer's side as a step opens the close-up, and back out before the next step cuts
+   somewhere else. Returns how far open it is, 0 to 1. */
+function stepOpening(seconds) {
+  const open = motion.open, goal = motion.opening;
+  if (goal && open.amount === 0) { open.normal.copy(goal.normal); open.depth = goal.depth; open.ball.copy(goal.ball); }
+  const there = !!goal && open.normal.equals(goal.normal) && open.depth === goal.depth;
+  open.amount = THREE.MathUtils.clamp(open.amount + (there ? seconds / 0.9 : -seconds / 0.45), 0, 1);
+  const eased = open.amount * open.amount * (3 - 2 * open.amount), edge = open.ball.x * open.normal.x + open.ball.y * open.normal.y + open.ball.z * open.normal.z + open.ball.w;
+  opened.plane.value.set(open.normal.x, open.normal.y, open.normal.z, edge + (open.depth - edge) * eased);
+  const was = opened.ball.value.w > 0;
+  opened.ball.value.copy(open.ball); if (open.amount === 0) opened.ball.value.w = 0;
+  if (was !== opened.ball.value.w > 0) openShells();
+  return open.amount;
+}
 const spot = new THREE.Vector3();
 function stepMotion(now) {
   const key = motionKey();
   if (!key || motion.for !== key) return;
   const { definition, rig } = motion, cycle = definition.cycle / 1000;
-  const seconds = THREE.MathUtils.clamp((now - motion.last) / 1000, 0, 0.05); motion.last = now;   // frames can arrive out of order by a hair: nothing steps back
+  const seconds = paused() ? 0 : THREE.MathUtils.clamp((now - motion.last) / 1000, 0, 0.05); motion.last = now;   // frames can arrive out of order by a hair: nothing steps back; a tour that is paused holds its motion too
   /* a story's step plays one stretch of the cycle, slowed, over and over, with a breath between: the drops fade out and in across the join */
   const step = telling(), span = motion.held === null && step?.span ? step : null;
   if (motion.told !== step) {
     motion.told = step; motion.clock = 0;
     /* what a step is about: the parts it frames, names and labels. The rest stands back while it is told. */
     motion.kept = step?.frame ? new Set([...step.frame, ...(step.labels || []), step.entry].flatMap(key => body.entries[key] || [])) : null;
+    motion.opening = step?.open ? openingOf(step, rig) : null;
   }
+  const open = stepOpening(seconds);
   if (motion.held === null) motion.clock += seconds;
   let time = motion.held === null ? motion.clock : motion.held * cycle, join = 1, rejoined = false;
   if (span) {
@@ -772,9 +855,10 @@ function stepMotion(now) {
   motion.touched.clear(); motion.chosen = new Set(selectedParts());
   const moment = definition.step(rig, phase, act, time) || {};
   if (span) for (const index of body.entries[step.entry] || []) act.glow(body.parts[index], 0.3);   // what the step is about, gently lit
+  if (open > 0) for (const [index, opacity] of rig.opened) { const was = motion.base[index * 4 + 3] / 255; act.fade(body.parts[index], was + (opacity - was) * Math.min(1, open * 2)); }
   if (motion.kept) {
     const away = Math.min(1, motion.clock / 0.7);   // eased out over the first moments of the step
-    for (const index of body.around.own) if (!motion.kept.has(index)) act.fade(body.parts[index], motion.base[index * 4 + 3] / 255 * (1 - 0.85 * away));
+    for (const index of body.around.own) if (!motion.kept.has(index) && !(motion.opening && rig.opened.has(index))) act.fade(body.parts[index], motion.base[index * 4 + 3] / 255 * (1 - 0.85 * away));
     for (const index of body.around.context) act.fade(body.parts[index], motion.base[index * 4 + 3] / 255 * (1 - 0.6 * away));
   }
   stateTexture.moves.needsUpdate = true; stateTexture.colour.needsUpdate = true;
@@ -783,6 +867,8 @@ function stepMotion(now) {
     const { position, alpha, tint } = stream.cloud.geometry.attributes, shown = step?.streams && !step.streams.includes(which) ? 0 : join * (stream.shown ? stream.shown(phase, time) : 1);
     stream.cloud.visible = shown > 0.004;
     if (!stream.cloud.visible) return;
+    stream.cloud.material.depthTest = open > 0;   // an opened close-up has solid walls, and its blood shows only where the cut lets it be seen
+    stream.cloud.material.uniforms.uSize.value = (stream.size ?? 0.8) * (1 + 0.6 * open);   // and is seen closer
     const lay = stream.lay?.(phase, time);   // a stream that knows where each of its drops is, by its place in the queue
     stream.drops.forEach((drop, k) => {
       if (lay) drop.where = lay(drop.label);
@@ -875,7 +961,7 @@ function speak() {
   sound.voice.pause(); sound.speaking = false; sound.music.volume = MUSIC_LEVEL;
   if (!sound.clip) return;
   sound.voice.src = `audio/${sound.clip}`; sound.speaking = true; sound.music.volume = UNDER_VOICE;
-  sound.voice.play().catch(refused);
+  if (!paused()) sound.voice.play().catch(refused);
 }
 $('soundBtn').addEventListener('click', () => setSound(!sound.on));
 /* only ever called from a touch or a click, which is what a browser waits for before it will play */
@@ -883,7 +969,7 @@ function setSound(on) {
   if (sound.on === on) return;
   sound.on = on;
   if (sound.on) outlet();
-  if (sound.on && sound.manifest.music) { sound.music.src ||= `audio/${sound.manifest.music}`; sound.music.play().catch(refused); }
+  if (sound.on && sound.manifest.music) { sound.music.src ||= `audio/${sound.manifest.music}`; if (!paused()) sound.music.play().catch(refused); }
   if (!sound.on) { sound.music.pause(); sound.voice.pause(); sound.speaking = false; }
   syncUI();
 }
@@ -919,7 +1005,7 @@ function renderInspector() {
     <div class="tour-bar">
       <span class="count" id="tourCount">Tour ${state.tour.index + 1} of ${stops.length}</span>
       <button type="button" class="btn" data-tour="prev" ${state.tour.index === 0 ? 'disabled' : ''}>Back</button>
-      <button type="button" class="btn" data-tour="play">${state.tour.playing ? 'Pause' : 'Play'}</button>
+      <button type="button" class="btn play" data-tour="play" data-playing="${state.tour.playing}">${state.tour.playing ? 'Pause' : state.tour.done ? 'Replay' : 'Play'}</button>
       <button type="button" class="btn primary" data-tour="next" ${state.tour.index === stops.length - 1 ? 'disabled' : ''}>Next</button>
       <button type="button" class="btn" data-tour="stop">End</button>
       <div class="tour-progress"><span style="width:${((state.tour.index + 1) / stops.length * 100).toFixed(1)}%"></span></div>
@@ -1002,7 +1088,7 @@ function renderSide() {
   requestAnimationFrame(resize);
 }
 document.addEventListener('click', event => {
-  const target = event.target.closest('[data-entry],[data-tour],[data-close],[data-sheet],[data-step],[data-show-all],[data-route],[data-leave],[data-region],[data-tour-region],[data-tour-start],[data-motion],[data-story]');
+  const target = event.target.closest('[data-entry],[data-tour],[data-close],[data-sheet],[data-step],[data-show-all],[data-route],[data-leave],[data-region],[data-tour-region],[data-tour-start],button[data-motion],[data-story]');   // button[data-motion]: the line under the model carries data-motion too, as its state, and has its own listener
   if (!target || target.closest('#views') || target.closest('#partGroups')) return;
   if (target.hasAttribute('data-leave')) { stopTour(); setView(state.view); }
   if (target.dataset.tourRegion) { setRegion(target.dataset.tourRegion); startTour(); return; }
@@ -1016,7 +1102,7 @@ document.addEventListener('click', event => {
   if (action === 'stop') stopTour();
   if (action === 'next' && state.tour) goTour(Math.min(tourStops().length - 1, state.tour.index + 1));
   if (action === 'prev' && state.tour) goTour(Math.max(0, state.tour.index - 1));
-  if (action === 'play' && state.tour) { state.tour.playing = !state.tour.playing; state.tour.stepStart = performance.now(); renderInspector(); }
+  if (action === 'play' && state.tour) playTour(!state.tour.playing);
   if (target.hasAttribute('data-close')) { if (phone.matches) { state.selection = null; applyVisibility(); syncUI(); } else state.inspectorOpen = false; stopTour(); renderInspector(); }
   if (target.hasAttribute('data-sheet')) { state.sheet = state.sheet === 'peek' ? 'full' : 'peek'; renderInspector(); }
   if (target.dataset.entry && body.entries[target.dataset.entry]) {
@@ -1057,9 +1143,11 @@ function syncUI() {
   const figure = state.selection?.entry ? `Fig. ${entryNumber(state.selection.entry)} · ${name}` : state.selection ? name : viewInfo().figure;
   /* in a close-up that moves, the line under the model says what is happening, and is itself the switch: a touch stops and starts it */
   const moves = !!MOTIONS[state.region] && !state.cut;
-  $('figure').classList.toggle('live', moves); $('figure').dataset.motion = moving() ? 'on' : 'off';
+  const told = moves && !!telling();
+  $('figure').classList.toggle('live', moves); $('figure').dataset.motion = (told ? state.tour.playing : moving()) ? 'on' : 'off';
   if (moves) { $('figure').setAttribute('role', 'button'); $('figure').tabIndex = 0; } else { $('figure').removeAttribute('role'); $('figure').removeAttribute('tabindex'); }
-  if (moves && !state.motion) $('figure').textContent = MOTIONS[state.region].start;
+  if (told) $('figure').textContent = state.tour.playing ? 'Pause' : state.tour.done ? 'Play it again' : 'Play';
+  else if (moves && !state.motion) $('figure').textContent = MOTIONS[state.region].start;
   else if (!moves) $('figure').textContent = `${figure}${isolating() ? ', isolated' : ''} · ${state.sex === 'male' ? 'Male' : 'Female'}`;
   else captionMotion();
   for (const button of $('views').children) button.setAttribute('aria-pressed', String(!state.region && button.dataset.view === state.view));
@@ -1277,6 +1365,7 @@ document.addEventListener('keydown', event => {   // arrow keys step from part t
   if (event.key === 'ArrowRight' || event.key === 'ArrowLeft') { event.preventDefault(); stepPart(event.key === 'ArrowRight' ? 1 : -1); }
   if (event.key === 'ArrowUp' || event.key === 'ArrowDown') { event.preventDefault(); flight = null; controls.lift((event.key === 'ArrowUp' ? 1 : -1) * Math.max(3, visibleHeight() * 0.08)); clampLift(); invalidate(); }
   if (event.key === 'Escape' && state.selection) { select(null); }
+  if (event.key === ' ' && state.tour && !event.target.closest('button, a, [role="button"]')) { event.preventDefault(); playTour(!state.tour.playing); }   // the space bar pauses a tour, as it does a film
 });
 for (const button of $('sexSwitch').children) button.addEventListener('click', () => switchSex(button.dataset.sex));
 
@@ -1672,10 +1761,10 @@ function frame(now) {
 window.bodyModel = {
   state, camera, controls, setView, setRegion, setPeel, spots: () => spotEls.filter(spot => !spot.el.hidden).map(spot => spot.id), freeRect, switchSex, selectEntry, selectPart, stepPart, startTour, stopTour, frame, pick,
   holdMotion: phase => { motion.held = phase; },
-  motion: () => ({ moving: moving() && motion.for === motionKey(), phase: motion.phase, caption: motion.caption, drops: motion.rig && moving() ? motion.rig.streams.reduce((sum, stream) => sum + stream.drops.length, 0) : 0 }),
+  motion: () => ({ moving: moving() && motion.for === motionKey(), phase: motion.phase, caption: motion.caption, open: motion.open.amount, drops: motion.rig && moving() ? motion.rig.streams.reduce((sum, stream) => sum + stream.drops.length, 0) : 0 }),
   moveOf: index => Array.from(stateTexture.moves.image.data.slice(index * 16, index * 16 + 16)),
   motions: () => Object.keys(MOTIONS),
-  sound: () => ({ on: sound.on, key: sound.key, clip: sound.clip, speaking: sound.speaking, music: sound.music.src.split('/').pop(), musicPlaying: !sound.music.paused, musicLevel: sound.music.volume }),
+  sound: () => ({ on: sound.on, key: sound.key, clip: sound.clip, speaking: sound.speaking, voicePaused: sound.voice.paused, music: sound.music.src.split('/').pop(), musicPlaying: !sound.music.paused, musicLevel: sound.music.volume }),
   regions: () => Object.values(REGIONS).filter(region => !region.sex || region.sex === body.sex).map(region => region.id), around: () => body.around,
   body: () => body, entries: () => body.order, entryParts: key => body.entries[key] || [],
   part: index => body.parts[index], findPart: name => body.parts.find(part => part.name === name)?.index ?? -1,

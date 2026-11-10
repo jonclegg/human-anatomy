@@ -209,9 +209,9 @@ const cutUniform = { value: 1e6 };
 const opened = { plane: { value: new THREE.Vector4(0, 0, 1, 0) }, ball: { value: new THREE.Vector4(0, 0, 0, 0) } };
 const CUT_FRAGMENT = 'varying float vCutX; varying vec3 vPlace; uniform float uCut; uniform vec4 uOpen; uniform vec4 uOpenBall;\n';
 const CUT_AWAY = 'uOpenBall.w > 0.0 && dot(vPlace, uOpen.xyz) > uOpen.w && distance(vPlace, uOpenBall.xyz) < uOpenBall.w';
-/* a part that is never sliced (a valve, with its cords): it is drawn whole or not at all. Marked in the blue of its flags, between none and all */
-const WHOLE = 'vFlags.b > 0.2 && vFlags.b < 0.9';
-const CUT_TEST = `if (vCutX > uCut) discard; if (!(${WHOLE}) && ${CUT_AWAY}) discard;`;
+const CUT_TEST = `if (vCutX > uCut) discard; if (${CUT_AWAY}) discard;`;
+/* the same cut, for what is drawn with three.js's own materials (a motion's models): the plane, far off while nothing is open */
+const openPlane = new THREE.Plane(new THREE.Vector3(0, 0, -1), 1e6);
 /* pass 0 draws the solid parts, pass 1 the see-through ones (rim-lit "X-ray" ghosts below half opacity) */
 function partMaterial(pass) {
   const material = new THREE.MeshStandardMaterial({ roughness: 0.6, metalness: 0, side: pass === 0 ? THREE.FrontSide : THREE.DoubleSide, transparent: pass === 1, depthWrite: pass === 0 });
@@ -475,9 +475,7 @@ function applyVisibility() {
     colours[k + 3] = Math.round(THREE.MathUtils.clamp(opacity, 0, 1) * 255);
     flags[k] = chosen.has(index) ? 255 : 0;
     flags[k + 1] = isolate && !chosen.has(index) ? 255 : 0;
-    const unlined = part.layer === 'skin' || part.layer === 'vessels' || part.group === 'nerves' || part.sheet;   // the skin, thin tubes and thin sheets, which a line would darken
-    const whole = !!live?.opened && around.own.has(index) && !!live.opened(part.name)?.whole;                    // and a part that a cut never slices (see WHOLE)
-    flags[k + 2] = unlined ? (whole ? 200 : 255) : whole ? 100 : 0;
+    flags[k + 2] = part.layer === 'skin' || part.layer === 'vessels' || part.group === 'nerves' || part.sheet ? 255 : 0;   // the skin, thin tubes and thin sheets, which a line would darken
     flags[k + 3] = chosen.has(index) && !isolate ? 255 : 0;
   });
   stateTexture.colour.needsUpdate = true; stateTexture.flags.needsUpdate = true;
@@ -743,16 +741,16 @@ function motionKit() {
    colour and how solid they are, moment by moment, is picked as them, and they are not drawn. { name, parts: the
    parts it stands in for, count: its vertices, index: its triangles, of: the part each vertex is picked as }; the
    motion's step writes its `positions`, and may keep what it likes in its `state`. */
-const MODEL_PICK = new THREE.ShaderMaterial({ side: THREE.DoubleSide,
-  vertexShader: 'attribute float _part; varying float vPart; void main() { vPart = _part + 1.0; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
-  fragmentShader: 'varying float vPart; void main() { float id = vPart; gl_FragColor = vec4(mod(id, 256.0) / 255.0, mod(floor(id / 256.0), 256.0) / 255.0, 0.0, 1.0); }' });
+const MODEL_PICK = new THREE.ShaderMaterial({ side: THREE.DoubleSide, uniforms: { uOpen: opened.plane, uOpenBall: opened.ball },
+  vertexShader: 'attribute float _part; varying float vPart; varying vec3 vPlace; void main() { vPart = _part + 1.0; vPlace = position; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
+  fragmentShader: `uniform vec4 uOpen; uniform vec4 uOpenBall; varying float vPart; varying vec3 vPlace; void main() { if (${CUT_AWAY}) discard; float id = vPart; gl_FragColor = vec4(mod(id, 256.0) / 255.0, mod(floor(id / 256.0), 256.0) / 255.0, 0.0, 1.0); }` });
 function makeModel({ name, parts, count, index, of }) {
   const geometry = new THREE.BufferGeometry(), positions = new Float32Array(count * 3);
   geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3).setUsage(THREE.DynamicDrawUsage));
   geometry.setAttribute('normal', new THREE.BufferAttribute(new Float32Array(count * 3), 3).setUsage(THREE.DynamicDrawUsage));
   geometry.setAttribute('_part', new THREE.BufferAttribute(Float32Array.from(of, part => part.index), 1));
   geometry.setIndex(index);
-  const material = new THREE.MeshStandardMaterial({ side: THREE.DoubleSide, roughness: 0.6, metalness: 0 }); material.envMapIntensity = 0.55;
+  const material = new THREE.MeshStandardMaterial({ side: THREE.DoubleSide, roughness: 0.78, metalness: 0, clippingPlanes: [openPlane] }); material.envMapIntensity = 0.4;
   const mesh = new THREE.Mesh(geometry, material), pick = new THREE.Mesh(geometry, MODEL_PICK);
   for (const object of [mesh, pick]) { object.frustumCulled = false; object.visible = false; object.raycast = () => {}; }
   root.add(mesh); pickScene.add(pick);
@@ -802,7 +800,7 @@ function setMotion() {
   for (const [name, rig] of Object.entries(motion.rigs)) if (name !== key) { for (const stream of rig.streams) stream.cloud.visible = false; for (const mesh of rig.caps) mesh.visible = false; for (const model of rig.models) model.mesh.visible = model.pick.visible = false; }
   if (motion.for !== key) {
     motion.for = null; motion.definition = motion.rig = null; motion.caption = ''; motion.moment = -1; motion.touched.clear();
-    motion.open.amount = 0; opened.ball.value.w = 0; capSheet.visible = false; openShells();
+    motion.open.amount = 0; opened.ball.value.w = 0; openPlane.normal.set(0, 0, -1); openPlane.constant = 1e6; capSheet.visible = false; openShells();
     stateTexture.moves.image.data.fill(0); stateTexture.moves.needsUpdate = true;
     /* its layers may still be on their way: this runs again when they arrive */
     if (!key || ![...body.around.own, ...body.around.context].every(index => body.layers[body.parts[index].layer]?.group)) return;
@@ -810,12 +808,8 @@ function setMotion() {
     if (!motion.rigs[key]) {
       const kit = motionKit(), rig = motion.definition.build(kit);
       rig.streams = (rig.streams || []).map(makeStream); rig.models = kit.models;
-      /* how each of its parts is when the close-up is cut open (a step of its story): { opacity, cap: the cut leaves a flat face on it, whole: it is never sliced } */
+      /* how each of its parts is when the close-up is cut open (a step of its story): { opacity, cap: the cut leaves a flat face on it } */
       rig.opened = new Map(kit.own.map(part => [part.index, motion.definition.opened?.(part.name)]).filter(([, look]) => look));
-      /* parts that are never sliced go by the group their `whole` names (a valve, and the muscles its cords are tied to): where the middle of its `lead` parts (the valve) is says whether all of it is drawn or none */
-      rig.wholes = new Map();
-      for (const [index, look] of rig.opened) if (look.whole && look.lead) { const group = rig.wholes.get(look.whole) || rig.wholes.set(look.whole, { middle: V(0, 0, 0), leads: [] }).get(look.whole); group.middle.add(V(...body.parts[index].centre)); group.leads.push(index); }
-      for (const group of rig.wholes.values()) group.middle.divideScalar(group.leads.length);
       rig.caps = capMeshes([...rig.opened].filter(([, look]) => look.cap).map(([index]) => index));
       motion.rigs[key] = rig;
     }
@@ -874,10 +868,10 @@ function stepOpening(seconds) {
   capSheet.quaternion.setFromUnitVectors(V(0, 0, 1), open.normal); capSheet.scale.setScalar(open.ball.w * 2.2);
   const was = opened.ball.value.w > 0;
   opened.ball.value.copy(open.ball); if (open.amount === 0) opened.ball.value.w = 0;
+  if (open.amount === 0) { openPlane.normal.set(0, 0, -1); openPlane.constant = 1e6; } else { openPlane.normal.copy(open.normal).negate(); openPlane.constant = opened.plane.value.w; }
   if (was !== opened.ball.value.w > 0) openShells();
   return open.amount;
 }
-const WHOLE_REACH = 1;   // how far past the cut, in cm, the middle of a part that is never sliced may lie before the part is left out
 const spot = new THREE.Vector3();
 function stepMotion(now) {
   const key = motionKey();
@@ -908,9 +902,7 @@ function stepMotion(now) {
   if (span) for (const index of body.entries[step.entry] || []) act.glow(body.parts[index], 0.3);   // what the step is about, gently lit
   if (open > 0) for (const [index, look] of rig.opened) {
     const part = body.parts[index], was = motion.base[index * 4 + 3] / 255;
-    /* what is never sliced, and lies mostly on the viewer's side of the cut, goes with what is cut away: unless the step is about it */
-    const group = look.whole && rig.wholes.get(look.whole), gone = group && group.middle.dot(motion.open.normal) - motion.open.depth > WHOLE_REACH && !group.leads.some(lead => motion.kept?.has(lead));
-    act.fade(part, was + ((gone ? 0 : look.opacity) - was) * Math.min(1, open * 2));
+    act.fade(part, was + (look.opacity - was) * Math.min(1, open * 2));
   }
   for (const mesh of rig.caps) mesh.visible = open >= 0.5;   // the cut gets its flat face as the walls turn solid
   capSheet.visible = open >= 0.5;
@@ -936,7 +928,7 @@ function stepMotion(now) {
     stream.cloud.visible = shown > 0.004;
     if (!stream.cloud.visible) return;
     stream.cloud.material.depthTest = open > 0;   // an opened close-up has solid walls, and its blood shows only where the cut lets it be seen
-    stream.cloud.material.uniforms.uSize.value = (stream.size ?? 0.8) * (1 + 0.6 * open);   // and is seen closer
+    stream.cloud.material.uniforms.uSize.value = (stream.size ?? 0.8) * (1 + 0.25 * open);   // and is seen closer
     const lay = stream.lay?.(phase, time);   // a stream that knows where each of its drops is, by its place in the queue
     stream.drops.forEach((drop, k) => {
       if (lay) drop.where = lay(drop.label);

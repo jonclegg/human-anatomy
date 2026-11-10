@@ -38,7 +38,7 @@ const VALVES = [
   { name: 'pulmonary', leaflets: /cusp of pulmonary valve$/i, from: 'Cavity of right ventricle' },
   { name: 'aortic', leaflets: /cusp of aortic valve$/i, from: 'Cavity of left ventricle' },
 ];
-const ACROSS = 14, ALONG = 8;                              // a leaflet's mesh: steps across it, and from the ring to its free edge
+const ACROSS = 20, ALONG = 12, THICK = 0.11;                                              // and how thick a leaflet is at the ring, in cm: it thins toward its edge                             // a leaflet's mesh: steps across it, and from the ring to its free edge
 const CORDS = [0.1, 0.24, 0.38, 0.62, 0.76, 0.9], CORD_STEPS = 5, CORD_WIDTH = 0.045;   // where along a leaflet's edge its cords are tied; a cord's mesh, and its half-width in cm
 function modelValve(kit, { name, leaflets, from, to, muscles }) {
   const parts = kit.find(leaflets), inflow = !!to, points = kit.points(parts), start = kit.centre(kit.one(exact(from)));
@@ -65,15 +65,18 @@ function modelValve(kit, { name, leaflets, from, to, muscles }) {
   const length = u => radius * 1.1 * (0.45 + 0.55 * Math.sin(Math.PI * u));
   function point({ from: left, to: right }, u, v, open) {
     const angle = left + (right - left) * u, side = Math.abs(2 * u - 1), edge = u < 0.5 ? left : right;   // side: 0 at the leaflet's middle, 1 where it meets its neighbour
+    const middling = 1 - side * side;
     if (inflow) {
-      const shut = [radius * 0.9 * side, edge, 0.3 * radius * (1 - side * side) + 0.35 * length(u) * side * side], wide = [radius * (0.7 + 0.08 * side), angle, length(u)];
+      /* shut, the edges meet a little below the ring, and the body of each leaflet domes slightly back toward the atrium */
+      const shut = [radius * 0.92 * side, edge, 0.4 * radius * middling + 0.4 * length(u) * side * side], wide = [radius * (0.66 + 0.1 * side), angle, length(u)];
       const free = place(shut[0] + (wide[0] - shut[0]) * open, shut[1] + (wide[1] - shut[1]) * open, shut[2] + (wide[2] - shut[2]) * open);
-      return place(radius, angle, 0).lerp(free, v).addScaledVector(axis, -0.1 * radius * Math.sin(Math.PI * v) * (1 - side * side) * (1 - open));   // shut, it billows a little toward the atrium
+      return place(radius, angle, 0).lerp(free, v).addScaledVector(axis, -0.16 * radius * Math.sin(Math.PI * v ** 0.75) * middling * (1 - open));
     }
-    const fixed = place(radius, angle, height * side ** 1.6);   // the U it is fixed along
-    const shut = [radius * side, edge, height * (0.8 + 0.2 * side)], wide = [radius * (0.84 + 0.1 * side), angle, height * (1.25 - 0.25 * side)];
+    const fixed = place(radius, angle, height * side * side);   // the U it is fixed along
+    /* shut, each cusp is a bowl: its free edge dips to where the three meet, and its belly hangs back toward the ventricle, as low as the bottom of the U */
+    const shut = [radius * side, edge, height * (0.55 + 0.45 * side)], wide = [radius * (0.86 + 0.1 * side), angle, height * (1.2 - 0.2 * side)];
     const free = place(shut[0] + (wide[0] - shut[0]) * open, shut[1] + (wide[1] - shut[1]) * open, shut[2] + (wide[2] - shut[2]) * open);
-    return fixed.lerp(free, v).addScaledVector(axis, -0.3 * height * Math.sin(Math.PI * v) * (1 - side * side) * (1 - open));   // shut, it bellies back toward the ventricle
+    return fixed.lerp(free, v).addScaledVector(axis, -0.38 * height * Math.sin(Math.PI * v) * middling * (1 - open));
   }
   /* the cords, each from a place on a leaflet's edge to the tip of the muscle nearest that place when the valve is open; taut when it is shut */
   const tips = muscles ? kit.find(muscles).map(part => kit.end(part, ring.clone().sub(kit.centre(part)).normalize(), 0.5)) : [];
@@ -81,23 +84,37 @@ function modelValve(kit, { name, leaflets, from, to, muscles }) {
     const hangs = point(sector, u, 1, 1), tip = tips.reduce((best, each) => (each.distanceTo(hangs) < best.distanceTo(hangs) ? each : best));
     return { sector, u, tip, taut: point(sector, u, 1, 0).distanceTo(tip) };
   })) : [];
-  /* the mesh: a sheet for each leaflet, then a three-sided tube for each cord */
-  const index = [], of = [], sheet = (ACROSS + 1) * (ALONG + 1);
+  /* the mesh: each leaflet a thin slab (the sheet's two faces, joined round its rim), then a three-sided tube for each cord */
+  const index = [], of = [], row = ALONG + 1, sheet = (ACROSS + 1) * row;
   sectors.forEach(({ part }, s) => {
-    for (let k = 0; k < sheet; k++) of.push(part);
-    for (let i = 0; i < ACROSS; i++) for (let j = 0; j < ALONG; j++) { const a = s * sheet + i * (ALONG + 1) + j, b = a + ALONG + 1; index.push(a, b, a + 1, a + 1, b, b + 1); }
+    for (let k = 0; k < sheet * 2; k++) of.push(part);
+    const top = s * sheet * 2, under = top + sheet;
+    for (let i = 0; i < ACROSS; i++) for (let j = 0; j < ALONG; j++) {
+      const a = i * row + j, b = a + row;
+      index.push(top + a, top + b, top + a + 1, top + a + 1, top + b, top + b + 1, under + a, under + a + 1, under + b, under + a + 1, under + b + 1, under + b);
+    }
+    for (let i = 0; i < ACROSS; i++) for (const [j, flip] of [[0, false], [ALONG, true]]) { const a = i * row + j, b = a + row; index.push(...(flip ? [top + a, top + b, under + a, top + b, under + b, under + a] : [top + a, under + a, top + b, top + b, under + a, under + b])); }
+    for (let j = 0; j < ALONG; j++) for (const [i, flip] of [[0, true], [ACROSS, false]]) { const a = i * row + j, b = a + 1; index.push(...(flip ? [top + a, top + b, under + a, top + b, under + b, under + a] : [top + a, under + a, top + b, top + b, under + a, under + b])); }
   });
-  const corded = sectors.length * sheet;
-  cords.forEach(({ sector }, c) => {
-    for (let k = 0; k < (CORD_STEPS + 1) * 3; k++) of.push(sector.part);
-    for (let i = 0; i < CORD_STEPS; i++) for (let j = 0; j < 3; j++) { const a = corded + c * (CORD_STEPS + 1) * 3 + i * 3 + j, b = corded + c * (CORD_STEPS + 1) * 3 + i * 3 + (j + 1) % 3; index.push(a, b, a + 3, b, b + 3, a + 3); }
-  });
+  const corded = sectors.length * sheet * 2;
   const model = kit.model({ name, parts, count: of.length, index, of });
-  const sideways = kit.V(0, 0, 0), up = kit.V(0, 0, 0), bow = kit.V(0, 0, 0), at = kit.V(0, 0, 0);
+  const sideways = kit.V(0, 0, 0), up = kit.V(0, 0, 0), bow = kit.V(0, 0, 0), at = kit.V(0, 0, 0), grid = Array.from({ length: sheet }, () => kit.V(0, 0, 0)), facing = kit.V(0, 0, 0);
   /* drawn `open` (0 to 1), its cords tied to muscles that the ventricle's squeeze has drawn toward a point by a share */
   return { name, inflow, pose(open, toward, share) {
     const positions = model.positions; let k = 0;
-    for (const sector of sectors) for (let i = 0; i <= ACROSS; i++) for (let j = 0; j <= ALONG; j++) { const spot = point(sector, i / ACROSS, j / ALONG, open); positions[k++] = spot.x; positions[k++] = spot.y; positions[k++] = spot.z; }
+    for (const sector of sectors) {
+      for (let i = 0; i <= ACROSS; i++) for (let j = 0; j <= ALONG; j++) grid[i * row + j].copy(point(sector, i / ACROSS, j / ALONG, open));
+      /* the sheet's two faces lie half its thickness to either side of it, along the way it faces at each place */
+      for (let i = 0; i <= ACROSS; i++) for (let j = 0; j <= ALONG; j++) {
+        const here = i * row + j, half = THICK * (1 - 0.5 * j / ALONG) / 2;
+        sideways.subVectors(grid[Math.min(ACROSS, i + 1) * row + j], grid[Math.max(0, i - 1) * row + j]); up.subVectors(grid[i * row + Math.min(ALONG, j + 1)], grid[i * row + Math.max(0, j - 1)]);
+        at.crossVectors(sideways, up); if (at.lengthSq() > 1e-12) facing.copy(at).normalize();   // where its edges run together it faces as the place before it did
+        const spot = grid[here];
+        positions[k + here * 3] = spot.x + facing.x * half; positions[k + here * 3 + 1] = spot.y + facing.y * half; positions[k + here * 3 + 2] = spot.z + facing.z * half;
+        positions[k + (sheet + here) * 3] = spot.x - facing.x * half; positions[k + (sheet + here) * 3 + 1] = spot.y - facing.y * half; positions[k + (sheet + here) * 3 + 2] = spot.z - facing.z * half;
+      }
+      k += sheet * 6;
+    }
     for (const { sector, u, tip, taut } of cords) {
       const tied = point(sector, u, 1, open), end = tip.clone().lerp(toward, share), along = end.clone().sub(tied), far = along.length();
       /* slack, it bows toward the middle of the way through, by as much as its length allows */
@@ -152,15 +169,13 @@ export const heart = {
     if (/^Cavity of left/.test(name)) return { colour: FRESH, opacity: 0.62 };
     return null;
   },
-  /* and cut open (a step of its story): the walls solid, with a flat face where they are cut; the chambers emptied but
-     for their blood; the valves, their cords and the muscles that hold them whole, never sliced */
+  /* and cut open (a step of its story): the walls and the muscles inside solid, with a flat face where they are cut;
+     the chambers emptied but for their blood; the valves as they are */
   opened(name) {
-    if (/^Wall of /.test(name)) return { opacity: 1, cap: true };
+    if (/^Wall of |papillary muscle/i.test(name)) return { opacity: 1, cap: true };
     if (/^Cavity of /.test(name)) return { opacity: 0 };
-    const valve = /(tricuspid|mitral|pulmonary|aortic) valve$/i.exec(name)?.[1].toLowerCase();
-    if (valve) return { opacity: 1, whole: valve, lead: true };
-    const holds = /papillary muscle of (right|left) ventricle$/i.exec(name)?.[1].toLowerCase();   // the muscles a valve's cords are tied to go with the valve
-    return holds ? { opacity: 1, whole: holds === 'right' ? 'tricuspid' : 'mitral' } : null;
+    if (/valve$/i.test(name)) return { opacity: 1 };
+    return null;
   },
   build(kit) {
     const valves = kit.find(/leaflet of (tricuspid|mitral) valve$|cusp of (pulmonary|aortic) valve$/i);

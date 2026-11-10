@@ -445,6 +445,44 @@ test.describe('peel and glowing points', () => {
   });
 });
 
+test.describe('the beating heart', () => {
+  test('in the heart close-up the chambers squeeze in turn, the valves open and shut, and blood runs through both sides', async ({ page }, testInfo) => {
+    desktopOnly(testInfo);
+    const errors = [];
+    page.on('pageerror', error => errors.push(error.message));
+    await page.goto('/?sex=male&closeup=heart');
+    await page.waitForSelector('html[data-model-ready="true"]', { timeout: 60_000 });
+    await model(page, () => window.bodyModel.ready());
+    const at = phase => model(page, phase => {
+      const m = window.bodyModel, parts = m.body().parts, opacity = pattern => m.opacityOf(parts.findIndex(part => pattern.test(part.name)));
+      m.holdHeart(phase); m.frame(performance.now());
+      return { ...m.heart(), tricuspid: opacity(/leaflet of tricuspid valve$/), aortic: opacity(/cusp of aortic valve$/), wall: opacity(/^Wall of ventricle$/) };
+    }, phase);
+    const topUp = await at(0.07), ejecting = await at(0.3), refilling = await at(0.8);
+    expect(topUp).toMatchObject({ beating: true, drops: 560, caption: expect.stringContaining('atria squeeze') });
+    expect(topUp.squeeze[0]).toBeGreaterThan(0.9); expect(topUp.squeeze[1]).toBe(0);
+    expect(ejecting.squeeze[0]).toBe(0); expect(ejecting.squeeze[1]).toBeGreaterThan(0.95);
+    expect(ejecting.tricuspid).toBe(1); expect(ejecting.aortic).toBeLessThan(0.3);        // inflow shut, outflow open
+    expect(refilling.tricuspid).toBeLessThan(0.3); expect(refilling.aortic).toBe(1);      // and the other way round
+    expect(refilling.squeeze).toEqual([0, 0]);
+    expect(refilling.wall).toBeLessThan(0.4);                                             // the walls are glass, so the blood shows
+    const before = await model(page, () => { window.bodyModel.holdHeart(null); return window.bodyModel.renders(); });
+    await page.waitForTimeout(700);
+    expect(await model(page, () => window.bodyModel.renders())).toBeGreaterThan(before);   // it keeps moving
+    await page.locator('#inspector [data-beat]').click();
+    expect(await model(page, () => ({ ...window.bodyModel.heart(), wall: window.bodyModel.opacityOf(window.bodyModel.findPart('Wall of ventricle')) }))).toMatchObject({ beating: false, drops: 0, wall: 1 });
+    expect(errors).toEqual([]);
+  });
+  test('with reduced motion the heart stays still', async ({ browser }, testInfo) => {
+    desktopOnly(testInfo);
+    const context = await browser.newContext({ reducedMotion: 'reduce' }), page = await context.newPage();
+    await page.goto('/?sex=male&closeup=heart');
+    await page.waitForSelector('html[data-model-ready="true"]', { timeout: 60_000 });
+    expect(await model(page, () => window.bodyModel.heart().beating)).toBe(false);
+    await context.close();
+  });
+});
+
 test.describe('sound', () => {
   test.use({ reducedMotion: 'reduce' });
   test('sound is off until asked for; then music plays, and the voice speaks for what is on show', async ({ page }, testInfo) => {

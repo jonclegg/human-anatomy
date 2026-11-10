@@ -55,6 +55,10 @@ button:focus-visible, input:focus-visible, a:focus-visible { outline: 2px solid 
 .sex { display: flex; padding: 3px; gap: 2px; border: 1px solid var(--line-strong); border-radius: 22px; }
 .sex button { border: 0; background: transparent; color: var(--muted); min-height: 36px; padding: 0 14px; border-radius: 18px; cursor: pointer; font-size: 13px; font-weight: 500; }
 .sex button[aria-pressed="true"] { background: var(--ink); color: var(--on-ink); font-weight: 600; }
+.invite { position: absolute; left: 50%; top: 96px; transform: translateX(-50%); z-index: 6; margin: 0; padding: 14px 26px; border-radius: 28px; background: var(--mark); color: var(--on-ink); font: 600 17px/1.2 'Inter Tight', sans-serif; letter-spacing: 0.01em; pointer-events: none; animation: invite 2.4s ease-in-out infinite; }
+.invite[hidden] { display: none; }
+@keyframes invite { 50% { transform: translateX(-50%) scale(1.05); } }
+@media (prefers-reduced-motion: reduce) { .invite { animation: none; } }
 .sound-btn { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 16px 0 12px; border: 1px solid var(--line-strong); border-radius: 22px; background: transparent; color: var(--muted); font-size: 13px; font-weight: 500; cursor: pointer; }
 .sound-btn svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
 .sound-btn .waves { display: none; }
@@ -269,6 +273,15 @@ input[type="range"]::-moz-range-thumb { width: 14px; height: 14px; border-radius
 .isolate span { white-space: nowrap; }
 .isolate .all { background: var(--ink); color: var(--on-ink); border-radius: 4px; padding: 3px 9px; font-weight: 700; font-size: 13px; }
 .figure { position: absolute; left: 50%; transform: translateX(-50%); bottom: 100px; white-space: nowrap; z-index: 2; font: 11.5px var(--mono); letter-spacing: 0.06em; text-transform: uppercase; color: var(--faint); pointer-events: none; }
+/* while a close-up moves, the line under it says what is happening: large enough to read from a step back */
+.figure.live { bottom: 30px; width: max-content; max-width: min(580px, calc(100% - 48px)); white-space: normal; text-align: center; padding: 13px 24px; border: 1px solid var(--line); border-radius: 18px; background: rgba(11, 13, 15, 0.74); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); font: 500 17px/1.42 'Inter', sans-serif; letter-spacing: 0; text-transform: none; color: var(--ink); text-wrap: balance; pointer-events: auto; cursor: pointer; }
+.figure.live::before { content: ''; display: inline-block; vertical-align: -1px; margin-right: 12px; width: 10px; height: 12px; border-left: 3px solid var(--mark); border-right: 3px solid var(--mark); box-sizing: border-box; }
+.figure.live[data-motion="off"]::before { width: 0; height: 0; border: 6px solid transparent; border-left: 10px solid var(--mark); border-right: 0; }
+.figure.live:hover, .figure.live:focus-visible { border-color: var(--mark); outline: none; }
+.inspector .quiet[data-motion] { display: inline-flex; align-items: center; gap: 10px; padding: 0 18px 0 14px; border: 1px solid var(--line-strong); border-radius: 22px; color: var(--ink); }
+.quiet[data-motion]::before { content: ''; width: 10px; height: 12px; border-left: 3px solid currentColor; border-right: 3px solid currentColor; box-sizing: border-box; }
+.quiet[data-motion][aria-pressed="false"]::before { width: 0; height: 0; border: 6px solid transparent; border-left: 10px solid currentColor; border-right: 0; }
+.quiet[data-motion]:hover { border-color: var(--mark); color: var(--mark); }
 .switch { justify-self: end; border: 1.5px solid var(--ink); background: var(--panel); border-radius: 999px; padding: 2px 12px; font-size: 13px; font-weight: 700; cursor: pointer; }
 .switch[aria-checked="true"] { background: var(--ink); color: var(--on-ink); }
 
@@ -344,6 +357,7 @@ footer a { color: inherit; }
   .tag { font-size: 11.5px; height: 20px; }
   .isolate { display: none !important; }   /* phones: Show all sits in the details sheet */
   .figure { display: none; }
+  .figure.live { display: block; left: 12px; right: 12px; bottom: auto; top: 104px; transform: none; width: auto; max-width: none; padding: 9px 14px; border-radius: 14px; font-size: 14px; }
 }
 @media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; transition: none !important; } }
 </style>
@@ -440,6 +454,7 @@ footer a { color: inherit; }
 
   <button type="button" class="isolate" id="isolateChip" hidden></button>
   <p class="figure" id="figure"></p>
+  <p class="invite" id="invite" hidden>Touch the screen to explore the body</p>
   <p class="hint" id="hint">Drag to turn · Pinch to zoom · Two fingers to move · Tap a part</p>
 </section>
 

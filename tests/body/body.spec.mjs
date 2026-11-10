@@ -402,7 +402,7 @@ test.describe('close-ups', () => {
     expect(seen.glansWidth).toBeGreaterThan(0.3); expect(seen.glansWidth).toBeLessThan(1);      // 3–10 mm (Lloyd 2005)
     expect(seen.urethraLength).toBeGreaterThan(3); expect(seen.urethraLength).toBeLessThan(6.5);
     expect(seen.urethraToBladder).toBeLessThan(0.3);   // it reaches the bladder
-    expect(seen.vaginaToOpening).toBeLessThan(1.5);    // the scanned vagina comes down to the modelled opening
+    expect(seen.vaginaToOpening).toBeLessThan(1.5);    // the vagina comes down to the opening
     expect(seen.midline).toBeLessThan(0.3);
   });
 });
@@ -445,7 +445,7 @@ test.describe('peel and glowing points', () => {
   });
 });
 
-test.describe('the beating heart', () => {
+test.describe('motion', () => {
   test('in the heart close-up the chambers squeeze in turn, the valves open and shut, and blood runs through both sides', async ({ page }, testInfo) => {
     desktopOnly(testInfo);
     const errors = [];
@@ -454,31 +454,70 @@ test.describe('the beating heart', () => {
     await page.waitForSelector('html[data-model-ready="true"]', { timeout: 60_000 });
     await model(page, () => window.bodyModel.ready());
     const at = phase => model(page, phase => {
-      const m = window.bodyModel, parts = m.body().parts, opacity = pattern => m.opacityOf(parts.findIndex(part => pattern.test(part.name)));
-      m.holdHeart(phase); m.frame(performance.now());
-      return { ...m.heart(), tricuspid: opacity(/leaflet of tricuspid valve$/), aortic: opacity(/cusp of aortic valve$/), wall: opacity(/^Wall of ventricle$/) };
+      const m = window.bodyModel, parts = m.body().parts, find = pattern => parts.findIndex(part => pattern.test(part.name)), opacity = pattern => m.opacityOf(find(pattern));
+      m.holdMotion(phase); m.frame(performance.now());
+      const scale = pattern => m.moveOf(find(pattern))[12];   // how far a part is drawn in toward its pivot: 1 is not at all
+      return { ...m.motion(), tricuspid: opacity(/leaflet of tricuspid valve$/), aortic: opacity(/cusp of aortic valve$/), wall: opacity(/^Wall of ventricle$/), atrium: scale(/^Cavity of right atrium$/), ventricle: scale(/^Cavity of left ventricle$/) };
     }, phase);
     const topUp = await at(0.07), ejecting = await at(0.3), refilling = await at(0.8);
-    expect(topUp).toMatchObject({ beating: true, drops: 560, caption: expect.stringContaining('atria squeeze') });
-    expect(topUp.squeeze[0]).toBeGreaterThan(0.9); expect(topUp.squeeze[1]).toBe(0);
-    expect(ejecting.squeeze[0]).toBe(0); expect(ejecting.squeeze[1]).toBeGreaterThan(0.95);
+    expect(topUp).toMatchObject({ moving: true, drops: 640, caption: expect.stringContaining('atria squeeze') });
+    expect(topUp.atrium).toBeLessThan(0.83); expect(topUp.ventricle).toBe(1);
+    expect(ejecting.atrium).toBe(1); expect(ejecting.ventricle).toBeLessThan(0.76);
     expect(ejecting.tricuspid).toBe(1); expect(ejecting.aortic).toBeLessThan(0.3);        // inflow shut, outflow open
     expect(refilling.tricuspid).toBeLessThan(0.3); expect(refilling.aortic).toBe(1);      // and the other way round
-    expect(refilling.squeeze).toEqual([0, 0]);
+    expect([refilling.atrium, refilling.ventricle]).toEqual([1, 1]);
     expect(refilling.wall).toBeLessThan(0.4);                                             // the walls are glass, so the blood shows
-    const before = await model(page, () => { window.bodyModel.holdHeart(null); return window.bodyModel.renders(); });
+    const before = await model(page, () => { window.bodyModel.holdMotion(null); return window.bodyModel.renders(); });
     await page.waitForTimeout(700);
     expect(await model(page, () => window.bodyModel.renders())).toBeGreaterThan(before);   // it keeps moving
-    await page.locator('#inspector [data-beat]').click();
-    expect(await model(page, () => ({ ...window.bodyModel.heart(), wall: window.bodyModel.opacityOf(window.bodyModel.findPart('Wall of ventricle')) }))).toMatchObject({ beating: false, drops: 0, wall: 1 });
+    await page.locator('#inspector [data-motion]').click();
+    expect(await model(page, () => ({ ...window.bodyModel.motion(), wall: window.bodyModel.opacityOf(window.bodyModel.findPart('Wall of ventricle')), still: window.bodyModel.moveOf(window.bodyModel.findPart('Wall of ventricle')).every(value => value === 0) }))).toMatchObject({ moving: false, drops: 0, wall: 1, still: true });
     expect(errors).toEqual([]);
   });
-  test('with reduced motion the heart stays still', async ({ browser }, testInfo) => {
+  for (const sex of ['male', 'female']) {
+    test(`every close-up of the ${sex} body that has a motion runs it, with a caption for each moment`, async ({ page }, testInfo) => {
+      desktopOnly(testInfo);
+      test.setTimeout(240_000);
+      const errors = [];
+      page.on('pageerror', error => errors.push(error.message));
+      await page.goto(`/?sex=${sex}`);
+      await page.waitForSelector('html[data-model-ready="true"]', { timeout: 60_000 });
+      const regions = await model(page, () => window.bodyModel.regions().filter(id => window.bodyModel.motions().includes(id)));
+      expect(regions.length).toBeGreaterThan(20);
+      for (const id of regions) {
+        const seen = await model(page, async id => {
+          const m = window.bodyModel, wait = ms => new Promise(done => setTimeout(done, ms));
+          m.setRegion(id); await m.ready();
+          for (let tries = 0; tries < 100 && !m.motion().moving; tries++) await wait(50);   // its layers arrive, then it starts
+          const moments = [];
+          for (const phase of [0.05, 0.3, 0.55, 0.8]) {
+            m.holdMotion(phase); m.frame(performance.now());
+            const moves = m.body().parts.map((part, index) => m.moveOf(index)), moved = moves.filter(move => move[3] > 0);
+            moments.push({ ...m.motion(), moved: moved.length, finite: moves.flat().every(Number.isFinite), switch: document.querySelector('#inspector [data-motion]')?.textContent });
+          }
+          m.holdMotion(null);
+          return moments;
+        }, id);
+        for (const moment of seen) {
+          expect(moment, id).toMatchObject({ moving: true, finite: true });
+          expect(moment.caption.length, `${id} has a caption`).toBeGreaterThan(20);
+          expect(moment.caption.length, `${id}'s caption fits the line under the figure`).toBeLessThan(190);
+          expect(moment.moved + moment.drops, `${id} moves something or has something flowing`).toBeGreaterThan(0);
+          expect(moment.switch, id).toMatch(/^(Stop|Keep) /);
+        }
+      }
+      expect(errors).toEqual([]);
+    });
+  }
+  test('with reduced motion nothing moves until it is asked to', async ({ browser }, testInfo) => {
     desktopOnly(testInfo);
     const context = await browser.newContext({ reducedMotion: 'reduce' }), page = await context.newPage();
-    await page.goto('/?sex=male&closeup=heart');
+    await page.goto('/?sex=male&closeup=knee');
     await page.waitForSelector('html[data-model-ready="true"]', { timeout: 60_000 });
-    expect(await model(page, () => window.bodyModel.heart().beating)).toBe(false);
+    await model(page, () => window.bodyModel.ready());
+    expect(await model(page, () => window.bodyModel.motion().moving)).toBe(false);
+    await page.locator('#inspector [data-motion]').click();
+    await expect.poll(() => model(page, () => window.bodyModel.motion().moving)).toBe(true);
     await context.close();
   });
 });

@@ -119,6 +119,10 @@ export const DIFFERENCES = [
   ['Same 206 bones, 12 pairs of ribs, same muscles', 'Same 206 bones, 12 pairs of ribs, same muscles'],
 ];
 
+/* Shown only when chosen (from the parts list or by search): the platysma is a paper-thin sheet in the skin of the neck
+   that would cover the sternocleidomastoid and the muscles of the throat, as atlases draw the neck with it lifted away */
+export const SHOWN_WHEN_CHOSEN = /platysma$/i;
+
 /* what the free models do not have, said plainly */
 export const GAPS = [
   ['Female body', 'No free model of a whole female body exists. Hers is the male body reshaped to a young woman\'s build, so her bones, muscles and most organs are his, fitted. Her uterus, vagina, ovaries, tubes and breasts are scanned from a woman.'],

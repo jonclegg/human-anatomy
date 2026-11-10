@@ -1,6 +1,6 @@
 // A body's landmarks, read from its bones (the names are the built body's part names), and the fit of its hands and
 // feet, joint by joint, onto MakeHuman's.
-import { thinPlateSpline } from './fit.mjs';
+import { thinPlateSpline, fitSimilarity, applyAffine } from './fit.mjs';
 
 /* named(layer, name, { optional }): the positions of a structure of the body */
 export function landmarks(named) {
@@ -125,12 +125,35 @@ export function handAndFootPairs(named, target, bones, marks, place) {
   }
   return pairs;
 }
+/* The joints of a hand or a foot lie nearly in one plane, so pairs of joints alone say nothing about its thickness, and
+   a deformation through them is free to flatten the bones. Each limb's pairs are given depth: the best turn, even
+   scale and shift taking its joints onto MakeHuman's is found, and every joint is paired again a little above and
+   below the plane of the joints, moved as that rigid fit moves it. Returns the pairs with those added. */
+export function withDepth(pairs, reach = 1.5) {
+  const limbs = Map.groupBy(pairs, pair => pair[2]), out = [...pairs];
+  for (const [limb, list] of limbs) {
+    const from = list.flatMap(pair => pair[0]), fit = fitSimilarity(from, list.flatMap(pair => pair[1]));
+    const turned = d => { const a = applyAffine(fit, 0, 0, 0), b = applyAffine(fit, ...d); return b.map((value, c) => value - a[c]); };
+    /* the plane's normal: the direction in which the joints are spread least (across the two in which they are spread most) */
+    const mean = [0, 1, 2].map(c => list.reduce((sum, pair) => sum + pair[0][c], 0) / list.length);
+    const C = [0, 1, 2].map(i => [0, 1, 2].map(j => list.reduce((sum, pair) => sum + (pair[0][i] - mean[i]) * (pair[0][j] - mean[j]), 0)));
+    const main = M => { let v = [0.5, 0.3, 0.8]; for (let k = 0; k < 80; k++) v = unit3([0, 1, 2].map(i => M[i][0] * v[0] + M[i][1] * v[1] + M[i][2] * v[2])); return v; };
+    const first = main(C), weight = first.reduce((sum, value, i) => sum + value * [0, 1, 2].reduce((t, j) => t + C[i][j] * first[j], 0), 0);
+    const second = main(C.map((row, i) => row.map((value, j) => value - weight * first[i] * first[j])));
+    const normal = unit3([first[1] * second[2] - first[2] * second[1], first[2] * second[0] - first[0] * second[2], first[0] * second[1] - first[1] * second[0]]);
+    for (const [a, b] of list) for (const sign of [1, -1]) {
+      const step = normal.map(value => sign * reach * value), moved = turned(step);
+      out.push([a.map((value, c) => value + step[c]), b.map((value, c) => value + moved[c]), limb]);
+    }
+  }
+  return out;
+}
 /* Each hand and foot: an exact thin-plate spline from its bones' ends (as they lie now) to MakeHuman's joints, held
    still by points on the forearm or shin bones a few centimetres back; applied in full from the wrist (ankle) out and
    faded to nothing over the 4 cm before it. */
 export function fitHandsAndFeet(structures, named, target, bones, marks, place) {
   const groups = new Map();
-  for (const [a, b, limb] of handAndFootPairs(named, target, bones, marks, place)) (groups.get(limb) || groups.set(limb, []).get(limb)).push([a, b]);
+  for (const [a, b, limb] of withDepth(handAndFootPairs(named, target, bones, marks, place))) (groups.get(limb) || groups.set(limb, []).get(limb)).push([a, b]);
   const report = [];
   for (const [limb, pairs] of groups) {
     const side = limb.at(-1), word = side === 'L' ? 'Left' : 'Right', hand = limb.startsWith('hand');

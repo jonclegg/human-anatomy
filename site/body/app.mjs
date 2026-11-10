@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
-import { ENTRIES, LAYER_INFO, GROUP_INFO, VIEW_INFO, TOUR, BUGS, DIFFERENCES, GAPS, colourOf } from './parts.mjs';
+import { ENTRIES, LAYER_INFO, GROUP_INFO, VIEW_INFO, TOUR, BUGS, DIFFERENCES, GAPS, colourOf, SHOWN_WHEN_CHOSEN } from './parts.mjs';
 performance.mark('body:module-start');
 
 /* ---------- Coordinates ----------
@@ -367,6 +367,7 @@ function applyVisibility() {
     let opacity = mode === 'solid' ? 1 : mode === 'ghost' ? GHOST : 0;
     if (part.layer === 'skin') opacity = mode === 'off' || (state.clothed && !revealed() && /pubic hair/i.test(part.name)) ? 0 : state.body;
     if (mode === 'solid' && view.xray.includes(part.layer)) opacity = 1 - (1 - GHOST) * state.xray;
+    if (SHOWN_WHEN_CHOSEN.test(part.name) && !chosen.has(index)) opacity = 0;
     if (isolate) opacity = chosen.has(index) ? 1 : Math.min(opacity, part.layer === 'skin' ? 0.05 : 0.12);
     if (chosen.has(index) && !isolate) opacity = Math.max(opacity, 1);
     colour.set(part.layer === 'skin' ? TONES[state.tone] : colourOf(part));

@@ -11,6 +11,8 @@ import { register, warpMesh, meanGap, startMap } from './register.mjs';
 import { Assembly, ERROR, MINIMUM_SHARE } from './assemble.mjs';
 import { zanatomyAdditions } from './zanatomy.mjs';
 import { clear, obstacleOf, centreOf, towardCentre } from './clearance.mjs';
+import { keepUnder, isGlobe, surfaceSamples } from './transfer.mjs';
+import { PointGrid } from './fit.mjs';
 
 const root = process.argv[2];
 if (!root) throw new Error('usage: node scripts/body/build-male.mjs <"Human Anatomy 3D Models" folder>');
@@ -18,16 +20,36 @@ const hra = (folder, file) => `${root}/${folder}/Human Reference Atlas (GLB)/${f
 const HEIGHT = 171.9;
 
 const assembly = new Assembly('male', HEIGHT);
-const his = listStructures(root).map(structure => ({ ...structure, ...classify(structure) }));
+/* BodyParts3D has the external anal sphincter a second time as "Superficial perineal muscle", and the left longus colli
+   in three parts with no right one (Z-Anatomy has both sides whole) */
+const NOT_HIS = /^Superficial perineal muscle$|^(Superior oblique|Vertical intermediate|Inferior oblique) part of left longus colli$/;
+const his = listStructures(root).map(structure => ({ ...structure, ...classify(structure) })).filter(structure => !NOT_HIS.test(structure.name));
+const everything = [];   // { info, mesh }, in the order they are added
 for (const structure of his) {
   if (structure.name === 'Intervertebral disk') structure.name = 'Intervertebral disk of twelfth thoracic vertebra';   // unnamed in the source: the one between T12 and L1
   structure.mesh = simplify(weld(readMesh(structure.path)), ERROR[structure.layer], MINIMUM_SHARE[structure.layer]);
-  assembly.add({ name: structure.name, layer: structure.layer, group: structure.group, source: 'BodyParts3D', id: structure.id, concept: structure.concept }, structure.mesh, { prepared: true });
+  everything.push({ info: { name: structure.name, layer: structure.layer, group: structure.group, source: 'BodyParts3D', id: structure.id, concept: structure.concept }, mesh: structure.mesh });
 }
-/* what BodyParts3D lacks, from Z-Anatomy, aligned to these bones */
-for (const structure of await zanatomyAdditions(`${root}/Whole Body - Z-Anatomy (Blender)/export`, his)) {
-  assembly.add({ name: structure.name, layer: structure.layer, group: structure.group, source: structure.source }, structure.mesh, { prepared: true });
+/* what BodyParts3D lacks, from Z-Anatomy, aligned to these bones. Two of its left-side muscles repeat his under another
+   name (he has the plantar interossei one by one, and the rotators by region). */
+const REPEATS_HIS = /^Left plantar interossei muscles$|^Left rotatores$/;
+const additions = (await zanatomyAdditions(`${root}/Whole Body - Z-Anatomy (Blender)/export`, his)).filter(structure => !REPEATS_HIS.test(structure.name));
+/* Z-Anatomy's left side is its right side mirrored, and the test for what he already has sometimes keeps one side
+   only (a chin muscle, a bursa): the missing twin is the kept one, mirrored */
+{
+  const names = new Set([...his, ...additions].map(structure => structure.name.toLowerCase()));
+  const twin = name => name.replace(/\b(left|right)\b/i, word => ({ left: 'right', right: 'left', Left: 'Right', Right: 'Left' })[word]);
+  const mirrored = [];
+  for (const structure of additions) {
+    if (!/\b(left|right)\b/i.test(structure.name) || names.has(twin(structure.name).toLowerCase())) continue;
+    const positions = Float32Array.from(structure.mesh.positions, (value, k) => (k % 3 === 0 ? -value : value)), indices = Uint32Array.from(structure.mesh.indices);
+    for (let k = 0; k < indices.length; k += 3) { const swap = indices[k + 1]; indices[k + 1] = indices[k + 2]; indices[k + 2] = swap; }
+    mirrored.push({ ...structure, name: twin(structure.name), mesh: { positions, indices } });
+  }
+  console.log(`  ${mirrored.length} one-sided Z-Anatomy structures given their twin: ${mirrored.map(structure => structure.name).join(', ')}`);
+  additions.push(...mirrored);
 }
+for (const structure of additions) everything.push({ info: { name: structure.name, layer: structure.layer, group: structure.group, source: structure.source }, mesh: structure.mesh });
 const him = pattern => his.filter(structure => pattern.test(structure.name)).map(structure => structure.mesh);
 const himGroup = (layer, group) => his.filter(structure => structure.layer === layer && structure.group === group).map(structure => structure.mesh);
 
@@ -63,7 +85,7 @@ const start = startMap(vhHeight, HEIGHT, centre(vh(/(pubis|ilium|ischium)_compac
 const warp = register({ pairs, spine: { source: vhDiscs, target: discs }, skin: { source: vhSkin, target: his.find(s => s.name === 'Skin').mesh, skip: (x, y) => y < 16 || Math.abs(x) > 22 }, start });
 
 /* BodyParts3D has the spinal cord's central canal but not the cord itself: carried across from the Visible Human Male too */
-for (const mesh of await nihMale([['Nervous', 'HRA_spinal_cord_male_vh.glb']])) assembly.add({ name: mesh.name, layer: 'nerves', group: 'spinal', source: 'NIH male' }, warpMesh(mesh, warp));
+for (const mesh of await nihMale([['Nervous', 'HRA_spinal_cord_male_vh.glb']])) everything.push({ info: { name: mesh.name, layer: 'nerves', group: 'spinal', source: 'NIH male' }, mesh: simplify(weld(warpMesh(mesh, warp)), ERROR.nerves, MINIMUM_SHARE.nerves) });
 const lungs = (await nihMale([['Respiratory', 'HRA_lung_male_vh.glb']])).filter(mesh => /bronchopulmonary_segm/.test(mesh.raw));
 /* his lungs came from another man: where they would pass through this man's ribs, they give way, as lungs carry the
    impressions of the ribs; each lung is pushed toward its own middle */
@@ -73,9 +95,66 @@ let pushed = 0;
 for (const mesh of lungs) {
   const placed = warpMesh(mesh, warp);
   pushed += clear(placed, chestBones, towardCentre(lungCentre[/left/.test(mesh.name) ? 'left' : 'right']), { reach: 1.8, depth: 1.6 });
-  assembly.add({ name: mesh.name, layer: 'organs', group: 'respiratory', source: 'NIH male' }, placed);
+  everything.push({ info: { name: mesh.name, layer: 'organs', group: 'respiratory', source: 'NIH male' }, mesh: simplify(weld(placed), ERROR.organs, MINIMUM_SHARE.organs) });
 }
 console.log(`  lungs kept clear of the ribs: ${pushed} points moved`);
 console.log(`  check left femur: ${meanGap(warpMesh(vh(/M_femur_L$/)[0], warp), him(/^Left femur$/)[0]).toFixed(2)} cm from the BodyParts3D femur after the warp; ${lungs.length} lung segments carried across`);
+/* Z-Anatomy's occipitalis is a thin sheet modelled on another skull: where it dips into this man's, it is lifted
+   to lie on it. Each point's height over the skull is raised by a rule that keeps heights in order (what was higher
+   stays higher), so a sheet's outer face stays outside its inner face: below 0.4 cm the height eases toward 0.1 cm. */
+{
+  const vault = everything.filter(({ info }) => /^(Frontal|Occipital|(Left|Right) (parietal|temporal)) bone$/.test(info.name)).map(({ mesh }) => mesh);
+  /* the skull's surface closely sampled, each sample with its face's normal turned outward: its own vertices are
+     centimetres apart on the smooth vault, too far to measure a height against */
+  const middle = centreOf(vault), points = [], normals = [], FROM = 0.4, LEAST = 0.1;
+  for (const mesh of vault) {
+    const samples = surfaceSamples(mesh, 0.25);
+    for (let k = 0; k < samples.points.length; k += 3) {
+      const out = [0, 1, 2].map(c => samples.points[k + c] - middle[c]), n = [0, 1, 2].map(c => samples.normals[k + c]);
+      const sign = out[0] * n[0] + out[1] * n[1] + out[2] * n[2] < 0 ? -1 : 1;
+      points.push(samples.points[k], samples.points[k + 1], samples.points[k + 2]); normals.push(sign * n[0], sign * n[1], sign * n[2]);
+    }
+  }
+  const skull = new PointGrid(Float32Array.from(points), 1);
+  let lifted = 0;
+  for (const { info, mesh } of everything) {
+    if (info.source !== 'Z-Anatomy' || !/occipitalis/i.test(info.name)) continue;
+    const p = mesh.positions;
+    for (let k = 0; k < p.length; k += 3) {
+      const [index] = skull.nearest(p[k], p[k + 1], p[k + 2], 3);
+      if (index < 0) continue;
+      const n = normals.slice(3 * index, 3 * index + 3);
+      const height = (p[k] - points[3 * index]) * n[0] + (p[k + 1] - points[3 * index + 1]) * n[1] + (p[k + 2] - points[3 * index + 2]) * n[2];
+      if (height >= FROM) continue;
+      const raised = LEAST + (FROM - LEAST) * Math.exp((height - FROM) / (FROM - LEAST));
+      for (let c = 0; c < 3; c++) p[k + c] += (raised - height) * n[c];
+      lifted++;
+    }
+  }
+  console.log(`  occipitalis lifted onto his skull: ${lifted} points moved`);
+}
+/* Z-Anatomy's structures were modelled on another body: some lie a little outside this man's skin (the frontalis, the
+   latissimus dorsi at the armpit, a vein). Whatever lies outside the skin or just under it is brought under, with the
+   layers beneath it (transfer.mjs). The hands and feet have no depth to press into. */
+{
+  /* his outer surface: his skin, and his hair, under which the skin has no scalp */
+  const outer = everything.filter(({ info }) => info.layer === 'skin' && /^(Skin|Hair of head)$/.test(info.name)).map(({ mesh }) => mesh);
+  if (outer.length !== 2) throw new Error('expected his skin and his hair');
+  const skin = { positions: Float32Array.from([...outer[0].positions, ...outer[1].positions]), indices: Uint32Array.from([...outer[0].indices, ...Array.from(outer[1].indices, index => index + outer[0].positions.length / 3)]) };
+  const extremity = /metacarpal|metatarsal|phalanx|scaphoid|lunate|triquetr|pisiform|trapezi|capitate|hamate|cuneiform|cuboid|navicular|talus|calcaneus/i;
+  const points = [], thinBone = [];
+  for (const { info, mesh } of everything) if (info.layer === 'skeleton') for (let k = 0; k < mesh.positions.length; k += 3) { points.push(mesh.positions[k], mesh.positions[k + 1], mesh.positions[k + 2]); thinBone.push(extremity.test(info.name)); }
+  const grid = new PointGrid(Float32Array.from(points), 2);
+  const thin = Uint8Array.from({ length: skin.positions.length / 3 }, (_, v) => { const [index] = grid.nearest(skin.positions[3 * v], skin.positions[3 * v + 1], skin.positions[3 * v + 2], 30); return index >= 0 && thinBone[index] ? 1 : 0; });
+  const inside = everything.filter(({ info }) => info.layer !== 'skin').map(({ info, mesh }) => ({ name: info.name, layer: info.layer, positions: mesh.positions, ownSkin: info.source === 'BodyParts3D' })).filter(structure => !isGlobe(structure));
+  /* not on the vault of his head: under the hair his skin has no scalp, and nothing there needs it. It fades out
+     over the brow, from a centimetre under the eyes' level to a centimetre and a half over it. */
+  const eyes = everything.filter(({ info }) => /^(Left|Right) sclera$/.test(info.name)).map(({ mesh }) => centreOf([mesh])[1]);
+  if (eyes.length !== 2) throw new Error('expected his two eyes');
+  const eyeLevel = (eyes[0] + eyes[1]) / 2;
+  const share = (x, y) => { const t = Math.min(1, Math.max(0, (y - (eyeLevel - 1)) / 2.5)); return 1 - t * t * (3 - 2 * t); };
+  console.log(`  kept under his skin: ${keepUnder(skin, inside, { thin, share, openings: true })}`);
+}
+for (const { info, mesh } of everything) assembly.add(info, mesh, { prepared: true });
 await assembly.write(new URL('../../site/body/data/male/', import.meta.url));
 

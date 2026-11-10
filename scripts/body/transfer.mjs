@@ -6,12 +6,12 @@
 // him follows. The pose does not change and the skin points correspond exactly, so nothing is torn or folded and what
 // lay under his skin lies under the new one.
 import { readMakeHuman, poseMakeHuman, landmarksOf } from './makehuman.mjs';
-import { PointGrid, thinPlateSpline } from './fit.mjs';
-import { vertexNormals, InsideTest, InsideAllWays } from './clearance.mjs';
-import { landmarks, handAndFootPairs, fitHandsAndFeet } from './landmarks.mjs';
+import { PointGrid, thinPlateSpline, spread } from './fit.mjs';
+import { vertexNormals, InsideTest, InsideAllWays, pushOutOver } from './clearance.mjs';
+import { landmarks, handAndFootPairs, fitHandsAndFeet, withDepth } from './landmarks.mjs';
 
 /* points spread over a mesh's surface no further apart than spacing (cm), each with its triangle's normal */
-function surfaceSamples({ positions, indices }, spacing, skip = () => false) {
+export function surfaceSamples({ positions, indices }, spacing, skip = () => false) {
   const points = [], normals = [], corners = [], weights = [];
   for (let t = 0; t < indices.length; t += 3) {
     if (skip(indices[t], indices[t + 1], indices[t + 2])) continue;
@@ -76,7 +76,7 @@ export function drawOnto(mesh, skin, { free = () => true, rounds = [[4, 8], [3, 
 }
 
 /* the parts of the eyeball itself (organs): they show through the eyelids, so they are placed whole and never tucked under the skin */
-const isGlobe = structure => structure.layer === 'organs' && /sclera|cornea|\blens\b|iris|retina|vitreous|choroid|corona ciliaris|anterior chamber|posterior chamber|pupil/i.test(structure.name);
+export const isGlobe = structure => structure.layer === 'organs' && /sclera|cornea|\blens\b|iris|retina|vitreous|choroid|corona ciliaris|anterior chamber|posterior chamber|pupil/i.test(structure.name);
 
 /**
  * Brings under the skin whatever lies outside it or within gap (cm) beneath it. The source body has some of this of
@@ -89,33 +89,66 @@ const isGlobe = structure => structure.layer === 'organs' && /sclera|cornea|\ble
  * the skin: bone a little deeper than muscle, vessels and nerves a little shallower.
  * lining: per skin vertex, true where the skin faces into the body (the lining of the mouth): not a surface to bring
  * anything under. thin: per skin vertex, true on the hands and feet, where there is no depth to press into.
+ * A structure may be marked ownSkin: scanned with this skin, so only a slight poke through it is corrected.
+ * share(x, y, z): from 1 where all of this applies to 0 where none does (a region whose skin cannot be trusted); in
+ * between, the layers are pressed by that share and nothing is put in place. openings: the skin has holes (eyes, ear
+ * canals), so a point counts as outside only on better evidence (InsideAllWays).
  */
-export function keepUnder(skin, structures, { gap = 0.2, reach = 5, lining = null, thin = null } = {}) {
+export function keepUnder(skin, structures, { gap = 0.2, reach = 5, lining = null, thin = null, share = () => 1, openings = false } = {}) {
   const count = skin.positions.length / 3;
-  const test = new InsideAllWays(skin, 0.25), samples = surfaceSamples(skin, 0.3, (a, b, c) => lining && (lining[a] || lining[b] || lining[c]));
-  const outer = samples.points, normals = samples.normals, grid = new PointGrid(outer, 1);
+  const test = new InsideAllWays(skin, 0.25, openings ? 2 : 1), samples = surfaceSamples(skin, 0.3, (a, b, c) => lining && (lining[a] || lining[b] || lining[c]));
+  /* a skin may be a shell with an inner wall facing into the body (BodyParts3D's is): only the wall that faces out
+     counts, the one a short step along whose normal leaves the body */
+  const kept = [];
+  for (let k = 0; k < samples.points.length; k += 3) if (test.inside(samples.points[k] + 0.15 * samples.normals[k], samples.points[k + 1] + 0.15 * samples.normals[k + 1], samples.points[k + 2] + 0.15 * samples.normals[k + 2]) !== true) kept.push(k / 3);
+  const outer = Float32Array.from(kept.flatMap(i => [samples.points[3 * i], samples.points[3 * i + 1], samples.points[3 * i + 2]])), normals = Float32Array.from(kept.flatMap(i => [samples.normals[3 * i], samples.normals[3 * i + 1], samples.normals[3 * i + 2]]));
+  samples.corners = Uint32Array.from(kept.flatMap(i => [samples.corners[3 * i], samples.corners[3 * i + 1], samples.corners[3 * i + 2]]));
+  samples.weights = Float32Array.from(kept.flatMap(i => [samples.weights[3 * i], samples.weights[3 * i + 1], samples.weights[3 * i + 2]]));
+  const grid = new PointGrid(outer, 1);
   const inner = lining && new PointGrid(surfaceSamples(skin, 0.3, (a, b, c) => !(lining[a] || lining[b] || lining[c])).points, 1);
   /* a point's place against the skin: the nearest skin sample, and its depth under it (negative outside) */
   const locate = (x, y, z, within) => {
-    const inside = test.inside(x, y, z);
-    if (inside === null) return null;
-    const [index, distance] = grid.nearest(x, y, z, inside ? within : reach);
-    if (index < 0) return inside ? null : { index: -1 };
+    /* On a hand or a foot the nearest skin decides alone, inside or outside by which side of it the point is on: a
+       column from the top of a foot runs on up through the trunk above it, and calls a point over the foot inside. */
+    if (thin) {
+      const [index, distance] = grid.nearest(x, y, z, 1.5);
+      if (index >= 0 && thin[samples.corners[3 * index]]) {
+        const depth = (outer[3 * index] - x) * normals[3 * index] + (outer[3 * index + 1] - y) * normals[3 * index + 1] + (outer[3 * index + 2] - z) * normals[3 * index + 2];
+        return depth < within ? { index, distance, depth: depth >= 0 ? depth : -distance, inside: depth >= 0 } : null;
+      }
+    }
+    const judged = test.inside(x, y, z);
+    const [index, distance] = grid.nearest(x, y, z, judged === true ? within : reach);
+    if (index < 0) return judged === false ? { index: -1 } : null;
     const depth = (outer[3 * index] - x) * normals[3 * index] + (outer[3 * index + 1] - y) * normals[3 * index + 1] + (outer[3 * index + 2] - z) * normals[3 * index + 2];
+    /* where the columns cannot say (beside an opening or a gap in the skin, or where only one of them calls a point
+       outside), the nearest skin decides: a point within two centimetres on its outer side is outside, one just under
+       it is inside, and anything else there is left alone */
+    if (judged === null && !(distance < 2 && depth < -0.05) && !(distance < within && depth >= -0.05)) return null;
+    const inside = judged === true || (judged === null && depth >= -0.05);
     /* nearer the lining than the outer skin: in the mouth or behind the eyelids, where it belongs, unless it has come
        out past the outer skin there (a tooth through a lip) */
     if (inner && inner.nearest(x, y, z, distance)[0] >= 0 && (inside || depth > 0)) return null;
+    /* on a skin with openings: judged outside, yet on the inner side of the nearest skin. The judgement is wrong there
+       (behind an opening, such as an eye), and the point is left alone. On a closed skin such a point lies past a fold
+       and goes under the nearest skin like any other. */
+    if (openings && !inside && depth > 0) return null;
     return { index, distance, depth: inside ? depth : -distance, inside };
   };
   /* how far short of its place the worst point under each skin vertex is, capped (more than that is a stray part, not a
      layer to make room for) and spread over the neighbouring skin */
   const MOST = 0.8;
+  /* a structure scanned with this very skin (ownSkin) cannot truly lie far outside it: beyond this many cm the
+     judgement, not the structure, is wrong (the skin has a gap there) */
+  const OWN = 0.6;
   let short = new Float32Array(count);
   for (const structure of structures) {
     const p = structure.positions;
     for (let k = 0; k < p.length; k += 3) {
       const at = locate(p[k], p[k + 1], p[k + 2], gap);
       if (!at || at.index < 0 || at.depth >= gap || (at.inside && at.depth < -0.5)) continue;
+      if (structure.ownSkin && !at.inside && at.distance > OWN) continue;
+      if (share(p[k], p[k + 1], p[k + 2]) < 1) continue;
       for (let c = 0; c < 3; c++) { const v = samples.corners[3 * at.index + c]; if (!thin?.[v]) short[v] = Math.max(short[v], Math.min(MOST, gap - at.depth)); }
     }
   }
@@ -137,21 +170,26 @@ export function keepUnder(skin, structures, { gap = 0.2, reach = 5, lining = nul
       for (let c = 0; c < 3; c++) { const v = samples.corners[3 * at.index + c], w = samples.weights[3 * at.index + c]; N += w * short[v]; for (let i = 0; i < 3; i++) n[i] += w * normal[3 * v + i]; }
       const deep = 0.8 + 2 * N;
       if (N < 0.01 || at.depth >= deep) continue;
-      const move = N * (deep - Math.max(at.depth, gap - N)) / (deep - gap + N), length = Math.hypot(...n) || 1;
+      const move = share(p[k], p[k + 1], p[k + 2]) * N * (deep - Math.max(at.depth, gap - N)) / (deep - gap + N), length = Math.hypot(...n) || 1;
       for (let c = 0; c < 3; c++) p[k + c] -= move * n[c] / length;
       pressed++;
     }
   }
-  const GAP = { skeleton: gap + 0.1, muscles: gap, organs: gap, vessels: gap - 0.08, nerves: gap - 0.08 };
+  const THIN = 0.08;
+  const GAP = { skeleton: gap + 0.25, muscles: gap, organs: gap, vessels: gap - 0.08, nerves: gap - 0.08 };
   let moved = 0, most = 0, left = 0;
   const worst = new Map();
   for (const structure of structures) {
-    const p = structure.positions, under = GAP[structure.layer] ?? gap;
+    const p = structure.positions, deep = GAP[structure.layer] ?? gap;
     let furthest = 0;
     for (let k = 0; k < p.length; k += 3) {
-      const at = locate(p[k], p[k + 1], p[k + 2], under);
+      const at = locate(p[k], p[k + 1], p[k + 2], deep);
       if (!at) continue;
+      /* a finger or a toe is all bone under a millimetre or two of skin: there, everything keeps close under it */
+      const under = at.index >= 0 && thin?.[samples.corners[3 * at.index]] ? (structure.layer === 'skeleton' ? THIN : 2.5 * THIN) : deep;
       if (at.index < 0) { left++; continue; }
+      if (structure.ownSkin && !at.inside && at.distance > OWN) continue;
+      if (share(p[k], p[k + 1], p[k + 2]) < 1) continue;
       const { index } = at;
       /* outside: straight to its place beneath the nearest skin point (on a toe or a finger, moving it down to the
          plane of that point's surface would leave it beside the toe) */
@@ -285,7 +323,7 @@ export function transfer(structures, folder, sourceTargets, targets, { height = 
   /* his eyes onto MakeHuman's, so they sit in its eyelids */
   for (const side of ['L', 'R']) { from.push(...target['eye' + side]); to.push(...there.place(`eye.${side}`, body.bones[`eye.${side}`].head).map((value, c) => value + ends.head[c] / ends.head[3])); }
   /* the hands and feet, joint by joint: the bones' ends onto MakeHuman's joints */
-  const joints = handAndFootPairs(named, target, body.bones, landmarksOf(body), there.place);
+  const joints = withDepth(handAndFootPairs(named, target, body.bones, landmarksOf(body), there.place));
   for (const [a, b] of joints) { from.push(...a); to.push(...b); }
   log(`${skinPairs} skin points move by ${(move / skinPairs).toFixed(1)} cm on average; ${joints.length} hand and foot joints`);
 
@@ -316,15 +354,49 @@ export function transfer(structures, folder, sourceTargets, targets, { height = 
     const from = low.map((value, c) => (value + high[c]) / 2), radius = (high[0] - low[0] + high[1] - low[1]) / 4;
     const factor = (lids[Math.floor(0.1 * lids.length)] - 0.07) / radius;
     let parts = 0;
+    const move = p => [0, 1, 2].map(c => centre[c] + factor * (p[c] - from[c]));
     for (const structure of structures) {
-      if (!isGlobe(structure) || !new RegExp(`\\b${word}\\b`, 'i').test(structure.name)) continue;
+      if (structure === skin || structure.layer === 'skeleton') continue;
       const p = structure.positions;
-      for (let k = 0; k < p.length; k += 3) for (let c = 0; c < 3; c++) p[k + c] = centre[c] + factor * (p[k + c] - from[c]);
-      parts++;
+      if (isGlobe(structure)) {
+        if (!new RegExp(`\\b${word}\\b`, 'i').test(structure.name)) continue;
+        for (let k = 0; k < p.length; k += 3) p.set(move([p[k], p[k + 1], p[k + 2]]), k);
+        parts++;
+        continue;
+      }
+      /* what is fixed to the eyeball goes with it (the muscles that turn it, the optic nerve, its vessels): in full at
+         the eyeball's surface, less and less toward the back of the socket, where they are fixed to bone */
+      for (let k = 0; k < p.length; k += 3) {
+        const point = [p[k], p[k + 1], p[k + 2]], away = Math.hypot(point[0] - from[0], point[1] - from[1], point[2] - from[2]);
+        if (away > 2.8 * radius) continue;
+        const t = Math.min(1, Math.max(0, (away - 1.1 * radius) / (1.7 * radius))), share = 1 - t * t * (3 - 2 * t), to = move(point);
+        for (let c = 0; c < 3; c++) p[k + c] += share * (to[c] - point[c]);
+      }
     }
     log(`${word.toLowerCase()} eye: ${parts} parts moved ${Math.hypot(centre[0] - from[0], centre[1] - from[1], centre[2] - from[2]).toFixed(2)} cm into the lids, sized ×${factor.toFixed(2)}`);
   }
-  log(`kept under the skin: ${keepUnder(skin, structures.filter(structure => structure !== skin && !isGlobe(structure)), { lining, thin: Uint8Array.from(posed.segment, name => (HAND_OR_FOOT.test(name) ? 1 : 0)) })}`);
+  /* MakeHuman's fingers and toes are slender, and his bones, brought to her size, are a little thick for them. A
+     crushed bone is the worse fault: the skin of her hands and feet rises over the bones where it must. */
+  {
+    const thinSkin = Uint8Array.from(posed.segment, name => (HAND_OR_FOOT.test(name) ? 1 : 0)), near = new PointGrid(fresh, 1);
+    const bones = [];
+    for (const structure of structures) {
+      if (structure.layer !== 'skeleton') continue;
+      const p = spread(structure.positions, 0.25);
+      for (let k = 0; k < p.length; k += 3) { const [v] = near.nearest(p[k], p[k + 1], p[k + 2], 2.5); if (v >= 0 && thinSkin[v]) bones.push(p[k], p[k + 1], p[k + 2]); }
+    }
+    const rose = pushOutOver(skin, Float32Array.from(bones), { fixed: Array.from(thinSkin, value => !value), gap: 0.12, spread: 0.9, rounds: 3, smoothing: 1 });
+    log(`the skin of her hands and feet raised over the bones by up to ${rose.toFixed(2)} cm`);
+  }
+  /* the fingers and toes, by MakeHuman's skin weights: all bone under a millimetre or two of skin (the palm and the
+     arch of the foot have flesh over their bones like the rest of the body) */
+  const digits = new Uint8Array(body.count);
+  {
+    const share = new Float32Array(body.count), total = new Float32Array(body.count);
+    for (const [bone, list] of Object.entries(body.weights)) for (const [vertex, weight] of list) { total[vertex] += weight; if (/^(finger|toe)/.test(bone)) share[vertex] += weight; }
+    for (let v = 0; v < body.count; v++) digits[v] = total[v] && share[v] / total[v] > 0.5 ? 1 : 0;
+  }
+  log(`kept under the skin: ${keepUnder(skin, structures.filter(structure => structure !== skin && !isGlobe(structure)), { lining, thin: digits })}`);
   if (height) {
     const factor = height / fresh.reduce((top, value, k) => (k % 3 === 1 ? Math.max(top, value) : top), 0);
     for (const structure of structures) for (let k = 0; k < structure.positions.length; k++) structure.positions[k] *= factor;

@@ -18,7 +18,10 @@ function alongSpine(centres) {
 const centreOf = mesh => { const sum = [0, 0, 0], n = mesh.positions.length / 3; for (let k = 0; k < mesh.positions.length; k++) sum[k % 3] += mesh.positions[k]; return sum.map(value => value / n); };
 
 /**
- * pairs: [{ name, source: [meshes], target: [meshes] }] structures that match one to one
+ * pairs: [{ name, source: [meshes], target: [meshes] }] structures that match one to one; a pair may give spacing (cm
+ *   between its anchors), sample (cm between the points its fit uses, for a small structure) and most (the fit is left
+ *   out if it leaves more than this many cm), and anchorsOnly (it pins the spline but the tissue around it does not
+ *   follow its own fit: for a small or thin structure, whose fit says little about the space around it)
  * spine: { source: [disc meshes, top to bottom], target: [...] }
  * skin: { source: mesh, target: mesh }
  * start: the affine map (fit.mjs layout) to begin from
@@ -28,11 +31,13 @@ const centreOf = mesh => { const sum = [0, 0, 0], n = mesh.positions.length / 3;
 export function register({ pairs, spine, skin, start, extra = { from: [], to: [] }, lambda = 2, skinRounds = [5, 3.5, 2.5], log = console.log }) {
   const from = [...extra.from], to = [...extra.to], fitted = [];
   for (const pair of pairs) {
-    const source = spread(flat(pair.source), 1), target = spread(flat(pair.target), 0.6);
+    const fine = pair.sample || 1, source = spread(flat(pair.source), fine), target = spread(flat(pair.target), 0.6 * fine);
     const { map, meanDistance } = icpAffine(source, target, start);
+    /* a small bone can settle on its neighbour (a phalanx on the next one): such a fit is left out, and said */
+    if (pair.most && meanDistance > pair.most) { log(`  ${pair.name}: left out, ICP left ${meanDistance.toFixed(2)} cm`); continue; }
     const near = Float32Array.from(spread(source, 0.8)), low = [Infinity, Infinity, Infinity], high = [-Infinity, -Infinity, -Infinity];
     for (let k = 0; k < near.length; k++) { low[k % 3] = Math.min(low[k % 3], near[k]); high[k % 3] = Math.max(high[k % 3], near[k]); }
-    fitted.push({ map, grid: new PointGrid(near, BLEND_REACH), low, high });
+    if (!pair.anchorsOnly) fitted.push({ map, grid: new PointGrid(near, BLEND_REACH), low, high });
     const anchors = spread(source, pair.spacing || 2.5);
     for (let k = 0; k < anchors.length; k += 3) { from.push(anchors[k], anchors[k + 1], anchors[k + 2]); to.push(...applyAffine(map, anchors[k], anchors[k + 1], anchors[k + 2])); }
     log(`  ${pair.name}: ${anchors.length / 3} anchors, ICP left ${meanDistance.toFixed(2)} cm`);

@@ -34,11 +34,19 @@ function placeOf(name, group) {
   throw new Error(`no layer for Z-Anatomy ${name} (${group})`);
 }
 
-/* Z-Anatomy bone name -> BodyParts3D bone name, for the alignment */
-const BONE_PAIRS = [
-  ['femur', 'femur'], ['tibia', 'tibia'], ['fibula', 'fibula'], ['humerus', 'humerus'], ['radius', 'radius'], ['ulna', 'ulna'],
-  ['scapula', 'scapula'], ['clavicle', 'clavicle'], ['hip bone', 'hip bone'], ['patella', 'patella'], ['calcaneus', 'calcaneus'],
-];
+/* A Z-Anatomy bone's name as BodyParts3D has it, for the alignment: most are the same; Z-Anatomy numbers the vertebrae
+   and the digits ("Vertebra T4", "Distal phalanx of second finger of foot") where BodyParts3D names them */
+const ORDINALS = ['first', 'second', 'third', 'fourth', 'fifth', 'sixth', 'seventh', 'eighth', 'ninth', 'tenth', 'eleventh', 'twelfth'];
+const FINGERS = { first: 'thumb', second: 'index finger', third: 'middle finger', fourth: 'ring finger', fifth: 'little finger' };
+const TOES = { first: 'big toe', second: 'second toe', third: 'third toe', fourth: 'fourth toe', fifth: 'little toe' };
+export function boneNameInBodyParts3D(name) {
+  const vertebra = name.match(/^Vertebra ([ctl])(\d+)$/i);
+  if (vertebra) return `${ORDINALS[Number(vertebra[2]) - 1]} ${{ c: 'cervical', t: 'thoracic', l: 'lumbar' }[vertebra[1].toLowerCase()]} vertebra`;
+  const digit = name.match(/^(left|right) (proximal|middle|distal) phalanx of (\w+) finger of (hand|foot)$/i);
+  if (digit) return `${digit[2]} phalanx of ${digit[1]} ${(digit[4].toLowerCase() === 'hand' ? FINGERS : TOES)[digit[3].toLowerCase()]}`;
+  if (/^manubrium of sternum$/i.test(name)) return 'manubrium';
+  return name;
+}
 
 /**
  * folder: the Z-Anatomy export folder (zanatomy.glb, zanatomy-bones.glb)
@@ -47,17 +55,21 @@ const BONE_PAIRS = [
  */
 export async function zanatomyAdditions(folder, his, log = console.log) {
   const bones = (await readOrgan(`${folder}/zanatomy-bones.glb`, METRES)).map(mesh => ({ ...mesh, name: zName(mesh.raw) }));
-  const named = (list, name) => list.filter(item => item.name.toLowerCase() === name.toLowerCase()).map(item => item.mesh || item);
+  /* every bone the two have in common pins the alignment: the large ones every 2.5 cm, the small ones of the face,
+     hand and foot more sparsely, so the face muscles follow the facial bones and the toe ligaments the toes */
+  const hisBones = new Map();
+  for (const structure of his) if (structure.layer === 'skeleton') { const key = structure.name.toLowerCase(); (hisBones.get(key) || hisBones.set(key, []).get(key)).push(structure.mesh); }
   const pairs = [];
-  for (const [z, b] of BONE_PAIRS) for (const side of ['Left', 'Right']) {
-    const source = bones.filter(mesh => mesh.name.toLowerCase() === `${side} ${z}`.toLowerCase()), target = named(his, `${side} ${b}`);
-    if (source.length && target.length) pairs.push({ name: `${side.toLowerCase()} ${z}`, source, target });
+  for (const [key, source] of Map.groupBy(bones, mesh => boneNameInBodyParts3D(mesh.name).toLowerCase())) {
+    const target = hisBones.get(key);
+    if (!target) continue;
+    const size = Math.max(...[0, 1, 2].map(c => { let low = Infinity, high = -Infinity; for (const mesh of target) for (let k = c; k < mesh.positions.length; k += 3) { low = Math.min(low, mesh.positions[k]); high = Math.max(high, mesh.positions[k]); } return high - low; }));
+    /* the long bones and girdles also carry the soft tissue beside them with their own fit; a rib, a skull plate or a
+       finger bone only pins the spline (its own fit says little about the space around it) */
+    const carries = /^(left |right )?(femur|tibia|fibula|humerus|radius|ulna|scapula|clavicle|hip bone|patella|calcaneus)$|^(sacrum|frontal bone|mandible|manubrium)$/.test(key);
+    pairs.push(carries ? { name: key, source, target } : size > 12 ? { name: key, source, target, anchorsOnly: true } : { name: key, source, target, spacing: 3.5, sample: 0.3, most: 0.5, anchorsOnly: true });
   }
-  for (const [z, b] of [['Sacrum', 'Sacrum'], ['Frontal bone', 'Frontal bone'], ['Mandible', 'Mandible'], ['Manubrium of sternum', 'Manubrium']]) {
-    const source = bones.filter(mesh => mesh.name === z), target = named(his, b);
-    if (source.length && target.length) pairs.push({ name: z.toLowerCase(), source, target });
-  }
-  if (pairs.length < 15) throw new Error(`only ${pairs.length} bone pairs to align Z-Anatomy with`);
+  if (pairs.length < 100) throw new Error(`only ${pairs.length} bone pairs to align Z-Anatomy with`);
   const centre = meshes => { const sum = [0, 0, 0]; let n = 0; for (const mesh of meshes) for (let k = 0; k < mesh.positions.length; k++) { sum[k % 3] += mesh.positions[k]; if (k % 3 === 0) n++; } return sum.map(value => value / n); };
   /* first the two skeletons as wholes (turn, even scale and shift), then bone by bone from there */
   const shift = startMap(1, 1, centre(pairs.flatMap(pair => pair.source)), centre(pairs.flatMap(pair => pair.target)));
@@ -66,7 +78,8 @@ export async function zanatomyAdditions(folder, his, log = console.log) {
   log(`  skeletons as wholes: ICP left ${whole.meanDistance.toFixed(2)} cm`);
   const start = whole.map;
   log('aligning Z-Anatomy with BodyParts3D:');
-  const warp = register({ pairs, start, log: line => log(line) });
+  const warp = register({ pairs, start, log: line => { const left = line.match(/anchors, ICP left ([\d.]+) cm/); if (!left || Number(left[1]) > 0.4) log(line); } });
+  log(`  ${pairs.length} bones paired`);
 
   /* his structures, by layer, to judge which Z-Anatomy ones are new. A Z-Anatomy structure repeats one of his only when
      the two match both ways: most of it lies on that one structure, and most of that structure lies on it. A thin sheet

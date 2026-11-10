@@ -186,23 +186,12 @@ const FETCH_STATE = `
    2 bent: turned about its pivot by a share that grows along a direction (texel 2), from none to all across a band
      (texel 3: where the band starts and ends, in cm from the pivot), as a muscle that crosses a bending joint
    3 held at one end: turned in full near the pivot and not at all far from it (texel 2: the two distances), as the
-     muscles of the eye, fixed to the orbit behind and to the turning eyeball in front
-   4 hinged on a ring, as a valve's leaflet on the ring it hangs from: each point swings about the nearest point of a
-     ring round an axis (texel 1: the axis, and the angle; texel 2: the ring's radius, and the depths along the axis
-     between which the swing dies away, as the cords that tie a leaflet's edge to the wall stay tied) */
+     muscles of the eye, fixed to the orbit behind and to the turning eyeball in front */
 const MOVE = (point, normal) => `
   vec4 move = texelFetch(uMoves, ivec2(cell.x * 4, cell.y), 0);
   if (move.w > 0.5) {
     vec4 turn = texelFetch(uMoves, ivec2(cell.x * 4 + 1, cell.y), 0), more = texelFetch(uMoves, ivec2(cell.x * 4 + 2, cell.y), 0);
     vec3 arm = ${point} - move.xyz;
-    if (move.w > 3.5) {
-      float deep = dot(arm, turn.xyz); vec3 out_ = arm - turn.xyz * deep; float far = length(out_); out_ /= max(far, 1e-4);
-      float angle = turn.w * (1.0 - smoothstep(more.y, more.z, deep)), c = cos(angle), s = sin(angle), off = far - more.x;
-      float off2 = min(off * c + deep * s, max(off, 0.0)), deep2 = deep * c - off * s;   // it never swings out through the ring it hangs from
-      ${point} = move.xyz + out_ * (more.x + off2) + turn.xyz * deep2;
-      float across = dot(${normal}, out_), along_ = dot(${normal}, turn.xyz);
-      ${normal} += out_ * (across * c + along_ * s - across) + turn.xyz * (along_ * c - across * s - along_);
-    } else {
     if (move.w < 1.5) { arm *= texelFetch(uMoves, ivec2(cell.x * 4 + 3, cell.y), 0).xyz; ${point} = move.xyz + turned(turn, arm) + more.xyz; }
     else {
       vec4 band = texelFetch(uMoves, ivec2(cell.x * 4 + 3, cell.y), 0);
@@ -211,7 +200,6 @@ const MOVE = (point, normal) => `
       ${point} = move.xyz + turned(turn, arm);
     }
     ${normal} = turned(turn, ${normal});
-    }
   }
 `;
 /* the midline cut: everything on the body's left of the cut (x beyond it) is not drawn */
@@ -695,6 +683,7 @@ function motionKit() {
     return cloud.get(part.index);
   });
   const kit = {
+    models: [], model(spec) { const model = makeModel(spec); kit.models.push(model); return model; },
     V, own, context, shown, skin: body.parts.filter(part => part.layer === 'skin'), sex: body.sex, height: body.height,
     find: (pattern, among = own) => among.filter(part => pattern.test(part.name)),
     one: (pattern, among = shown) => among.find(part => pattern.test(part.name)) || fail(`nothing named ${pattern}`),
@@ -749,6 +738,27 @@ function motionKit() {
   };
   return kit;
 }
+/* A model of the motion's own: a shape the source has only at rest (a valve, drawn shut), built in code so that it can
+   move as the real thing does. While the motion runs it stands in for some of the close-up's parts: it takes their
+   colour and how solid they are, moment by moment, is picked as them, and they are not drawn. { name, parts: the
+   parts it stands in for, count: its vertices, index: its triangles, of: the part each vertex is picked as }; the
+   motion's step writes its `positions`, and may keep what it likes in its `state`. */
+const MODEL_PICK = new THREE.ShaderMaterial({ side: THREE.DoubleSide,
+  vertexShader: 'attribute float _part; varying float vPart; void main() { vPart = _part + 1.0; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
+  fragmentShader: 'varying float vPart; void main() { float id = vPart; gl_FragColor = vec4(mod(id, 256.0) / 255.0, mod(floor(id / 256.0), 256.0) / 255.0, 0.0, 1.0); }' });
+function makeModel({ name, parts, count, index, of }) {
+  const geometry = new THREE.BufferGeometry(), positions = new Float32Array(count * 3);
+  geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3).setUsage(THREE.DynamicDrawUsage));
+  geometry.setAttribute('normal', new THREE.BufferAttribute(new Float32Array(count * 3), 3).setUsage(THREE.DynamicDrawUsage));
+  geometry.setAttribute('_part', new THREE.BufferAttribute(Float32Array.from(of, part => part.index), 1));
+  geometry.setIndex(index);
+  const material = new THREE.MeshStandardMaterial({ side: THREE.DoubleSide, roughness: 0.6, metalness: 0 }); material.envMapIntensity = 0.55;
+  const mesh = new THREE.Mesh(geometry, material), pick = new THREE.Mesh(geometry, MODEL_PICK);
+  for (const object of [mesh, pick]) { object.frustumCulled = false; object.visible = false; object.raycast = () => {}; }
+  root.add(mesh); pickScene.add(pick);
+  return { name, parts, positions, geometry, mesh, pick, state: {} };
+}
+const CHOSEN_LIGHT = new THREE.Color('#5a3d00'), NO_LIGHT = new THREE.Color('#000000');
 /* a stream: drops that run along a curve. { curve, colour, to (the colour it turns by the end), count, size and spread
    (cm), packed (the share of the curve the drops start bunched into: a single body, such as an egg), speed(where,
    phase, time) in shares of the curve a second, gates [{ at, open(phase) }] that hold the drops behind them when shut,
@@ -789,7 +799,7 @@ function captionMotion() {
 }
 function setMotion() {
   const key = motionKey();
-  for (const [name, rig] of Object.entries(motion.rigs)) if (name !== key) { for (const stream of rig.streams) stream.cloud.visible = false; for (const mesh of rig.caps) mesh.visible = false; }
+  for (const [name, rig] of Object.entries(motion.rigs)) if (name !== key) { for (const stream of rig.streams) stream.cloud.visible = false; for (const mesh of rig.caps) mesh.visible = false; for (const model of rig.models) model.mesh.visible = model.pick.visible = false; }
   if (motion.for !== key) {
     motion.for = null; motion.definition = motion.rig = null; motion.caption = ''; motion.moment = -1; motion.touched.clear();
     motion.open.amount = 0; opened.ball.value.w = 0; capSheet.visible = false; openShells();
@@ -799,9 +809,13 @@ function setMotion() {
     motion.definition = MOTIONS[state.region];
     if (!motion.rigs[key]) {
       const kit = motionKit(), rig = motion.definition.build(kit);
-      rig.streams = (rig.streams || []).map(makeStream);
+      rig.streams = (rig.streams || []).map(makeStream); rig.models = kit.models;
       /* how each of its parts is when the close-up is cut open (a step of its story): { opacity, cap: the cut leaves a flat face on it, whole: it is never sliced } */
       rig.opened = new Map(kit.own.map(part => [part.index, motion.definition.opened?.(part.name)]).filter(([, look]) => look));
+      /* parts that are never sliced go by the group their `whole` names (a valve, and the muscles its cords are tied to): where the middle of its `lead` parts (the valve) is says whether all of it is drawn or none */
+      rig.wholes = new Map();
+      for (const [index, look] of rig.opened) if (look.whole && look.lead) { const group = rig.wholes.get(look.whole) || rig.wholes.set(look.whole, { middle: V(0, 0, 0), leads: [] }).get(look.whole); group.middle.add(V(...body.parts[index].centre)); group.leads.push(index); }
+      for (const group of rig.wholes.values()) group.middle.divideScalar(group.leads.length);
       rig.caps = capMeshes([...rig.opened].filter(([, look]) => look.cap).map(([index]) => index));
       motion.rigs[key] = rig;
     }
@@ -813,7 +827,7 @@ function setMotion() {
 const STILL = new THREE.Quaternion(), NONE = [0, 0, 0, 0], FOUR = [0, 0, 0, 0], MORE = [0, 0, 0, 0];
 const four = (into, x, y, z, w) => { into[0] = x; into[1] = y; into[2] = z; into[3] = w; return into; };
 function writeMove(part, kind, pivot, turn, more, last) {
-  const sign = kind < 4 && turn.w < 0 ? -1 : 1;   // the short way round, for a share of the turn
+  const sign = turn.w < 0 ? -1 : 1;   // the short way round, for a share of the turn
   const moves = stateTexture.moves.image.data, k = part.index * 16;
   moves[k] = pivot.x; moves[k + 1] = pivot.y; moves[k + 2] = pivot.z; moves[k + 3] = kind;
   moves[k + 4] = turn.x * sign; moves[k + 5] = turn.y * sign; moves[k + 6] = turn.z * sign; moves[k + 7] = turn.w * sign;
@@ -826,8 +840,6 @@ const act = {
   bend(part, { pivot, turn, along, from, to }) { writeMove(part, 2, pivot, turn, four(MORE, along.x, along.y, along.z, 0), four(FOUR, from, to, 0, 0)); },
   /* turned in full within `near` cm of the pivot, not at all beyond `far` */
   held(part, { pivot, turn, near, far }) { writeMove(part, 3, pivot, turn, four(MORE, near, far, 0, 0), NONE); },
-  /* swung by an angle (radians) about a ring: its middle (the pivot), the axis through it, and its radius. slack: the depths along the axis between which the swing dies away */
-  hinge(part, { pivot, axis, radius, angle, slack = [1e5, 1e6] }) { writeMove(part, 4, pivot, { x: axis.x, y: axis.y, z: axis.z, w: angle }, four(MORE, radius, slack[0], slack[1], 0), NONE); },
   fade(part, opacity) {
     if (motion.chosen.has(part.index)) return;
     stateTexture.colour.image.data[part.index * 4 + 3] = Math.round(THREE.MathUtils.clamp(opacity, 0, 1) * 255); motion.touched.add(part.index);
@@ -865,7 +877,7 @@ function stepOpening(seconds) {
   if (was !== opened.ball.value.w > 0) openShells();
   return open.amount;
 }
-const WHOLE_REACH = 1.5;   // how far past the cut, in cm, the middle of a part that is never sliced may lie before the part is left out
+const WHOLE_REACH = 1;   // how far past the cut, in cm, the middle of a part that is never sliced may lie before the part is left out
 const spot = new THREE.Vector3();
 function stepMotion(now) {
   const key = motionKey();
@@ -896,7 +908,8 @@ function stepMotion(now) {
   if (span) for (const index of body.entries[step.entry] || []) act.glow(body.parts[index], 0.3);   // what the step is about, gently lit
   if (open > 0) for (const [index, look] of rig.opened) {
     const part = body.parts[index], was = motion.base[index * 4 + 3] / 255;
-    const gone = look.whole && V(...part.centre).dot(motion.open.normal) - motion.open.depth > WHOLE_REACH;   // a whole part mostly on the viewer's side of the cut goes with what is cut away
+    /* what is never sliced, and lies mostly on the viewer's side of the cut, goes with what is cut away: unless the step is about it */
+    const group = look.whole && rig.wholes.get(look.whole), gone = group && group.middle.dot(motion.open.normal) - motion.open.depth > WHOLE_REACH && !group.leads.some(lead => motion.kept?.has(lead));
     act.fade(part, was + ((gone ? 0 : look.opacity) - was) * Math.min(1, open * 2));
   }
   for (const mesh of rig.caps) mesh.visible = open >= 0.5;   // the cut gets its flat face as the walls turn solid
@@ -905,6 +918,16 @@ function stepMotion(now) {
     const away = Math.min(1, motion.clock / 0.7);   // eased out over the first moments of the step
     for (const index of body.around.own) if (!motion.kept.has(index) && !(motion.opening && rig.opened.has(index))) act.fade(body.parts[index], motion.base[index * 4 + 3] / 255 * (1 - 0.85 * away));
     for (const index of body.around.context) act.fade(body.parts[index], motion.base[index * 4 + 3] / 255 * (1 - 0.6 * away));
+  }
+  /* each model takes the look its parts have at this moment, and stands in for them */
+  for (const model of rig.models) {
+    const k = model.parts[0].index * 4, solid = colours[k + 3] / 255, material = model.mesh.material;
+    model.mesh.visible = model.pick.visible = solid > 0.004;
+    material.color.setRGB(colours[k] / 255, colours[k + 1] / 255, colours[k + 2] / 255, THREE.SRGBColorSpace); material.opacity = solid;
+    if (material.transparent !== solid < 0.999) { material.transparent = solid < 0.999; material.depthWrite = !material.transparent; material.needsUpdate = true; }
+    material.emissive.copy(model.parts.some(part => motion.chosen.has(part.index)) ? CHOSEN_LIGHT : NO_LIGHT);
+    for (const part of model.parts) { colours[part.index * 4 + 3] = 0; motion.touched.add(part.index); }
+    model.geometry.attributes.position.needsUpdate = true; model.geometry.computeVertexNormals();
   }
   stateTexture.moves.needsUpdate = true; stateTexture.colour.needsUpdate = true;
   dropHeight.value = renderer.domElement.height;
@@ -1808,6 +1831,7 @@ window.bodyModel = {
   holdMotion: phase => { motion.held = phase; },
   motion: () => ({ moving: moving() && motion.for === motionKey(), phase: motion.phase, caption: motion.caption, open: motion.open.amount, drops: motion.rig && moving() ? motion.rig.streams.reduce((sum, stream) => sum + stream.drops.length, 0) : 0 }),
   moveOf: index => Array.from(stateTexture.moves.image.data.slice(index * 16, index * 16 + 16)),
+  models: () => (motion.rig && moving() ? motion.rig.models.map(model => ({ name: model.name, shown: model.mesh.visible, solid: model.mesh.material.opacity, ...model.state })) : []),
   motions: () => Object.keys(MOTIONS),
   sound: () => ({ on: sound.on, key: sound.key, clip: sound.clip, speaking: sound.speaking, voicePaused: sound.voice.paused, music: sound.music.src.split('/').pop(), musicPlaying: !sound.music.paused, musicLevel: sound.music.volume }),
   regions: () => Object.values(REGIONS).filter(region => !region.sex || region.sex === body.sex).map(region => region.id), around: () => body.around,

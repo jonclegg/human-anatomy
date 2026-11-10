@@ -5,9 +5,10 @@
 //   0.19-0.47  the ventricles squeeze, the pulmonary and aortic valves are open, blood leaves
 //   0.48       the pulmonary and aortic valves swing shut (the second heart sound)
 //   0.58-1.00  the heart relaxes, the tricuspid and mitral valves open, and it refills
-// A step of its story (stories.mjs) cuts it open, so the valves and the blood are seen from inside.
+// The valves are models of their own while it beats (see VALVES). A step of its story (stories.mjs) cuts it open, so
+// the valves and the blood are seen from inside.
 import { smooth, SPENT, FRESH } from './shared.mjs';
-const FIRST_SOUND = 0.14, SECOND_SOUND = 0.48, CYCLE = 1.3, RADIANS = Math.PI / 180;   // CYCLE: one beat, in seconds
+const FIRST_SOUND = 0.14, SECOND_SOUND = 0.48, CYCLE = 1.3;   // CYCLE: one beat, in seconds
 export function beatAt(phase) {
   return {
     atria: phase < 0.13 ? Math.sin(Math.PI * phase / 0.13) ** 2 : 0,           // how far the atria are squeezed, 0 to 1
@@ -22,15 +23,94 @@ export function beatAt(phase) {
 const MOVES = [[/^Wall of (left|right) atrium$/, 1], [/^Wall of ventricle$|papillary muscle/i, 2], [/^Cavity of (left|right) atrium$/, 3], [/^Cavity of (left|right) ventricle$/, 4]];
 const SQUEEZE = [0, 0.07, 0.09, 0.2, 0.26];
 const RIDES_THE_WALL = ['heartLeftCoronary', 'heartAnteriorInterventricular', 'heartCircumflex', 'heartRightCoronary', 'cardiacVeins'];
-/* The four valves. The model has them shut. Each leaflet swings open on the ring it hangs from: `from` is the chamber
-   the blood comes from and `to` the one it goes to, which give the way through; `swing` is how far it opens, in degrees;
-   `cords` is how deep, in cm past the ring, a leaflet's cords run before they reach the muscle that anchors them (their far ends do not move) */
+/* The four valves. The source has each one shut, its leaflets fused with their cords, and a shape like that cannot be
+   made to open. So while the heart beats each valve is a model of its own (the engine draws it in place of the source's
+   parts), fitted to the source's: its ring where the source's leaflets hang, as wide as they reach, one leaflet where
+   each of the source's is. `from` is the chamber the blood comes from and `to` the one it goes to, which give the way
+   through; `muscles` are the papillary muscles its cords are tied to.
+   An inflow valve's leaflets hang from the ring into the ventricle. Shut, their edges meet along lines from the ring to
+   its middle, a little below it, and the cords are taut; open, they hang apart as a funnel, and the cords go slack.
+   An outflow valve's cusps are pockets on the artery's wall, each fixed along a U. Shut, they fill, belly back toward
+   the ventricle, and their free edges meet at the middle; open, they lie up against the wall. */
 const VALVES = [
-  { leaflets: /leaflet of tricuspid valve$/i, from: 'Cavity of right atrium', to: 'Cavity of right ventricle', inflow: true, swing: 62, cords: [0.9, 3.2] },
-  { leaflets: /leaflet of mitral valve$/i, from: 'Cavity of left atrium', to: 'Cavity of left ventricle', inflow: true, swing: 62, cords: [0.9, 3.2] },
-  { leaflets: /cusp of pulmonary valve$/i, from: 'Cavity of right ventricle', swing: 52 },
-  { leaflets: /cusp of aortic valve$/i, from: 'Cavity of left ventricle', swing: 52 },
+  { name: 'tricuspid', leaflets: /leaflet of tricuspid valve$/i, from: 'Cavity of right atrium', to: 'Cavity of right ventricle', muscles: /papillary muscle of right ventricle$/i },
+  { name: 'mitral', leaflets: /leaflet of mitral valve$/i, from: 'Cavity of left atrium', to: 'Cavity of left ventricle', muscles: /papillary muscle of left ventricle$/i },
+  { name: 'pulmonary', leaflets: /cusp of pulmonary valve$/i, from: 'Cavity of right ventricle' },
+  { name: 'aortic', leaflets: /cusp of aortic valve$/i, from: 'Cavity of left ventricle' },
 ];
+const ACROSS = 14, ALONG = 8;                              // a leaflet's mesh: steps across it, and from the ring to its free edge
+const CORDS = [0.1, 0.24, 0.38, 0.62, 0.76, 0.9], CORD_STEPS = 5, CORD_WIDTH = 0.045;   // where along a leaflet's edge its cords are tied; a cord's mesh, and its half-width in cm
+function modelValve(kit, { name, leaflets, from, to, muscles }) {
+  const parts = kit.find(leaflets), inflow = !!to, points = kit.points(parts), start = kit.centre(kit.one(exact(from)));
+  const onward = (to ? kit.centre(kit.one(exact(to))).sub(start) : kit.centre(parts).sub(start)).normalize();   // roughly the way through
+  /* an inflow valve's leaflets are the part of the source's shape nearest the atrium: its cords run on below them */
+  const first = Math.min(...points.map(point => point.dot(onward))), isLeaf = point => !inflow || point.dot(onward) < first + 1.5, leaf = points.filter(isLeaf);
+  const axis = kit.thin(leaf, onward), middle = leaf.reduce((sum, point) => sum.add(point), kit.V(0, 0, 0)).divideScalar(leaf.length);   // shut, the leaflets lie across the way through
+  const deep = point => point.clone().sub(middle).dot(axis), wide = point => point.clone().sub(middle).addScaledVector(axis, -deep(point)).length();
+  const reach = leaf.map(wide).sort((a, b) => a - b), radius = reach[Math.floor(reach.length * 0.85)];
+  const depths = leaf.map(deep), rim = leaf.filter(point => wide(point) > radius * 0.8);
+  /* the ring: for an inflow valve where its leaflets hang from, for an outflow valve at the bottom of its cusps */
+  const level = inflow ? rim.reduce((sum, point) => sum + deep(point), 0) / rim.length : Math.min(...depths);
+  const ring = middle.clone().addScaledVector(axis, level), height = Math.min(Math.max(...depths) - Math.min(...depths), radius * 1.05);
+  const one = Math.abs(axis.y) < 0.9 ? kit.V(0, 1, 0) : kit.V(1, 0, 0), across = one.cross(axis).normalize(), other = axis.clone().cross(across);
+  const place = (r, angle, h) => ring.clone().addScaledVector(across, r * Math.cos(angle)).addScaledVector(other, r * Math.sin(angle)).addScaledVector(axis, h);
+  /* a leaflet for each of the source's, where it is round the ring: each runs from halfway to its neighbour on one side to halfway on the other */
+  const angleOf = part => { const mine = kit.points(part).filter(isLeaf), mean = mine.reduce((sum, point) => sum.add(point), kit.V(0, 0, 0)).divideScalar(mine.length).sub(ring); return Math.atan2(mean.dot(other), mean.dot(across)); };
+  const round = parts.map(part => ({ part, angle: angleOf(part) })).sort((a, b) => a.angle - b.angle);
+  const sectors = round.map(({ part, angle }, k) => {
+    const before = round[(k + round.length - 1) % round.length].angle - (k === 0 ? 2 * Math.PI : 0), after = round[(k + 1) % round.length].angle + (k === round.length - 1 ? 2 * Math.PI : 0);
+    return { part, from: (before + angle) / 2, to: (angle + after) / 2 };
+  });
+  /* a point of a leaflet: u across it (0 to 1), v from the ring to its free edge, with the valve `open` from 0 to 1 */
+  const length = u => radius * 1.1 * (0.45 + 0.55 * Math.sin(Math.PI * u));
+  function point({ from: left, to: right }, u, v, open) {
+    const angle = left + (right - left) * u, side = Math.abs(2 * u - 1), edge = u < 0.5 ? left : right;   // side: 0 at the leaflet's middle, 1 where it meets its neighbour
+    if (inflow) {
+      const shut = [radius * 0.9 * side, edge, 0.3 * radius * (1 - side * side) + 0.35 * length(u) * side * side], wide = [radius * (0.7 + 0.08 * side), angle, length(u)];
+      const free = place(shut[0] + (wide[0] - shut[0]) * open, shut[1] + (wide[1] - shut[1]) * open, shut[2] + (wide[2] - shut[2]) * open);
+      return place(radius, angle, 0).lerp(free, v).addScaledVector(axis, -0.1 * radius * Math.sin(Math.PI * v) * (1 - side * side) * (1 - open));   // shut, it billows a little toward the atrium
+    }
+    const fixed = place(radius, angle, height * side ** 1.6);   // the U it is fixed along
+    const shut = [radius * side, edge, height * (0.8 + 0.2 * side)], wide = [radius * (0.84 + 0.1 * side), angle, height * (1.25 - 0.25 * side)];
+    const free = place(shut[0] + (wide[0] - shut[0]) * open, shut[1] + (wide[1] - shut[1]) * open, shut[2] + (wide[2] - shut[2]) * open);
+    return fixed.lerp(free, v).addScaledVector(axis, -0.3 * height * Math.sin(Math.PI * v) * (1 - side * side) * (1 - open));   // shut, it bellies back toward the ventricle
+  }
+  /* the cords, each from a place on a leaflet's edge to the tip of the muscle nearest that place when the valve is open; taut when it is shut */
+  const tips = muscles ? kit.find(muscles).map(part => kit.end(part, ring.clone().sub(kit.centre(part)).normalize(), 0.5)) : [];
+  const cords = tips.length ? sectors.flatMap(sector => CORDS.map(u => {
+    const hangs = point(sector, u, 1, 1), tip = tips.reduce((best, each) => (each.distanceTo(hangs) < best.distanceTo(hangs) ? each : best));
+    return { sector, u, tip, taut: point(sector, u, 1, 0).distanceTo(tip) };
+  })) : [];
+  /* the mesh: a sheet for each leaflet, then a three-sided tube for each cord */
+  const index = [], of = [], sheet = (ACROSS + 1) * (ALONG + 1);
+  sectors.forEach(({ part }, s) => {
+    for (let k = 0; k < sheet; k++) of.push(part);
+    for (let i = 0; i < ACROSS; i++) for (let j = 0; j < ALONG; j++) { const a = s * sheet + i * (ALONG + 1) + j, b = a + ALONG + 1; index.push(a, b, a + 1, a + 1, b, b + 1); }
+  });
+  const corded = sectors.length * sheet;
+  cords.forEach(({ sector }, c) => {
+    for (let k = 0; k < (CORD_STEPS + 1) * 3; k++) of.push(sector.part);
+    for (let i = 0; i < CORD_STEPS; i++) for (let j = 0; j < 3; j++) { const a = corded + c * (CORD_STEPS + 1) * 3 + i * 3 + j, b = corded + c * (CORD_STEPS + 1) * 3 + i * 3 + (j + 1) % 3; index.push(a, b, a + 3, b, b + 3, a + 3); }
+  });
+  const model = kit.model({ name, parts, count: of.length, index, of });
+  const sideways = kit.V(0, 0, 0), up = kit.V(0, 0, 0), bow = kit.V(0, 0, 0), at = kit.V(0, 0, 0);
+  /* drawn `open` (0 to 1), its cords tied to muscles that the ventricle's squeeze has drawn toward a point by a share */
+  return { name, inflow, pose(open, toward, share) {
+    const positions = model.positions; let k = 0;
+    for (const sector of sectors) for (let i = 0; i <= ACROSS; i++) for (let j = 0; j <= ALONG; j++) { const spot = point(sector, i / ACROSS, j / ALONG, open); positions[k++] = spot.x; positions[k++] = spot.y; positions[k++] = spot.z; }
+    for (const { sector, u, tip, taut } of cords) {
+      const tied = point(sector, u, 1, open), end = tip.clone().lerp(toward, share), along = end.clone().sub(tied), far = along.length();
+      /* slack, it bows toward the middle of the way through, by as much as its length allows */
+      bow.copy(ring).addScaledVector(axis, tied.clone().sub(ring).dot(axis)).sub(tied).addScaledVector(along, -bow.dot(along) / (far * far)).setLength(0.5 * Math.sqrt(Math.max(0, taut * taut - far * far)));
+      sideways.copy(along).cross(axis).setLength(CORD_WIDTH); up.copy(along).cross(sideways).setLength(CORD_WIDTH);
+      for (let i = 0; i <= CORD_STEPS; i++) {
+        const t = i / CORD_STEPS; at.copy(tied).addScaledVector(along, t).addScaledVector(bow, 4 * t * (1 - t));
+        for (let j = 0; j < 3; j++) { const turn = j * 2.0944; positions[k++] = at.x + sideways.x * Math.cos(turn) + up.x * Math.sin(turn); positions[k++] = at.y + sideways.y * Math.cos(turn) + up.y * Math.sin(turn); positions[k++] = at.z + sideways.z * Math.cos(turn) + up.z * Math.sin(turn); }
+      }
+    }
+    model.state.open = open;
+  } };
+}
 const SPENT_CELLS = '#8fb0ff', FRESH_CELLS = '#ff9a8c';   // the blood in motion: paler than the chamber it runs through, so it shows
 /* The two streams, as the structures each passes through, in order */
 const STREAMS = [
@@ -77,8 +157,10 @@ export const heart = {
   opened(name) {
     if (/^Wall of /.test(name)) return { opacity: 1, cap: true };
     if (/^Cavity of /.test(name)) return { opacity: 0 };
-    if (/valve$|papillary muscle/i.test(name)) return { opacity: 1, whole: true };
-    return null;
+    const valve = /(tricuspid|mitral|pulmonary|aortic) valve$/i.exec(name)?.[1].toLowerCase();
+    if (valve) return { opacity: 1, whole: valve, lead: true };
+    const holds = /papillary muscle of (right|left) ventricle$/i.exec(name)?.[1].toLowerCase();   // the muscles a valve's cords are tied to go with the valve
+    return holds ? { opacity: 1, whole: holds === 'right' ? 'tricuspid' : 'mitral' } : null;
   },
   build(kit) {
     const valves = kit.find(/leaflet of (tricuspid|mitral) valve$|cusp of (pulmonary|aortic) valve$/i);
@@ -107,24 +189,12 @@ export const heart = {
       const width = where => { const found = stops.findIndex(stop => stop >= where), k = found < 0 ? stops.length - 1 : Math.max(1, found); return widths[k - 1] + (widths[k] - widths[k - 1]) * smooth(stops[k - 1], stops[k], where); };
       return { curve: line.curve, colour, count: 2400, size: 0.13, spread: 1, width, swirl: 1.1, strength: 0.7, lay: (phase, time) => layBlood(places, time, CYCLE) };
     });
-    /* each valve's ring: round the way through, as wide as its leaflets reach, at the level where they hang from it */
-    const rings = VALVES.map(({ leaflets, from, to, inflow = false, swing, cords }) => {
-      const parts = kit.find(leaflets), points = kit.points(parts), middle = kit.centre(parts), start = kit.centre(kit.one(exact(from)));
-      const onward = (to ? kit.centre(kit.one(exact(to))).sub(start) : middle.clone().sub(start)).normalize();   // roughly the way through
-      /* an inflow valve's leaflets are the part nearest the atrium, and its cords run on below them */
-      const first = Math.min(...points.map(point => point.dot(onward))), leaf = inflow ? points.filter(point => point.dot(onward) < first + 1.5) : points;
-      const axis = kit.thin(leaf, onward);   // shut, the leaflets lie across the way through
-      const deep = point => point.clone().sub(middle).dot(axis), wide = point => point.clone().sub(middle).addScaledVector(axis, -deep(point)).length();
-      const reach = leaf.map(wide).sort((a, b) => a - b), radius = reach[Math.floor(reach.length * 0.85)];
-      const rim = leaf.filter(point => wide(point) > radius * 0.8), level = inflow ? rim.reduce((sum, point) => sum + deep(point), 0) / rim.length : Math.min(...leaf.map(deep));
-      return { parts, inflow, axis, radius, pivot: middle.clone().addScaledVector(axis, level), angle: RADIANS * swing, slack: cords };
-    });
-    return { movers, rings, streams };
+    return { movers, base, valves: VALVES.map(valve => modelValve(kit, valve)), streams };
   },
   step(rig, phase, act) {
     const beat = beatAt(phase), squeeze = [0, beat.atria, beat.ventricles, beat.atria, beat.ventricles];
     for (const { part, kind, pivot } of rig.movers) act.rigid(part, { pivot, scale: 1 - squeeze[kind] * SQUEEZE[kind] });
-    for (const { parts, inflow, pivot, axis, radius, angle, slack } of rig.rings) for (const part of parts) act.hinge(part, { pivot, axis, radius, angle: angle * (inflow ? beat.inflow : beat.outflow), slack });
+    for (const valve of rig.valves) valve.pose(valve.inflow ? beat.inflow : beat.outflow, rig.base, beat.ventricles * SQUEEZE[2]);   // the papillary muscles ride the ventricles' wall
     return { caption: MOMENTS[beat.moment], moment: beat.moment };
   },
   sounds: [[FIRST_SOUND, play => play.thump(58, 0.13, 0.5)], [SECOND_SOUND, play => play.thump(74, 0.09, 0.36)]],

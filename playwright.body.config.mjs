@@ -13,7 +13,7 @@ export default defineConfig({
   projects: [
     { name: 'webkit', use: { ...devices['Desktop Safari'], viewport: { width: 1440, height: 900 } } },
     // Headless Chromium otherwise draws WebGL in software (SwiftShader), far slower than the GPU a real Chrome uses.
-    { name: 'chromium', use: { ...devices['Desktop Chrome'], viewport: { width: 1440, height: 900 }, launchOptions: { args: ['--use-angle=metal', '--enable-gpu', '--ignore-gpu-blocklist'] } } },
+    { name: 'chromium', use: { ...devices['Desktop Chrome'], viewport: { width: 1440, height: 900 }, launchOptions: { args: ['--use-angle=metal', '--enable-gpu', '--ignore-gpu-blocklist', '--mute-audio'] } } },
     { name: 'iphone', use: { ...devices['iPhone 13'] } },
   ],
 });

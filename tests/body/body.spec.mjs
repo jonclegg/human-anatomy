@@ -2,6 +2,15 @@ import { test, expect } from '@playwright/test';
 import { ENTRIES } from '../../site/body/parts.mjs';
 import { REGIONS, DETAILS } from '../../site/body/closeups.mjs';
 
+/* the tests turn the sound on: it plays, but silently, so a test run is never heard on the machine it runs on */
+test.beforeEach(async ({ page }) => {
+  await page.addInitScript(() => {
+    const play = HTMLMediaElement.prototype.play;
+    HTMLMediaElement.prototype.play = function () { this.muted = true; return play.call(this); };
+    const connect = AudioNode.prototype.connect;
+    AudioNode.prototype.connect = function (to, ...rest) { return to instanceof AudioDestinationNode ? to : connect.call(this, to, ...rest); };
+  });
+});
 const settle = page => page.waitForFunction(() => !window.bodyModel.busy(), null, { timeout: 30_000 });
 async function open(page, { sex = 'male', view } = {}) {
   const errors = [];
@@ -470,6 +479,14 @@ test.describe('motion', () => {
     await expect(page.locator('#figure span.now')).toHaveText('Heart refills');                                          // and the one it is in is lit
     expect(refilling.wall).toBeLessThan(0.4);                                             // the walls are glass, so the blood shows
     const before = await model(page, () => { window.bodyModel.holdMotion(null); return window.bodyModel.renders(); });
+    /* the labels hold their places while the heart moves under them */
+    await page.waitForTimeout(600);
+    const layouts = await page.evaluate(async () => {
+      const seen = new Set();
+      for (let k = 0; k < 20; k++) { seen.add([...document.querySelectorAll('#labels .tag')].filter(tag => !tag.hidden).map(tag => tag.textContent + tag.style.transform).join('|')); await new Promise(done => setTimeout(done, 100)); }
+      return [...seen];
+    });
+    expect(layouts).toHaveLength(1); expect(layouts[0]).toContain('Right atrium');
     await page.waitForTimeout(700);
     expect(await model(page, () => window.bodyModel.renders())).toBeGreaterThan(before);   // it keeps moving
     await page.locator('#inspector [data-motion]').click();

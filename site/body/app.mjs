@@ -1608,11 +1608,12 @@ function frame(now) {
     } else tip.hidden = true;
     hoverEvent = null;
   }
-  if (flight) needsRender = true;
+  if (flight) invalidate();
   /* the label visibility map is redrawn once the picture has been still for a moment */
   if (!needsRender && visibilityDue && now - lastChange > 120 && body) { visibilityDue = false; refreshVisibility(); updateLabels(stage.clientWidth, stage.clientHeight); }
-  /* a moving close-up is never still: there it is redrawn twice a second */
-  if (needsRender && body && moving() && now - mapped > 500) { mapped = now; refreshVisibility(); }
+  /* a moving close-up is never still: there it is redrawn once the view itself has settled, and not again until the
+     view changes, so the labels hold their places while the parts move under them */
+  if (needsRender && body && moving() && lastChange > mapped && now - lastChange > 120) { mapped = now; refreshVisibility(); }
   if (!needsRender) return;
   needsRender = false; visibilityDue = true;
   renderCount++;

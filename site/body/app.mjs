@@ -1512,4 +1512,6 @@ loading.remove();
 document.fonts.ready.then(measureTags);
 measureTags();
 requestAnimationFrame(animate);
+/* the columns have their sizes only once the page is laid out: fit the view to the space they leave, unless the visitor has already moved it */
+requestAnimationFrame(() => { if (state.touched) return; const frame = viewFrame(); camera.position.copy(frame.position); controls.target.copy(frame.target); invalidate(); });
 document.documentElement.dataset.modelReady = 'true';

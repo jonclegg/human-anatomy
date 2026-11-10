@@ -72,12 +72,13 @@ export const heart = {
     if (/^Cavity of left/.test(name)) return { colour: FRESH, opacity: 0.62 };
     return null;
   },
-  /* and cut open (a step of its story): the walls solid, the chambers emptied but for their blood, the valves and the muscles that hold them as they are */
+  /* and cut open (a step of its story): the walls solid, with a flat face where they are cut; the chambers emptied but
+     for their blood; the valves, their cords and the muscles that hold them whole, never sliced */
   opened(name) {
-    if (/^Wall of /.test(name)) return 1;
-    if (/^Cavity of /.test(name)) return 0;
-    if (/valve$|papillary muscle/i.test(name)) return 1;
-    return undefined;
+    if (/^Wall of /.test(name)) return { opacity: 1, cap: true };
+    if (/^Cavity of /.test(name)) return { opacity: 0 };
+    if (/valve$|papillary muscle/i.test(name)) return { opacity: 1, whole: true };
+    return null;
   },
   build(kit) {
     const valves = kit.find(/leaflet of (tricuspid|mitral) valve$|cusp of (pulmonary|aortic) valve$/i);

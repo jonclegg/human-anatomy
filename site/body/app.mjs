@@ -609,7 +609,7 @@ function storyNav(key) {
 }
 /* The right column (desktop). On the whole body: the card of the close-up whose glowing point was chosen. In a close-up:
    its stops, numbered, the one on show marked. */
-const HOTSPOTS = [['brain', 'frontalLobe', null], ['eye', 'eye', 'right'], ['heart', 'heart', null], ['shoulder', 'scapula', 'right'], ['digestive', 'smallIntestine', null], ['hand', 'carpals', 'right'], ['knee', 'patella', 'right'], ['foot', 'talus', 'right']];
+const HOTSPOTS = [['brain', 'frontalLobe', null, 'Brain'], ['eye', 'eye', 'right', 'Eye'], ['heart', 'heart', null, 'Heart'], ['shoulder', 'scapula', 'right', 'Shoulder'], ['digestive', 'smallIntestine', null, 'Gut'], ['hand', 'carpals', 'right', 'Hand'], ['knee', 'patella', 'right', 'Knee'], ['foot', 'talus', 'right', 'Foot']];
 const atHome = () => !state.region && !state.selection && !state.tour;
 let sideShown = null;
 function renderSide() {
@@ -940,33 +940,49 @@ function buildTags() {
     labelsEl.append(tag); tagEls[key] = tag;
   }
 }
-/* the glowing points: one per close-up worth diving into from the whole body, at the middle of a part that marks it */
+/* The glowing points: one per close-up worth diving into from the whole body. Each stands clear of the body, in a column
+   on its side of it, with its name, and a fine line runs from it to the part it opens, so nothing sits on the body itself. */
 let spotEls = [];
 function buildSpots() {
   for (const { el } of spotEls) el.remove();
   spotEls = [];
-  for (const [id, entry, side] of HOTSPOTS) {
+  for (const [id, entry, side, name] of HOTSPOTS) {
     const parts = (body.entries[entry] || []).filter(index => !side || sideOf(index) === side);
     if (!REGIONS[id] || !parts.length) continue;
     const box = new THREE.Box3();
     for (const index of parts) box.expandByPoint(V(...body.parts[index].min)).expandByPoint(V(...body.parts[index].max));
     const el = document.createElement('button');
-    el.type = 'button'; el.className = 'spot'; el.hidden = true; el.innerHTML = '<b></b><i></i>';
+    el.type = 'button'; el.className = 'spot'; el.hidden = true; el.innerHTML = `<b></b><i></i><span>${escapeHtml(name)}</span>`;
     el.setAttribute('aria-label', `Open ${REGIONS[id].title.toLowerCase()}`);
     el.addEventListener('click', () => { if (phone.matches) { setRegion(id); return; } state.spot = id; syncUI(); });
     labelsEl.append(el); spotEls.push({ id, el, point: box.getCenter(new THREE.Vector3()) });
   }
 }
+/* places the points and returns their lines (SVG); the columns stand a little outside the body's widest reach on screen */
 function placeSpots(width, height) {
   const shown = atHome() && !isolating();
-  for (const { id, el, point } of spotEls) {
-    projected.copy(point).project(camera);
-    const visible = shown && projected.z < 1 && Math.abs(projected.x) < 1 && Math.abs(projected.y) < 1;
-    el.hidden = !visible;
-    if (!visible) continue;
-    el.style.transform = `translate(${((projected.x + 1) / 2 * width).toFixed(1)}px, ${((1 - projected.y) / 2 * height).toFixed(1)}px)`;
-    el.setAttribute('aria-pressed', String(id === state.spot));
+  const skin = body.parts.find(part => part.name === 'Skin'), at = point => { projected.copy(point).project(camera); return [(projected.x + 1) / 2 * width, (1 - projected.y) / 2 * height, projected.z]; };
+  const middle = at(V(0, body.height / 2, 0))[0], reach = Math.abs(at(V(skin.max[0], body.height / 2, 0))[0] - at(V(skin.min[0], body.height / 2, 0))[0]) / 2;
+  const columns = { left: [], right: [] };
+  for (const spot of spotEls) {
+    const [x, y, z] = at(spot.point);
+    spot.el.hidden = !(shown && z < 1 && x > 0 && x < width && y > 0 && y < height);
+    if (!spot.el.hidden) columns[x < middle ? 'left' : 'right'].push({ spot, x, y });
   }
+  let svg = '';
+  const gap = phone.matches ? 40 : 46, out = reach + (phone.matches ? 14 : 44);
+  for (const side of ['left', 'right']) {
+    const column = columns[side].sort((p, q) => p.y - q.y), ys = [];
+    column.forEach((item, k) => ys.push(Math.max(item.y, k ? ys[k - 1] + gap : 0)));
+    column.forEach((item, k) => {
+      const x = side === 'left' ? middle - out : middle + out, y = ys[k];
+      item.spot.el.classList.toggle('left', side === 'left');
+      item.spot.el.style.transform = `translate(${x.toFixed(1)}px, ${y.toFixed(1)}px)`;
+      item.spot.el.setAttribute('aria-pressed', String(item.spot.id === state.spot));
+      svg += `<polyline class="spot-line" points="${item.x.toFixed(1)},${item.y.toFixed(1)} ${(side === 'left' ? x + 18 : x - 18).toFixed(1)},${y.toFixed(1)} ${x.toFixed(1)},${y.toFixed(1)}"/><circle class="spot-end" cx="${item.x.toFixed(1)}" cy="${item.y.toFixed(1)}" r="2"/>`;
+    });
+  }
+  return svg;
 }
 function measureTags() { for (const [key, tag] of Object.entries(tagEls)) { tag.hidden = false; tagWidths[key] = tag.offsetWidth; tag.hidden = true; } invalidate(); }
 const projected = new THREE.Vector3();
@@ -989,7 +1005,7 @@ function anchorOf(key) {
   return best;
 }
 function updateLabels(width, height) {
-  placeSpots(width, height);
+  const spotLines = placeSpots(width, height);
   const origin = stage.getBoundingClientRect();
   const placed = [...document.querySelectorAll(OVERLAYS.join(','))].filter(el => !el.hidden && el.offsetParent).map(el => el.getBoundingClientRect())
     .map(r => [r.left - origin.left, r.top - origin.top, r.right - origin.left, r.bottom - origin.top]);
@@ -1045,7 +1061,7 @@ function updateLabels(width, height) {
       svg += `<polyline points="${c.ax.toFixed(1)},${c.ay.toFixed(1)} ${elbow.toFixed(1)},${ey.toFixed(1)} ${ex.toFixed(1)},${ey.toFixed(1)}"/><circle class="${c.key === selectedKey ? 'on' : ''}" cx="${c.ax.toFixed(1)}" cy="${c.ay.toFixed(1)}" r="3.5"/>`;
     });
   }
-  svg += ruler(width, height, placed);
+  svg += spotLines + ruler(width, height, placed);
   leaders.innerHTML = svg;
 }
 /* a 10 cm ruler beside the body, drawn from two projected points so it stays true to scale as the camera moves */

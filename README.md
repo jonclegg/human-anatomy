@@ -77,7 +77,7 @@ npm test             # Playwright: desktop Safari, desktop Chrome and iPhone
 | **Male and female** | Switch bodies at the top right. A selected part carries over, or jumps to its equivalent (testes and ovaries). |
 | **Views per system** | Body, Skeleton, Muscles, Organs, Vessels and Nerves, each with the rest as faint context. |
 | **Every structure** | Every structure can be picked on the model, found by name in the parts list, and isolated. 188 main parts have a description, a common misconception, published measurements and the other sex's equivalent. Step through them with ‹ › or the arrow keys. |
-| **Clothed by default** | Both bodies open with the skin solid and clothes on (a short top and shorts, boxer briefs), as a safe-for-work first view. The Clothing switch takes it off; in the system views it fades with the skin but still covers. |
+| **Clothed by default** | Both bodies open with the skin solid and clothes on (a short top and shorts for her, shorts for him), as a safe-for-work first view. The Clothing switch takes it off; in the system views it fades with the skin but still covers. |
 | **X-ray and skin** | Fade a view's outer layer to outlines, and fade the skin. |
 | **Loads fast** | Each system is its own compressed GLB (meshopt), fetched only when a view needs it. The opening view loads 2–3 MB. |
 
@@ -128,10 +128,10 @@ The female build reads the built male body (`site/body/data/male/`), so the male
 
 The MakeHuman files are read from `MakeHuman (CC0)` inside the models folder. They come from [makehumancommunity/makehuman](https://github.com/makehumancommunity/makehuman/tree/master/makehuman/data): `3dobjs/base.obj`, `rigs/default.mhskel`, `rigs/default_weights.mhw`, and from `targets/macrodetails/` the targets named in [`scripts/body/build-female.mjs`](scripts/body/build-female.mjs), all in one folder.
 
-She is dressed by her own build, in MakeHuman's clothing (CC0): the top of its `female_sportsuit01` and the shorts of its `female_casualsuit02`, read from `MakeHuman clothes (CC0)/clothes` inside the models folder (the `makehuman_system_assets_cc0` pack from [files.makehumancommunity.org](https://files.makehumancommunity.org/asset_packs/makehuman_system_assets/)). A MakeHuman garment is tied vertex by vertex to the MakeHuman body mesh, which her skin is, so it follows her shape ([`scripts/body/garments.mjs`](scripts/body/garments.mjs)). His briefs are shaped from his skin:
+Both are dressed in MakeHuman's clothing (CC0), read from `MakeHuman clothes (CC0)/clothes` inside the models folder (the `makehuman_system_assets_cc0` pack from [files.makehumancommunity.org](https://files.makehumancommunity.org/asset_packs/makehuman_system_assets/)). A MakeHuman garment is tied vertex by vertex to the MakeHuman body mesh, so it follows the body's shape ([`scripts/body/garments.mjs`](scripts/body/garments.mjs)). She wears the top of its `female_sportsuit01` and the shorts of its `female_casualsuit02`, put on by her own build, since her skin is that mesh. His skin is not, so the mesh is first laid onto it; MakeHuman has no men's shorts, so he wears the jeans of its `male_casualsuit04` cut off at mid-thigh, with the front let out over him (MakeHuman's mesh has no genitals):
 
 ```bash
-node scripts/body/clothing.mjs male
+node scripts/body/clothing.mjs male "<Human Anatomy 3D Models folder>"
 ```
 
 First export Z-Anatomy with Blender (the scripts in [`scripts/body/blender/`](scripts/body/blender/) write to the folder the builds read):
@@ -154,7 +154,7 @@ The whole-body data in `site/body/data/` is derived from:
 
 - **BodyParts3D**, © The Database Center for Life Science, licensed under CC Attribution 4.0 International ([licence page](https://dbarchive.biosciencedbc.jp/en/bodyparts3d/lic.html)). The OBJ files' headers still carry an older CC BY-SA 2.1 Japan notice; the licence page, updated 27 February 2025, gives CC BY 4.0. Simplified, re-coloured and, for the female body, reshaped.
 - **Human Reference Atlas 3D reference organs** (HuBMAP, NIH; Visible Human Project, U.S. National Library of Medicine; brain from the Allen Institute), CC BY 4.0. Simplified, renamed and aligned.
-- **MakeHuman** base mesh, skeleton, skin weights and shape targets (the female skin), and two garments (the female clothing), CC0.
+- **MakeHuman** base mesh, skeleton, skin weights and shape targets (the female skin), and three garments (the clothing of both bodies), CC0.
 - **Z-Anatomy**, the libre 3D atlas of anatomy, CC BY-SA 4.0 (built on BodyParts3D); cranial nerves after Cranial Nerves and Foramina, University of Dundee CAHID, CC BY 4.0. Aligned, simplified and, for the female body, reshaped.
 
 Because it includes Z-Anatomy, the whole-body 3D data (`site/body/data/`) is shared under [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/). The code and the text in `site/body/parts.mjs` stay MIT.

@@ -255,13 +255,12 @@ function ownShare(body, segment) {
 const endOf = segment => (/^(hand|foot)/.test(segment) ? segment : /^(lowerForeArm|foreArm)/.test(segment) ? 'hand' + segment.at(-1) : /^(lowerShin|shin)/.test(segment) ? 'foot' + segment.at(-1) : 'head');
 
 /**
- * structures: the source body, [{ name, layer, positions, indices }], positions changed in place; its 'Skin' takes the
- *   new skin's positions and indices
- * folder: the MakeHuman files; sourceTargets: the morph targets nearest the source body; targets: the new body's
- * Returns { segment: each new skin vertex's body segment, lining: 1 where it lines the mouth or an eye socket, breast: its
- *   share of the breast (0 to 1), rest: the new body's MakeHuman shape before it was posed (readMakeHuman) }
+ * Lays the MakeHuman mesh onto a body's skin: posed to its skeleton, then drawn onto its skin surface, so every vertex
+ * marks a known spot on that body. sourceTargets: the morph targets nearest the body.
+ * Returns { named, skin, target (the body's landmarks), like (MakeHuman in that shape, at rest), posed, lining (1 where
+ * a vertex lines the mouth or an eye socket), onSkin: { positions, matched } }.
  */
-export function transfer(structures, folder, sourceTargets, targets, { height = null, log = console.log } = {}) {
+export function layMakeHumanOnto(structures, folder, sourceTargets, log = console.log) {
   const named = (layer, name, { optional = false } = {}) => {
     const found = structures.find(structure => structure.layer === layer && structure.name === name);
     if (!found && optional) return null;
@@ -270,10 +269,9 @@ export function transfer(structures, folder, sourceTargets, targets, { height = 
   };
   const skin = structures.find(structure => structure.layer === 'skin' && structure.name === 'Skin');
   const target = landmarks(named);
-  const like = readMakeHuman(folder, sourceTargets), body = readMakeHuman(folder, targets);
+  const like = readMakeHuman(folder, sourceTargets);
   log('MakeHuman posed to the source skeleton:');
   const posed = poseMakeHuman(like, target, line => log(line));
-  const HAND_OR_FOOT = /^(hand|foot)/;
   /* MakeHuman's skin runs on inside the head: a pouch behind each pair of eyelids, and the lining of the mouth. Those
      vertices are no part of anyone's outer skin, so they are neither drawn onto his nor used as marks. A vertex is one
      of them if a short step out along its normal is still inside the head. */
@@ -285,6 +283,20 @@ export function transfer(structures, folder, sourceTargets, targets, { height = 
   }
   log('and drawn onto the source skin:');
   const onSkin = drawOnto({ positions: posed.positions, indices: like.indices }, skin, { free: v => !HAND_OR_FOOT.test(posed.segment[v]) && !lining[v], log });
+  return { named, skin, target, like, posed, lining, onSkin };
+}
+const HAND_OR_FOOT = /^(hand|foot)/;
+
+/**
+ * structures: the source body, [{ name, layer, positions, indices }], positions changed in place; its 'Skin' takes the
+ *   new skin's positions and indices
+ * folder: the MakeHuman files; sourceTargets: the morph targets nearest the source body; targets: the new body's
+ * Returns { segment: each new skin vertex's body segment, lining: 1 where it lines the mouth or an eye socket, breast: its
+ *   share of the breast (0 to 1), rest: the new body's MakeHuman shape before it was posed (readMakeHuman) }
+ */
+export function transfer(structures, folder, sourceTargets, targets, { height = null, log = console.log } = {}) {
+  const { named, skin, target, like, posed, lining, onSkin } = layMakeHumanOnto(structures, folder, sourceTargets, log);
+  const body = readMakeHuman(folder, targets);
   /* The new skin: his own skin, changed by what separates the two MakeHuman shapes in this pose, so the pose's own
      flaws (a twisted forearm, a trunk a little too narrow), which both shapes share, cancel. The head, hands and feet
      are MakeHuman's own: his face would stay his under the change, and his fingers were not drawn onto. There, only

@@ -118,7 +118,7 @@ test.describe('clothing', () => {
       const skin = await model(page, () => window.bodyModel.findPart('Skin'));
       expect(await model(page, index => window.bodyModel.opacityOf(index), skin)).toBe(1);
       expect(await model(page, () => window.bodyModel.clothing())).toMatchObject({ shown: true, opacity: 1 });
-      expect((await model(page, () => window.bodyModel.clothing())).triangles).toBeGreaterThan(3000);
+      expect((await model(page, () => window.bodyModel.clothing())).triangles).toBeGreaterThan(500);   // modelled garments: his cut-off jeans are about 700 triangles
       if (sex === 'male') expect(await model(page, index => window.bodyModel.opacityOf(index), await model(page, () => window.bodyModel.findPart('Pubic hair')))).toBe(0);
       await page.locator(isPhone(page) ? '#partsBtn' : '#clothedBtn').click();
       if (isPhone(page)) await page.locator('#drawer [data-toggle="clothed"]').click();

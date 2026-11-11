@@ -25,7 +25,7 @@ export const REGIONS = {
     text: { any: 'The right eye: the three coats of the eyeball and the clear parts that focus light, the six muscles that aim it, the nerve that leaves it, and the glands and ducts that keep it wet.' },
     parts: ['eyeCornea', 'eyeSclera', 'eyeAnteriorChamber', 'eyeIris', 'eyeLens', 'eyeChoroid', 'eyeRetina', 'eyeVitreousBody', 'eyeOpticNerve',
       'eyeSuperiorRectus', 'eyeInferiorRectus', 'eyeMedialRectus', 'eyeLateralRectus', 'eyeObliques', 'eyeLacrimalApparatus', 'eyeEyelids'],
-    context: [{ layer: 'skeleton' }], direction: [-0.9, 0.2, 0.75], body: 0.06,
+    context: [{ layer: 'skeleton' }], direction: [-0.7, 0.18, 0.9], body: 0.06,
   },
   skull: {
     name: 'Skull and jaw', note: 'the bones of the skull one by one, the teeth and the hyoid',

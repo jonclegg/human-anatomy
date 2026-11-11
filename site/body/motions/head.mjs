@@ -57,10 +57,11 @@ export const brainDeep = {
 /* ---------- The eye: light in, a signal out; then the muscles turn it ---------- */
 const GLOBE = /cornea$|sclera$|^Anterior chamber|iris$|lens$|choroid$|corona ciliaris$|retina$|vitreous body$/i;
 const AIMING = /rectus$|(inferior|superior) oblique$|optic nerve$/i;
+const IRIS_ROUND = 48, PUPIL = [0.36, 0.2];   // points round each ring of the iris; the pupil's radius in dim light and in bright, cm
 export const eye = {
   cycle: 11000, stop: 'Stop the eye', start: 'Set the eye working',
   /* the coats of the eyeball are glass, so the light can be followed through it, and what lies over the eye (the lids, the tear gland) is all but gone */
-  look: name => (/sclera$|choroid$|retina$|vitreous body$|corona ciliaris$/i.test(name) ? { opacity: 0.3 } : /tarsal plate|levator palpebrae|lacrimal|canalicul|conjunctiv/i.test(name) ? { opacity: 0.08 } : null),
+  look: name => (/sclera$|choroid$|retina$|vitreous body$|corona ciliaris$/i.test(name) ? { opacity: 0.3 } : /cornea$|^Anterior chamber/i.test(name) ? { opacity: 0.1 } : /lens$/i.test(name) ? { colour: '#0d1014', opacity: 0.6 } : /tarsal plate|levator palpebrae|lacrimal|canalicul|conjunctiv/i.test(name) ? { opacity: 0.08 } : null),
   build(kit) {
     const { V } = kit, ball = kit.centre(kit.one(/vitreous body$/i)), front = kit.centre(kit.one(/cornea$/i)), lens = kit.centre(kit.one(/^(Left|Right) lens$/i));
     const forward = front.clone().sub(ball).normalize(), back = ball.clone().add(forward.clone().multiplyScalar(-1.05)), up = V(0, 1, 0);
@@ -70,12 +71,18 @@ export const eye = {
     const across = forward.clone().cross(up).normalize(), at = (place, ahead, off) => place.clone().addScaledVector(forward, ahead).add(off);
     const ray = (height, round) => {
       const off = up.clone().multiplyScalar(Math.cos(round) * height).addScaledVector(across, Math.sin(round) * height);
-      return { curve: kit.path([at(front, 4.2, off), at(front, 0.12 - height * height * 0.6, off), at(lens, 0, off.clone().multiplyScalar(0.55)), back]), colour: '#fff1b8', glow: true, count: 480, size: 0.05, spread: 0.003, strength: 0.3, speed: () => 0.3, shown: phase => during(phase, 0, 0.5) };
+      return { curve: kit.path([at(front, 4.2, off), at(front, 0.12 - height * height * 0.6, off), at(lens, 0, off.clone().multiplyScalar(0.5)), back]), colour: '#fff1b8', glow: true, count: 480, size: 0.05, spread: 0.003, strength: 0.3, speed: () => 0.3, shown: phase => during(phase, 0, 0.5) };
     };
+    /* The iris: in the source a disc with a pinhole, fixed. Here it is a ring built in code, so that its pupil can close down in bright light and widen again:
+       three rings of points, the inner one the pupil's edge, set a little forward as the iris rides on the front of the lens */
+    const source = kit.one(/^(Left|Right) iris$/i), size = kit.box(source).getSize(V(0, 0, 0)), upward = across.clone().cross(forward).normalize();
+    const iris = { model: kit.model({ name: 'iris', parts: [source], count: IRIS_ROUND * 3, of: Array(IRIS_ROUND * 3).fill(source),
+      index: Array.from({ length: IRIS_ROUND * 2 }, (_, k) => { const ring = Math.floor(k / IRIS_ROUND), a = ring * IRIS_ROUND + k % IRIS_ROUND, b = ring * IRIS_ROUND + (k + 1) % IRIS_ROUND; return [a, b, a + IRIS_ROUND, b, b + IRIS_ROUND, a + IRIS_ROUND]; }).flat() }),
+      middle: kit.centre(source), rim: Math.min(size.x, size.y) / 2, forward, across, upward, spot: V(0, 0, 0) };
     return {
-      ball, up, turn: kit.turn, globe: kit.find(GLOBE), aiming: kit.find(AIMING), inward: kit.find(/medial rectus$/i), outward: kit.find(/lateral rectus$/i), retina: kit.find(/retina$/i),
+      iris, ball, up, turn: kit.turn, globe: kit.find(GLOBE), aiming: kit.find(AIMING), inward: kit.find(/medial rectus$/i), outward: kit.find(/lateral rectus$/i), retina: kit.find(/retina$/i),
       side: Math.sign(ball.x),   // which eye: its medial rectus turns it toward the nose
-      streams: [ray(0, 0), ...[0, 1, 2, 3, 4, 5].map(k => ray(0.34, k * Math.PI / 3)), { curve: kit.curve([back, ...nerve]).curve, colour: SIGNAL, glow: true, count: 90, size: 0.13, spread: 0.04, strength: 0.6, speed: () => 0.5, shown: phase => during(phase, 0.05, 0.52) }],
+      streams: [ray(0, 0), ...[0, 1, 2, 3, 4, 5].map(k => ray(0.28, k * Math.PI / 3)), { curve: kit.curve([back, ...nerve]).curve, colour: SIGNAL, glow: true, count: 90, size: 0.13, spread: 0.04, strength: 0.6, speed: () => 0.5, shown: phase => during(phase, 0.05, 0.52) }],
     };
   },
   step(rig, phase, act) {
@@ -85,7 +92,14 @@ export const eye = {
     /* turning toward +x is toward the nose for the right eye, away from it for the left */
     light(act, rig.inward, Math.max(0, -sweep * rig.side)); light(act, rig.outward, Math.max(0, sweep * rig.side));
     light(act, rig.retina, 0.25 * during(phase, 0.08, 0.5));
-    return { caption: phase < 0.53 ? 'Light is bent by the cornea and focused by the lens onto the retina; the optic nerve carries the picture to the brain' : 'Six muscles aim the eye. Here two of them turn it: the medial rectus toward the nose, the lateral rectus away' };
+    /* the pupil is wide in the dark, closes down as the light comes in, and widens again when it has gone; the iris turns with the eye */
+    const { model, middle, rim, forward, across, upward, spot } = rig.iris, pupil = PUPIL[0] + (PUPIL[1] - PUPIL[0]) * during(phase, 0.03, 0.5, 0.12);
+    for (let ring = 0; ring < 3; ring++) for (let k = 0; k < IRIS_ROUND; k++) {
+      const angle = k / IRIS_ROUND * 2 * Math.PI, radius = pupil + (rim - pupil) * ring / 2;
+      spot.copy(middle).addScaledVector(upward, Math.cos(angle) * radius).addScaledVector(across, Math.sin(angle) * radius).addScaledVector(forward, 0.05 * (1 - ring / 2)).sub(rig.ball).applyQuaternion(turn).add(rig.ball);
+      model.positions.set([spot.x, spot.y, spot.z], (ring * IRIS_ROUND + k) * 3);
+    }
+    return { caption: phase < 0.14 ? 'Light enters through the pupil, the opening in the iris. In bright light the iris closes it down' : phase < 0.53 ? 'Light is bent by the cornea and focused by the lens onto the retina; the optic nerve carries the picture to the brain' : 'Six muscles aim the eye. Here two of them turn it: the medial rectus toward the nose, the lateral rectus away' };
   },
 };
 

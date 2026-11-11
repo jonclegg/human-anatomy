@@ -15,7 +15,7 @@ const sheet = await page.evaluate(async ({ view, clothed, angles }) => {
   await wait(300); await m.ready();
   while (m.busy()) await wait(100);
   if (m.state.clothed !== clothed) document.querySelector('[data-toggle="clothed"]').click();
-  document.querySelectorAll('.masthead,#inspector,.rail,.views,.top-right,.figure,#heightRuler,#labels,#isolateChip,.hint').forEach(el => { el.style.visibility = 'hidden'; });
+  document.querySelectorAll('.strip,#heightRuler,#labels,.hint').forEach(el => { el.style.visibility = 'hidden'; });
   const h = m.body().height;
   const canvas = document.getElementById('scene'), W = canvas.width, H = canvas.height, tile = [600, 450];
   const composite = document.createElement('canvas'); composite.width = tile[0] * 3; composite.height = tile[1] * Math.ceil(angles.length / 3);

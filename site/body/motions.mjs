@@ -1,8 +1,10 @@
-// Motions: what a close-up does while you watch. One per close-up, under the close-up's id; app.mjs runs them.
+// Motions: what a close-up does in its story. One per close-up, under the close-up's id; app.mjs runs them, and only
+// while the story is being watched.
 //
 // A motion:
 //   cycle           how long one round takes, in ms
-//   stop, start     the words on the switch that stops and starts it
+//   watch           what it shows, in plain words: "how the heart beats". The story's name in the trail and the lists,
+//                   and the words on the button that starts it ("Watch: how the heart beats, 2 min")
 //   look(name)      how a part of the close-up looks while it runs: { colour, opacity }, either may be left out
 //   context, skin   how solid the faint context and the skin are while it runs, as a share of what they usually are
 //   build(kit)      measures the body once and returns the rig: whatever step needs, plus streams (the specs of what
@@ -19,4 +21,7 @@ import * as pelvis from './motions/pelvis.mjs';
 import { REGIONS } from './closeups.mjs';
 
 export const MOTIONS = { heart, ...chest, ...head, ...limbs, ...pelvis };
-for (const key of Object.keys(MOTIONS)) if (!REGIONS[key]) throw new Error(`a motion is called ${key}, which is no close-up`);
+for (const key of Object.keys(MOTIONS)) {
+  if (!REGIONS[key]) throw new Error(`a motion is called ${key}, which is no close-up`);
+  if (!MOTIONS[key].watch) throw new Error(`the ${key} motion does not say what it shows`);
+}

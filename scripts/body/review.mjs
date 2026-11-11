@@ -23,7 +23,7 @@ for (const [name, view, clothed] of VIEWS) {
     await wait(300); await m.ready();
     while (m.busy()) await wait(100);
     if (m.state.clothed !== clothed) document.querySelector('[data-toggle="clothed"]').click();
-    document.querySelectorAll('.masthead,#inspector,.rail,.views,.top-right,.figure,#heightRuler,#labels,#isolateChip,.hint').forEach(el => { el.style.visibility = 'hidden'; });
+    document.querySelectorAll('.strip,#heightRuler,#labels,.hint').forEach(el => { el.style.visibility = 'hidden'; });
     const h = m.body().height;
     const angles = [['front', [0, h * 0.53, 0], [0, h * 0.55, h * 1.25]], ['back', [0, h * 0.53, 0], [0, h * 0.55, -h * 1.25]],
       ['side', [0, h * 0.53, 0], [h * 1.25, h * 0.55, 0]], ['head', [0, h * 0.93, 3], [-14, h * 0.94, 50]],

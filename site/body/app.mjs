@@ -3,9 +3,10 @@ import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
 import { LAYER_INFO, GROUP_INFO, VIEW_INFO, TOUR, BUGS, DIFFERENCES, GAPS, colourOf, SHOWN_WHEN_CHOSEN } from './parts.mjs';
-import { REGIONS, DETAILS, ALL, indexParts, regionContext, sideOfPart } from './closeups.mjs';
+import { REGIONS, GROUPS, DETAILS, ALL, indexParts, regionContext, sideOfPart } from './closeups.mjs';
 import { MOTIONS } from './motions.mjs';
 import { STORIES } from './stories.mjs';
+import { NARRATION } from './narration.mjs';
 performance.mark('body:module-start');
 
 /* ---------- Coordinates ----------
@@ -438,8 +439,8 @@ function measureAnchors(body, geometry) {
 
 /* ---------- State ---------- */
 const state = {
-  sex: 'male', view: 'body', peel: 0, blend: null, spot: 'heart', region: null, layers: {}, xray: 0, body: 0.25, labels: true, clothed: true, cut: false, motion: !reducedMotion(), tone: 0,
-  selection: null, hovered: -1, drawer: false, dock: false, closeups: false, inspectorOpen: true, sheet: 'peek', tour: null, touched: false, search: '',
+  sex: 'male', view: 'body', peel: 0, blend: null, region: null, layers: {}, xray: 0, body: 0.25, labels: true, clothed: true, cut: false, tone: 0,
+  selection: null, hovered: -1, sheet: 'peek', story: null, contents: false, touched: false,
 };
 try { const saved = JSON.parse(localStorage.getItem('wl-body') || '{}'); if (saved.tonePicked && Number.isInteger(saved.tone)) state.tone = saved.tone; if (saved.sex === 'female' || saved.sex === 'male') state.sex = saved.sex; } catch (error) { /* storage unavailable */ }
 const params = new URLSearchParams(location.search);
@@ -456,7 +457,7 @@ function viewInfo() {
 const GHOST = 0.16;
 const TONES = ['#ebc2aa', '#c9966f', '#8f5f3d', '#5b3926'];
 
-/* the selection: an entry (all its parts, from the parts list or stepping) or one picked part (with its entry's text) */
+/* the selection: an entry (all its parts, from the sheet's list, the search or stepping) or one picked part (with its entry's text) */
 const selectedParts = () => state.selection ? state.selection.parts : [];
 const isolating = () => !!state.selection && state.selection.isolate;
 
@@ -507,21 +508,7 @@ function applyVisibility() {
   invalidate();
 }
 
-/* ---------- UI: drawer, inspector, guided tour ---------- */
-const layersEl = $('layers');
-for (const layer of LAYERS) {
-  const button = document.createElement('button');
-  button.type = 'button'; button.className = 'chip'; button.dataset.layer = layer;
-  button.style.setProperty('--dot', LAYER_INFO[layer].dot);
-  button.innerHTML = `<i></i>${LAYER_INFO[layer].name}`;
-  button.addEventListener('click', () => {
-    const mode = state.layers[layer];
-    state.layers[layer] = mode === 'off' ? (layer === 'skin' ? 'ghost' : 'solid') : 'off';
-    if (layer === 'skin' && state.layers.skin !== 'off' && state.body < 0.05) state.body = 0.25;
-    ensureLayers(); applyVisibility(); syncUI();
-  });
-  layersEl.append(button);
-}
+/* ---------- UI: the sheet, the stories, Contents ---------- */
 const tonesEl = $('tones');
 TONES.forEach((tone, k) => {
   const button = document.createElement('button'); button.type = 'button'; button.style.setProperty('--sw', tone);
@@ -533,83 +520,63 @@ TONES.forEach((tone, k) => {
 let tonePicked = (() => { try { return !!JSON.parse(localStorage.getItem('wl-body') || '{}').tonePicked; } catch (error) { return false; } })();
 const save = () => { try { localStorage.setItem('wl-body', JSON.stringify({ tone: state.tone, tonePicked, sex: state.sex })); } catch (error) { /* storage unavailable */ } };
 
-/* every entry has a number, as in a parts diagram: the callouts on the model and the parts list share it */
-const entryNumber = key => body.order.indexOf(key) + 1;   // 0 for an entry that is not among the numbered parts (inside a close-up)
+/* every entry has a number, as in a parts diagram: the callouts on the model and the sheet's list of parts share it */
+const entryNumber = key => body.order.indexOf(key) + 1;   // 0 for an entry that is not among the numbered parts (inside a region)
 const entryLayer = key => body.parts[body.entries[key][0]].layer;
-const entryGroup = key => body.parts[body.entries[key][0]].group;
-let listButtons = {};
-function buildPartsList() {
-  const holder = $('partGroups'); holder.innerHTML = ''; listButtons = {};
-  const query = state.search.trim().toLowerCase();
-  let shown = 0;
-  for (const layer of LAYERS) {
-    const keys = body.order.filter(key => entryLayer(key) === layer);
-    const structures = body.parts.filter(part => part.layer === layer);
-    const keysShown = keys.filter(key => !query || ALL[key].name.toLowerCase().includes(query) || (ALL[key].aka || '').toLowerCase().includes(query));
-    const structuresShown = query ? structures.filter(part => part.name.toLowerCase().includes(query)).slice(0, 80) : structures;
-    if (!keysShown.length && !(query && structuresShown.length)) continue;
-    const wrapper = document.createElement('div');
-    wrapper.innerHTML = `<div class="group-name" style="--dot:${LAYER_INFO[layer].dot}"><i></i>${LAYER_INFO[layer].name}</div>`;
-    const list = document.createElement('ul'); list.className = 'part-list';
-    for (const key of keysShown) {
-      const item = document.createElement('li');
-      const button = document.createElement('button'); button.type = 'button'; button.dataset.entry = key;
-      button.innerHTML = `<span>${entryNumber(key)}</span>${escapeHtml(ALL[key].name)}`;
-      button.addEventListener('click', () => { stopTour(); if (phone.matches) state.drawer = false; selectEntry(key); focusSelection(); });
-      item.append(button); list.append(item); listButtons[key] = button; shown++;
-    }
-    wrapper.append(list);
-    if (structuresShown.length) {
-      /* every structure of the layer, named and selectable, under a fold (open when searching) */
-      const more = document.createElement('details'); more.className = 'more'; if (query) more.open = true;
-      more.innerHTML = `<summary>${query ? `${structuresShown.length}${structuresShown.length === 80 ? '+' : ''} structures matching` : `All ${structures.length} ${LAYER_INFO[layer].name.toLowerCase()} structures`}</summary>`;
-      const minorList = document.createElement('ul'); minorList.className = 'part-list minor';
-      const fill = () => {
-        if (minorList.childElementCount) return;
-        for (const part of structuresShown.slice().sort((a, b) => a.name.localeCompare(b.name))) {
-          const item = document.createElement('li'), button = document.createElement('button');
-          button.type = 'button'; button.dataset.part = part.index;
-          const at = body.entryOf[part.index];
-          button.innerHTML = `<span>${(at >= 0 && entryNumber(body.keys[at])) || '·'}</span>${escapeHtml(part.name)}`;
-          button.addEventListener('click', () => { stopTour(); if (phone.matches) state.drawer = false; selectPart(part.index); focusSelection(); });
-          item.append(button); minorList.append(item);
-        }
-      };
-      more.addEventListener('toggle', fill); if (query) fill();
-      more.append(minorList); wrapper.append(more); shown += query ? structuresShown.length : 0;
-    }
-    holder.append(wrapper);
-  }
-  $('searchNote').textContent = query ? (shown ? '' : 'Nothing by that name in this body.') : `${body.order.length} main parts, ${body.parts.length.toLocaleString('en')} structures in all.`;
-}
-$('search').addEventListener('input', event => { state.search = event.target.value; buildPartsList(); syncUI(); });
-$('partsBtn').addEventListener('click', () => { state.drawer = !state.drawer; if (state.drawer) { state.dock = false; state.closeups = false; } syncUI(); });
-$('dockBtn').addEventListener('click', () => { state.dock = !state.dock; if (state.dock) { state.drawer = false; state.closeups = false; } syncUI(); });
-/* the close-ups this body has, as a menu */
-function buildCloseupList() {
-  $('closeupList').innerHTML = Object.values(REGIONS).filter(region => !region.sex || region.sex === body.sex).map(region =>
-    `<button type="button" data-region="${region.id}"><b>${escapeHtml(region.name)}</b><span>${escapeHtml(region.note || '')}</span></button>`).join('');
-}
 $('bugList').innerHTML = BUGS.map(([title, fix]) => `<li><b>${escapeHtml(title)}</b><span>${escapeHtml(fix)}</span></li>`).join('');
 $('differenceRows').innerHTML = DIFFERENCES.map(([female, male]) => `<tr><td>${escapeHtml(female)}</td><td>${escapeHtml(male)}</td></tr>`).join('');
 $('gapList').innerHTML = GAPS.map(([title, text]) => `<li><b>${escapeHtml(title)}.</b> ${escapeHtml(text)}</li>`).join('');
 
-/* the tour visits the main landmarks of each system, each from the view it is best seen in */
-/* a close-up's tour is its story, a step at a time, where it has one; else its own parts in order */
-const tourStops = () => (!state.region ? TOUR.filter(([key]) => body.entries[key]) : STORIES[state.region] ? STORIES[state.region].map(step => [step.entry, null, step]) : body.order.map(key => [key, null]));
-const telling = () => state.tour?.step || null;   // the step of a story being told now
-const TOUR_STEP_MS = 7000;
-function goTour(index) {
-  const stops = tourStops(), [key, view, step = null] = stops[index];
-  const held = paused();
-  state.tour = { index, playing: true, stepStart: performance.now(), step };   // moving on, by hand or not, plays
-  if (held && sound.on && sound.manifest.music) sound.music.play().catch(refused);
-  if (view) applyView(view);
-  state.inspectorOpen = true;
-  /* a story's step picks nothing out: the part it is about stays as it is drawn in motion (glass, with its blood showing), labelled and gently lit */
-  if (step) { select(null); focusStep(step); } else { selectEntry(key); focusSelection(viewInfo()); }
+/* ---------- Stories ----------
+   A story takes the whole stage: the sheet is hidden, the model moves, the words being spoken are shown under it, and
+   the strip is its transport. There are three kinds, and they share this one mode.
+   'steps'   how a region works, a step at a time (stories.mjs: the heart has one)
+   'motion'  a region that moves and has no steps: its motion plays over and over, and the region's opening is spoken once
+   'tour'    the main parts of the whole body, one by one, each in the view of its layer */
+const sentence = text => text.charAt(0).toUpperCase() + text.slice(1);
+const TOUR_NAME = 'Tour of the body';
+const HOME_STORIES = ['heart', 'lungs', 'eye', 'knee'];   // the few offered on the home page; Contents lists them all
+const storyKind = id => (!id ? 'tour' : STORIES[id] ? 'steps' : 'motion');
+const storyName = id => (id ? sentence(MOTIONS[id].watch) : TOUR_NAME);
+const storySteps = (id, kind) => (kind === 'tour' ? TOUR.filter(([key]) => body.entries[key]).map(([entry, view]) => ({ entry, view })) : kind === 'steps' ? STORIES[id] : [{}]);
+/* what the voice says at a step: a step's own words, a part's name and notes, or the region's opening */
+function stepWords(kind, id, step) {
+  if (kind === 'steps') return step.say;
+  if (kind === 'tour') { const entry = ALL[step.entry]; return `${entry.name}. ${entry.what} ${entry.does}`; }
+  return NARRATION[`region:${id}`];
 }
-/* a story's step closes in on what it is about, from where it is best seen */
+/* how long a story takes told aloud, in whole minutes: the voice takes about SPEECH_MS over each character (measured
+   from the clips), and a breath after each step. Read with the sound off, a step lasts as long as its words take to read. */
+const SPEECH_MS = 88, READ_MS = 60, STEP_MS = 7000;
+function storyMinutes(id) {
+  const kind = storyKind(id), spoken = storySteps(id, kind).reduce((ms, step) => ms + stepWords(kind, id, step).length * SPEECH_MS + AFTER_VOICE_MS, 0);
+  return Math.max(1, Math.round(spoken / 60_000));
+}
+const telling = () => (state.story?.kind === 'steps' ? state.story.steps[state.story.index] : null);   // the step of a region's story being told now
+/* Starts a region's story, or with no region the tour of the body. A story is told aloud, so starting one turns the
+   sound on (aloud: false for a screen showing itself off to nobody). loop: play the region's motion on its own, though
+   it has steps. A story started from inside another ends where that one would have. */
+function startStory(id, { aloud = true, loop = false } = {}) {
+  if (id && !MOTIONS[id]) throw new Error(`${id} has no story`);
+  const kind = loop ? 'motion' : storyKind(id), from = state.story ? state.story.from : { region: state.region, view: state.view };
+  setContents(false);
+  state.cut = false;
+  state.story = { kind, region: id, name: storyName(id), steps: storySteps(id, kind), index: 0, playing: true, done: false, stepStart: 0, spent: 0, from };
+  sound.key = null;   // its words are spoken from the start, though the region's opening may just have said them
+  if (id && state.region !== id) applyRegion(id);
+  goStep(0);
+  if (aloud) setSound(true);
+}
+function goStep(index) {
+  const story = state.story, step = story.steps[index], held = paused();
+  Object.assign(story, { index, playing: true, done: false, stepStart: performance.now() });   // moving on, by hand or not, plays
+  if (held && sound.on && sound.manifest.music) sound.music.play().catch(refused);
+  /* a stop of the tour picks its part out, in the view of its layer. A region's step picks nothing out: the part it
+     is about stays as it is drawn in motion (glass, with its blood showing), labelled and gently lit */
+  if (story.kind === 'tour') { applyView(step.view); selectEntry(step.entry); focusSelection(viewInfo()); }
+  else { select(null); focusStep(step); }
+}
+/* a step closes in on what it is about, from where it is best seen; one that names nothing shows the whole region */
 function focusStep(step) {
   if (!step.frame) { const frame = viewFrame(); flyTo(frame.position, frame.target, V(0, 1, 0)); return; }
   const parts = step.frame.flatMap(key => body.entries[key] || []);
@@ -622,58 +589,55 @@ function stepPart(delta) {
   const first = state.region ? 0 : Math.max(0, keys.findIndex(key => viewForLayer(entryLayer(key)) === state.view));
   const index = current < 0 ? (delta > 0 ? first : keys.length - 1) : (current + delta + keys.length) % keys.length;
   const key = keys[index];
-  stopTour();
-  if (phone.matches) state.drawer = false;
   if (!state.region && viewForLayer(entryLayer(key)) !== state.view) applyView(viewForLayer(entryLayer(key)));
-  state.inspectorOpen = true;
   selectEntry(key);
   focusSelection(viewInfo());
 }
 const viewForLayer = layer => ({ skeleton: 'skeleton', muscles: 'muscles', organs: 'organs', vessels: 'vessels', nerves: 'nerves', skin: 'body' })[layer];
-/* a tour is told aloud: starting one turns the sound on */
-function startTour(index = 0) { setSound(true); if (state.region && !reducedMotion()) state.motion = true; state.tour = { index, playing: true }; goTour(index); }
-/* A tour held where it is: its voice, its music, its motion and its clock all wait, and all go on from where they were.
-   A tour that has played to its end is not held: it plays again from the top. */
-const paused = () => !!state.tour && !state.tour.playing && !state.tour.done;
-function playTour(playing) {
-  if (!state.tour || state.tour.playing === playing) return;
-  if (state.tour.done) { startTour(0); return; }
+/* A story held where it is: its voice, its music, its motion and its clock all wait, and all go on from where they were.
+   A story that has played to its end is not held: it plays again from the top. */
+const paused = () => !!state.story && !state.story.playing && !state.story.done;
+function playStory(playing) {
+  const story = state.story;
+  if (!story || story.playing === playing) return;
+  if (story.done) { goStep(0); return; }
   const now = performance.now();
-  state.tour.playing = playing;
-  if (playing) state.tour.stepStart = now - state.tour.spent; else state.tour.spent = now - state.tour.stepStart;
+  story.playing = playing;
+  if (playing) story.stepStart = now - story.spent; else story.spent = now - story.stepStart;
   if (!playing) { sound.voice.pause(); sound.music.pause(); }
   else if (sound.on) { if (sound.speaking) sound.voice.play().catch(refused); if (sound.manifest.music) sound.music.play().catch(refused); }
-  renderInspector(); syncUI();
+  syncUI();
 }
-function stopTour() { if (!state.tour) return; state.tour = null; renderInspector(); syncUI(); }
-function stepTour(now) {
-  if (!state.tour?.playing) return;
-  /* with the sound on, a stop that is spoken lasts as long as the voice, and a breath more */
-  const unspoken = telling() ? Math.max(TOUR_STEP_MS, telling().say.length * 60) : TOUR_STEP_MS;   // a story's step, read, takes as long as its words
-  if (sound.on && sound.clip ? sound.speaking || now - sound.endedAt < AFTER_VOICE_MS : now - state.tour.stepStart < unspoken) return;
-  if (state.tour.index + 1 < tourStops().length) goTour(state.tour.index + 1);
-  else { state.tour.playing = false; state.tour.done = true; renderInspector(); syncUI(); }
+/* the story is over, and whoever ends it goes somewhere next, which draws the page again; music it was holding plays on */
+function endStory() {
+  if (!state.story) return;
+  const held = paused();
+  state.story = null;
+  if (held && sound.on && sound.manifest.music) sound.music.play().catch(refused);
 }
-$('tourBtn').addEventListener('click', () => state.tour ? stopTour() : startTour());
+/* Exit: back to where the story was started, home or a region, with the model at rest */
+function exitStory() {
+  const { from } = state.story;
+  endStory();
+  if (from.region) setRegion(from.region); else { state.selection = null; setView(from.view); }
+}
+function stepStory(now) {
+  const story = state.story;
+  if (!story?.playing || story.kind === 'motion') return;   // a motion goes round until it is left
+  /* with the sound on, a step that is spoken lasts as long as the voice, and a breath more */
+  const unspoken = Math.max(STEP_MS, stepWords(story.kind, story.region, story.steps[story.index]).length * READ_MS);
+  if (sound.on && sound.clip ? sound.speaking || now - sound.endedAt < AFTER_VOICE_MS : now - story.stepStart < unspoken) return;
+  if (story.index + 1 < story.steps.length) goStep(story.index + 1);
+  else { story.playing = false; story.done = true; syncUI(); }
+}
 
-/* ---------- Motion: what a close-up does while you watch ----------
-   motions.mjs says, for each close-up, what moves, when, and what flows. Here its parts are moved in the shaders (the
+/* ---------- Motion: what a region does in its story ----------
+   motions.mjs says, for each region, what moves, when, and what flows. Here its parts are moved in the shaders (the
    moves texture), its streams are drawn as drops running along curves, its parts fade and glow from moment to moment,
    and it has a caption for each moment and sounds at some of them. */
-/* A close-up moves only while the movement is what is being shown: as it opens, and through a story. It is still while a part is picked out or the parts are toured one by one,
-   and it comes to rest after it has gone round a few times (REST_AFTER, and for no less than REST_SECONDS: a heartbeat is short) or its tour is ended; its switch sets it going again. */
-const REST_AFTER = 3, REST_SECONDS = 20;
-const moving = () => !!MOTIONS[state.region] && state.motion && !state.cut && !state.selection && (!state.tour || !!telling());
-function restMotion() { if (!state.motion) return; state.motion = false; applyVisibility(); renderInspector(); syncUI(); }
-function toggleMotion() {
-  state.motion = !state.motion;
-  if (state.motion && state.selection) state.selection.isolate = false;   // a moving close-up stays whole
-  applyVisibility(); renderInspector(); syncUI();
-}
-/* the line under a moving close-up is its switch: it stops and starts the motion, or, while a story is told, the telling */
-const pressFigure = () => { if (!$('figure').classList.contains('live')) return; if (telling()) playTour(!state.tour.playing); else toggleMotion(); };
-$('figure').addEventListener('click', pressFigure);
-$('figure').addEventListener('keydown', event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); event.stopPropagation(); pressFigure(); } });
+/* The model moves only inside a story. A region opens still, and is still again once its story is left. For anyone who
+   has asked their device for less motion a story still shows its steps and its words, and nothing moves. */
+const moving = () => !!state.story && state.story.kind !== 'tour' && state.region === state.story.region && !reducedMotion();
 const motionKey = () => (moving() ? `${body.sex}:${state.region}` : null);
 const motion = { for: null, definition: null, rig: null, rigs: {}, phase: 0, clock: 0, caption: '', moment: -1, told: null, kept: null, opening: null, open: { amount: 0, normal: V(0, 0, 1), depth: 0, ball: new THREE.Vector4() }, into: 0, last: 0, held: null, base: null, touched: new Set(), chosen: new Set() };   // held: a moment of the cycle to stay at (tests and pictures)
 const DROP = (() => { const c = document.createElement('canvas'); c.width = c.height = 32; const g = c.getContext('2d'), fill = g.createRadialGradient(16, 16, 0, 16, 16, 16); fill.addColorStop(0, 'rgba(255,255,255,1)'); fill.addColorStop(0.5, 'rgba(255,255,255,0.9)'); fill.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = fill; g.fillRect(0, 0, 32, 32); return new THREE.CanvasTexture(c); })();
@@ -821,14 +785,21 @@ function makeStream(spec) {
   return { ...spec, cloud, from, to, gates: spec.gates || [], way: spec.curve.getSpacedPoints(WAY),   // the curve as points evenly spaced along it: quick to look up, drop by drop, frame by frame
     drops: Array.from({ length: count }, (_, k) => ({ label: (k + Math.random()) / count, behind: (spec.packed ?? 1) * k / count, where: spec.packed ? spec.packed * k / count : (k + Math.random()) / count, off: spec.swirl ? inBall(spread) : V(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5).multiplyScalar(spread * 2), other: spec.swirl ? inBall(spread) : null, rate: (0.5 + Math.random()) * (Math.random() < 0.5 ? -1 : 1), turn: Math.random() * 6.283 })) };
 }
-/* The line under a moving close-up. A motion that turns over faster than a line can be read (a heartbeat) names its
-   moments side by side and lights the one it is in: the words stay put. */
-function captionMotion() {
-  if (telling()) return;   // a story says what is happening in its own words: the line is its pause button (syncUI)
-  const figure = $('figure'), moments = motion.definition && motion.for === motionKey() && motion.definition.moments;
-  if (!moments) { figure.textContent = motion.caption || MOTIONS[state.region].stop; return; }
-  if (figure.children.length !== moments.length) figure.replaceChildren(...moments.map(text => Object.assign(document.createElement('span'), { textContent: text })));
-  [...figure.children].forEach((span, k) => span.classList.toggle('now', k === motion.moment));
+/* The words under the model during a story: a step's own; on the tour the part's name and notes; and for a region that
+   only moves, the motion's caption for the moment. A motion that turns over faster than a line can be read (a
+   heartbeat) names its moments side by side and lights the one it is in: the words stay put. Where nothing moves
+   (reduced motion) there are no moments, and the words are the ones the voice says. */
+let wordsShown = null;
+function renderWords() {
+  const say = $('say'), story = state.story;
+  say.hidden = !story;
+  if (!story) return;
+  const step = story.steps[story.index], moments = story.kind === 'motion' && moving() && motion.for === motionKey() && motion.definition.moments;
+  const words = story.kind === 'tour' ? `<b>${escapeHtml(ALL[step.entry].name)}.</b> ${escapeHtml(`${ALL[step.entry].what} ${ALL[step.entry].does}`)}`
+    : story.kind === 'steps' || !moving() ? escapeHtml(stepWords(story.kind, story.region, step))
+    : moments ? moments.map(text => `<span>${escapeHtml(text)}</span>`).join('') : escapeHtml(motion.caption);
+  if (words !== wordsShown) { wordsShown = words; say.innerHTML = words; }
+  if (moments) [...say.children].forEach((span, k) => span.classList.toggle('now', k === motion.moment));
 }
 function setMotion() {
   const key = motionKey();
@@ -913,7 +884,7 @@ function stepMotion(now) {
   const key = motionKey();
   if (!key || motion.for !== key) return;
   const { definition, rig } = motion, cycle = definition.cycle / 1000;
-  const seconds = paused() ? 0 : THREE.MathUtils.clamp((now - motion.last) / 1000, 0, 0.05); motion.last = now;   // frames can arrive out of order by a hair: nothing steps back; a tour that is paused holds its motion too
+  const seconds = paused() ? 0 : THREE.MathUtils.clamp((now - motion.last) / 1000, 0, 0.05); motion.last = now;   // frames can arrive out of order by a hair: nothing steps back; a story that is paused holds its motion too
   /* a story's step plays one stretch of the cycle, slowed, over and over, with a breath between: the drops fade out and in across the join */
   const step = telling(), span = motion.held === null && step?.span ? step : null;
   if (motion.told !== step) {
@@ -924,7 +895,6 @@ function stepMotion(now) {
   }
   const open = stepOpening(seconds);
   if (motion.held === null) motion.clock += seconds;
-  if (!state.tour && motion.held === null && motion.clock > Math.max(REST_AFTER * cycle, REST_SECONDS)) { restMotion(); return; }
   let time = motion.held === null ? motion.clock : motion.held * cycle, join = 1, rejoined = false;
   if (span) {
     const round = span.seconds + 0.6, into = motion.clock % round;
@@ -993,7 +963,7 @@ function stepMotion(now) {
   /* a sound is made as the cycle passes its moment: not while a moment is held, nor on a frame in which no time passed */
   if (sound.on && motion.held === null && phase !== before && !rejoined) for (const [at, make] of rig.sounds || definition.sounds || []) if (before < phase ? before < at && at <= phase : at > before || at <= phase) make(play, rig);
   const which = moment.moment ?? -1;
-  if ((moment.caption && moment.caption !== motion.caption) || which !== motion.moment) { motion.caption = moment.caption || motion.caption; motion.moment = which; captionMotion(); }
+  if ((moment.caption && moment.caption !== motion.caption) || which !== motion.moment) { motion.caption = moment.caption || motion.caption; motion.moment = which; renderWords(); }
   needsRender = true;
 }
 /* the sounds a motion can make: a low thump (a heart sound), a breath, a sung note, a soft chime */
@@ -1048,7 +1018,12 @@ const MUSIC_LEVEL = 0.2, UNDER_VOICE = 0.07, AFTER_VOICE_MS = 900;
 const sound = { on: false, manifest: null, music: new Audio(), voice: new Audio(), key: null, clip: null, speaking: false, endedAt: 0 };
 sound.music.loop = true; sound.music.volume = MUSIC_LEVEL;
 sound.voice.addEventListener('ended', () => { sound.speaking = false; sound.endedAt = performance.now(); sound.music.volume = MUSIC_LEVEL; invalidate(); });
-const voiceKey = () => (telling() ? `story:${state.region}:${state.tour.index}` : state.selection?.entry ? `entry:${state.selection.entry}` : state.region ? `region:${state.region}` : state.selection || state.blend ? null : `view:${state.view}`);
+const voiceKey = () => {
+  const story = state.story;
+  if (story?.kind === 'steps') return `story:${story.region}:${story.index}`;
+  if (story?.kind === 'motion') return `region:${story.region}`;
+  return state.selection?.entry ? `entry:${state.selection.entry}` : state.region ? `region:${state.region}` : state.selection || state.blend ? null : `view:${state.view}`;
+};
 /* a browser may still refuse to play (no click yet): the sound goes back off. A clip cut short by the next one is not a refusal. */
 const refused = error => { if (error.name === 'AbortError') return; sound.on = false; sound.music.pause(); sound.voice.pause(); sound.speaking = false; syncUI(); };
 function speak() {
@@ -1089,168 +1064,153 @@ const SOURCE_TEXT = {
   'NIH male': 'NIH Visible Human Male: a 38-year-old man, from cryosection images. Aligned to the BodyParts3D body.',
   'Z-Anatomy': 'Z-Anatomy, an open atlas built on BodyParts3D (CC BY-SA 4.0). Aligned to the BodyParts3D body.',
 };
-function renderInspector() {
-  const el = $('inspector');
-  if (el.hidden !== !state.inspectorOpen) el.hidden = !state.inspectorOpen;
-  requestAnimationFrame(resize);   // the free space for the model changes with the panel
-  const selection = state.selection;
-  el.classList.toggle('empty', !selection && !state.tour);
-  el.classList.toggle('peek', state.sheet === 'peek');
-  const handle = `<button type="button" class="sheet-handle" data-sheet aria-label="${state.sheet === 'peek' ? 'Show more' : 'Show less'}"></button>`;
-  const stops = body ? tourStops() : [];
-  const tour = state.tour ? `
-    <div class="tour-bar">
-      <span class="count" id="tourCount">Tour ${state.tour.index + 1} of ${stops.length}</span>
-      <button type="button" class="btn" data-tour="prev" ${state.tour.index === 0 ? 'disabled' : ''}>Back</button>
-      <button type="button" class="btn play" data-tour="play" data-playing="${state.tour.playing}">${state.tour.playing ? 'Pause' : state.tour.done ? 'Replay' : 'Play'}</button>
-      <button type="button" class="btn primary" data-tour="next" ${state.tour.index === stops.length - 1 ? 'disabled' : ''}>Next</button>
-      <button type="button" class="btn" data-tour="stop">End</button>
-      <div class="tour-progress"><span style="width:${((state.tour.index + 1) / stops.length * 100).toFixed(1)}%"></span></div>
-    </div>` : '';
-  if (telling()) {
-    el.innerHTML = `${handle}${tour}
-      <div class="inspector-head"><span class="sys">Step ${state.tour.index + 1} of ${stops.length}</span><button type="button" class="close" data-close aria-label="Close panel">×</button></div>
-      <div><h2 id="inspectorTitle">${escapeHtml(telling().title)}</h2></div>
-      <p class="lead">${escapeHtml(telling().say)}</p>`;
-    return;
-  }
-  if (!selection) {
-    const intro = viewInfo();
-    const items = body ? intro.items.filter(([key]) => body.entries[key]) : [];
-    const eyebrow = state.region ? `Close-up · ${body.order.length} parts` : `Layer ${String(Math.round(state.peel) + 1).padStart(2, '0')} / ${String(PEEL.length).padStart(2, '0')}`;
-    el.innerHTML = `${handle}
-      <div class="eyebrow">${eyebrow}</div>
-      <div class="welcome"><h2>${escapeHtml(intro.title)}</h2></div>
-      <p class="lead">${escapeHtml(intro.text[state.sex] || intro.text.any)}</p>
-      ${state.region ? `<div class="nav-row"><button type="button" class="go" data-tour-start>Start the tour  →</button></div>` : `<div class="exits">${items.map(([key, note]) => `
-        <button type="button" data-entry="${key}"><i>${String(entryNumber(key)).padStart(2, '0')}</i><b>${escapeHtml(ALL[key].name)}</b><span>${escapeHtml(note)}</span></button>`).join('')}
-      </div>`}
-      <button type="button" class="quiet step-start" data-step="1">${state.region ? 'Or step through the parts yourself' : 'Step through the parts  →'}</button>
-      ${MOTIONS[state.region] ? `<button type="button" class="quiet" data-motion aria-pressed="${state.motion}">${state.motion ? MOTIONS[state.region].stop : MOTIONS[state.region].start}</button>` : ''}
-      <p class="small">Drag to turn · scroll or pinch to zoom · ↑ ↓ move along the body · ← → step from part to part</p>`;
-    return;
-  }
+/* The sheet shows exactly one thing: the home page (the layer on show, the tour, a few stories), a region (what it is,
+   its story, its numbered parts), or a part's card. A story hides it. */
+const lowerFirst = text => text.charAt(0).toLowerCase() + text.slice(1);
+function renderSheet() {
+  const el = $('sheet');
+  el.hidden = !!state.story;
+  el.classList.toggle('full', state.sheet === 'full');
+  if (el.hidden) return;
+  /* the keyboard keeps its place when the sheet is drawn again: on the same button if it is still there, else on the heading */
+  const held = el.contains(document.activeElement) ? document.activeElement : null;
+  const again = held && (held.dataset.step ? `[data-step="${held.dataset.step}"]` : held.hasAttribute('data-sheet') ? '[data-sheet]' : null);
+  el.innerHTML = `<button type="button" class="sheet-handle" data-sheet aria-label="${state.sheet === 'peek' ? 'Show more' : 'Show less'}"></button>${sheetContent()}`;
+  if (held) (again && el.querySelector(again) || $('sheetTitle')).focus();
+}
+function sheetContent() {
+  const selection = state.selection, intro = viewInfo();
+  const heading = `<h2 id="sheetTitle" tabindex="-1">${escapeHtml(intro.title)}</h2>
+    <p class="lead">${escapeHtml(intro.text[state.sex] || intro.text.any)}</p>`;
+  if (!selection && !state.region) return `
+    <div class="eyebrow">Layer ${Math.round(state.peel) + 1} of ${PEEL.length}</div>
+    ${heading}
+    <button type="button" class="go" data-watch="">Tour the body, ${storyMinutes(null)} min</button>
+    <h3 class="sub">Watch how it works</h3>
+    <div class="list">${HOME_STORIES.map(id => `<button type="button" data-watch="${id}">${escapeHtml(storyName(id))}<span>${storyMinutes(id)} min</span></button>`).join('')}
+      <button type="button" data-contents>Everything on this site<span>Contents</span></button></div>`;
+  if (!selection) return `
+    <div class="eyebrow">Region</div>
+    ${heading}
+    ${MOTIONS[state.region] ? `<button type="button" class="go" data-watch="${state.region}">Watch: ${escapeHtml(MOTIONS[state.region].watch)}, ${storyMinutes(state.region)} min</button>` : ''}
+    <h3 class="sub">Parts</h3>
+    <div class="list parts">${body.order.map(key => `<button type="button" data-entry="${key}"><i>${entryNumber(key)}</i>${escapeHtml(ALL[key].short || ALL[key].name)}</button>`).join('')}</div>`;
   const key = selection.entry, entry = key ? ALL[key] : null, part = body.parts[selection.part ?? selection.parts[0]];
   const title = selectionName();
   const picked = selection.part !== undefined ? body.parts[selection.part].name : null;
   const aka = !entry ? `${LAYER_INFO[part.layer].name} · ${GROUP_INFO[part.group]?.name || part.group}`
     : title !== entry.name ? `Part of: ${entry.name}` : picked && picked !== entry.name ? `Selected piece: ${picked}` : entry.aka;
-  const stepper = state.tour || !key || !entryNumber(key) ? '' : `<div class="stepper"><span>${body.order.indexOf(key) + 1} of ${body.order.length}</span></div>`;   // Back and Next are under the story
+  const at = key ? body.order.indexOf(key) : -1;
   const size = part.max.map((value, axis) => value - part.min[axis]);
   const facts = entry ? entry.stats : [['Size (this model)', `${Math.max(...size).toFixed(1)} cm across`], ['Layer', LAYER_INFO[part.layer].name]];
   const equivalent = entry && (entry.other?.[otherSex()] ?? entry.other?.any);
-  el.innerHTML = `${handle}${tour}
-    <div class="inspector-head"><span class="sys" style="--dot:${LAYER_INFO[part.layer].dot}">${key && entryNumber(key) ? `<em class="no">${entryNumber(key)}</em>` : ''}${escapeHtml(GROUP_INFO[part.group]?.name || LAYER_INFO[part.layer].name)}</span>${stepper}${isolating() ? '<button type="button" class="btn show-all" data-show-all>Show all</button>' : ''}<button type="button" class="close" data-close aria-label="Close panel">×</button></div>
-    <div><h2 id="inspectorTitle">${escapeHtml(title)}</h2><div class="aka">${escapeHtml(aka || '')}</div></div>
-    ${entry ? `<p>${escapeHtml(entry.what)}</p><p>${escapeHtml(entry.does)}</p><div class="bug"><b>Worth knowing</b>${escapeHtml(entry.bug)}</div>` : `<p>One of the ${body.parts.length} structures in this model, in the ${escapeHtml((GROUP_INFO[part.group]?.name || part.group).toLowerCase())}. The main parts have full notes; step through them with ‹ ›.</p>`}
+  return `
+    <div class="sheet-head"><span class="sys" style="--dot:${LAYER_INFO[part.layer].dot}">${at >= 0 ? `<em class="no">${at + 1}</em>` : ''}${escapeHtml(GROUP_INFO[part.group]?.name || LAYER_INFO[part.layer].name)}</span>${at >= 0 ? `<span class="count">${at + 1} of ${body.order.length}</span>` : ''}</div>
+    <div><h2 id="sheetTitle" tabindex="-1">${escapeHtml(title)}</h2><div class="aka">${escapeHtml(aka || '')}</div></div>
+    ${entry ? `<p>${escapeHtml(entry.what)}</p><p>${escapeHtml(entry.does)}</p><div class="bug"><b>Worth knowing</b>${escapeHtml(entry.bug)}</div>` : `<p>One of the ${body.parts.length} structures in this model, in the ${escapeHtml((GROUP_INFO[part.group]?.name || part.group).toLowerCase())}. The main parts have full notes.</p>`}
     <dl class="stats">${facts.map(([k, v]) => `<dt>${escapeHtml(k)}</dt><dd>${escapeHtml(v)}</dd>`).join('')}</dl>
     ${equivalent ? `<div class="homolog">${state.sex === 'male' ? 'Female' : 'Male'} equivalent: <b>${escapeHtml(equivalent)}</b></div>` : ''}
-    ${storyNav(key)}
+    ${partNav(at)}
     ${sourceNote(selection.parts)}`;
 }
-/* Back, and Next named for the stop it leads to: the numbered parts in order */
-function storyNav(key) {
-  const at = key ? body.order.indexOf(key) : -1;
-  if (at < 0) return '';
-  const next = body.order[(at + 1) % body.order.length];
-  return `<div class="nav-row"><button type="button" class="back" data-step="-1">Back</button><button type="button" class="go" data-step="1">Next: ${escapeHtml(ALL[next].short || ALL[next].name)}  →</button></div>`;
+/* Next and Previous, each named for the part it leads to (the numbered parts, in order), and the way back up: to the
+   region, or on the whole body to the layer */
+function partNav(at) {
+  const up = `<button type="button" data-up>Back to ${escapeHtml(lowerFirst(viewInfo().title))}</button>`;
+  if (at < 0) return `<div class="part-nav">${up}</div>`;
+  const name = k => { const entry = ALL[body.order[(k + body.order.length) % body.order.length]]; return escapeHtml(entry.short || entry.name); };
+  return `<div class="part-nav"><button type="button" class="go" data-step="1">Next: ${name(at + 1)}</button><button type="button" data-step="-1">Previous: ${name(at - 1)}</button>${up}</div>`;
 }
-/* The right column (desktop). On the whole body: the card of the close-up whose glowing point was chosen. In a close-up:
-   its stops, numbered, the one on show marked. */
 const HOTSPOTS = [['brain', 'frontalLobe', null, 'Brain'], ['eye', 'eye', 'right', 'Eye'], ['heart', 'heart', null, 'Heart'], ['shoulder', 'scapula', 'right', 'Shoulder'], ['digestive', 'smallIntestine', null, 'Gut'], ['hand', 'carpals', 'right', 'Hand'], ['knee', 'patella', 'right', 'Knee'], ['foot', 'talus', 'right', 'Foot']];
-const atHome = () => !state.region && !state.selection && !state.tour;
-let sideShown = null;
-function renderSide() {
-  const el = $('side');
-  if (!body || phone.matches) { el.hidden = true; return; }
-  const story = STORIES[state.region];
-  const key = state.region ? `stops ${state.region} ${body.sex} ${story ? state.tour?.index ?? '' : state.selection?.entry || ''}` : atHome() && REGIONS[state.spot] ? `card ${state.spot}` : '';
-  if (key === sideShown) return;
-  sideShown = key;
-  el.hidden = !key;
-  if (story) {
-    el.innerHTML = `<div class="hint-line">${escapeHtml(REGIONS[state.region].name)}: how it works, in ${story.length} steps</div><div class="stops">${story.map((step, k) =>
-      `<button type="button" data-story="${k}" aria-current="${k === state.tour?.index}"><i>${String(k + 1).padStart(2, '0')}</i>${escapeHtml(step.title)}</button>`).join('')}</div>`;
-  } else if (state.region) {
-    el.innerHTML = `<div class="hint-line">${escapeHtml(REGIONS[state.region].name)}: ${body.order.length} stops</div><div class="stops">${body.order.map((entry, k) =>
-      `<button type="button" data-entry="${entry}" aria-current="${entry === state.selection?.entry}"><i>${String(k + 1).padStart(2, '0')}</i>${escapeHtml(ALL[entry].short || ALL[entry].name)}</button>`).join('')}</div>`;
-  } else if (key) {
-    const region = REGIONS[state.spot];
-    el.innerHTML = `<div class="hint-line">Tap a glowing point on the body</div>
-      <div class="card"><div class="shot"><img src="img/close-${region.id}.webp" alt="${escapeHtml(region.name)}, close up"></div>
-      <div class="body"><div class="meta">${region.parts.length} parts · about ${Math.max(2, Math.round(region.parts.length * 7 / 60))} min</div><h3>${escapeHtml(region.title)}</h3><p>${escapeHtml(region.note.charAt(0).toUpperCase() + region.note.slice(1))}.</p>
-      <button type="button" class="go" data-tour-region="${region.id}">Start the tour  →</button><button type="button" class="quiet" data-region="${region.id}">Or explore it freely</button></div></div>`;
-  }
-  requestAnimationFrame(resize);
+const atHome = () => !state.region && !state.selection && !state.story;
+/* a part goes back up to its region, or on the whole body to its layer */
+function leavePart() { select(null); const frame = viewFrame(); flyTo(frame.position, frame.target, V(0, 1, 0)); }
+/* home: out of any region, story and selection, onto the whole body in one layer (the skin, from the title), the camera reset */
+function goHome(view = 'body') { endStory(); setContents(false); state.selection = null; setView(view); }
+/* up one level: Contents closes, a story exits, a part goes back to its region or layer, a region goes home */
+function goUp() {
+  if (state.contents) { setContents(false); $('contentsBtn').focus(); }
+  else if (state.story) { exitStory(); $('sheetTitle').focus(); }
+  else if (state.selection) leavePart();
+  else if (state.region) setView(state.view);
 }
 document.addEventListener('click', event => {
-  const target = event.target.closest('[data-entry],[data-tour],[data-close],[data-sheet],[data-step],[data-show-all],[data-route],[data-leave],[data-region],[data-tour-region],[data-tour-start],button[data-motion],[data-story]');   // button[data-motion]: the line under the model carries data-motion too, as its state, and has its own listener
-  if (!target || target.closest('#views') || target.closest('#partGroups')) return;
-  if (target.hasAttribute('data-leave')) { stopTour(); setView(state.view); }
-  if (target.dataset.tourRegion) { setRegion(target.dataset.tourRegion); startTour(); return; }
-  if (target.hasAttribute('data-tour-start')) { startTour(); return; }
-  if (target.dataset.story) { startTour(Number(target.dataset.story)); return; }
-  if (target.hasAttribute('data-motion')) { toggleMotion(); return; }
-  if (target.dataset.region) { stopTour(); state.closeups = false; setRegion(target.dataset.region); }
-  if (target.dataset.step) stepPart(Number(target.dataset.step));
-  if (target.hasAttribute('data-show-all')) { select(null); resetView(); }
-  const action = target.dataset.tour;
-  if (action === 'stop') { stopTour(); restMotion(); }
-  if (action === 'next' && state.tour) goTour(Math.min(tourStops().length - 1, state.tour.index + 1));
-  if (action === 'prev' && state.tour) goTour(Math.max(0, state.tour.index - 1));
-  if (action === 'play' && state.tour) playTour(!state.tour.playing);
-  if (target.hasAttribute('data-close')) { if (phone.matches) { state.selection = null; applyVisibility(); syncUI(); } else state.inspectorOpen = false; stopTour(); renderInspector(); }
-  if (target.hasAttribute('data-sheet')) { state.sheet = state.sheet === 'peek' ? 'full' : 'peek'; renderInspector(); }
-  if (target.dataset.entry && body.entries[target.dataset.entry]) {
-    stopTour();
+  const target = event.target.closest('[data-entry],[data-step],[data-up],[data-sheet],[data-region],[data-watch],[data-contents],[data-layer],[data-story],[data-manual]');
+  if (!target) return;
+  if (target.hasAttribute('data-sheet')) { state.sheet = state.sheet === 'peek' ? 'full' : 'peek'; renderSheet(); }
+  else if (target.hasAttribute('data-contents')) { setContents(true); $('contents').focus(); }
+  else if (target.hasAttribute('data-up')) leavePart();
+  else if (target.hasAttribute('data-watch')) { startStory(target.dataset.watch || null); $('transport').querySelector('[data-story="play"]').focus(); }
+  else if (target.dataset.region) { endStory(); setContents(false); setRegion(target.dataset.region); }
+  else if (target.dataset.layer) goHome(target.dataset.layer);
+  else if (target.dataset.step) stepPart(Number(target.dataset.step));
+  else if (target.dataset.manual) { setContents(false); $(target.dataset.manual).scrollIntoView({ behavior: reducedMotion() ? 'auto' : 'smooth', block: 'start' }); }
+  else if (target.dataset.story) {
+    const story = state.story, action = target.dataset.story;
+    if (action === 'exit') { exitStory(); $('sheetTitle').focus(); }
+    if (action === 'play') playStory(!story.playing);
+    if (action === 'next') goStep(Math.min(story.steps.length - 1, story.index + 1));
+    if (action === 'prev') goStep(Math.max(0, story.index - 1));
+  } else if (body.entries[target.dataset.entry]) {
+    endStory(); setContents(false);
     const key = target.dataset.entry, view = target.dataset.view || viewForLayer(entryLayer(key));
-    if (target.dataset.view ? state.region || view !== state.view : !state.region && view !== state.view) applyView(view);   // a close-up's own parts stay in it
+    if (target.dataset.view ? state.region || view !== state.view : !state.region && view !== state.view) applyView(view);   // a region's own parts stay in it
     selectEntry(key);
     focusSelection(viewInfo());
     if (target.closest('.manual')) $('viewer').scrollIntoView({ behavior: reducedMotion() ? 'auto' : 'smooth', block: 'start' });
   }
 });
 
+/* ---------- Contents: the whole site on one page, laid over the stage ----------
+   The stories to watch, the regions by part of the body, the six layers, how the model is drawn, and the reading. What
+   is under it keeps its place, and shows again when the page is closed. Opening it ends a story. */
+function renderContents() {
+  const regions = Object.values(REGIONS).filter(region => !region.sex || region.sex === body.sex);
+  const watch = id => `<button type="button" data-watch="${id || ''}">${escapeHtml(storyName(id))}<span>${storyMinutes(id)} min</span></button>`;
+  $('contentsWatch').innerHTML = [null, ...regions.filter(region => MOTIONS[region.id]).map(region => region.id)].map(watch).join('');
+  $('contentsRegions').innerHTML = GROUPS.map(group => `<section><h2>${escapeHtml(group)}</h2><div class="list">${regions.filter(region => region.group === group).map(region =>
+    `<button type="button" data-region="${region.id}">${escapeHtml(region.name)}</button>`).join('')}</div></section>`).join('');
+}
+function setContents(open) {
+  if (state.contents === open) return;
+  if (open && state.story) exitStory();
+  state.contents = open;
+  if (open) { renderContents(); $('contents').scrollTop = 0; }
+  syncUI();
+}
+$('contentsBtn').addEventListener('click', () => { setContents(!state.contents); if (state.contents) $('contents').focus(); });
+
 function syncUI() {
   invalidate();
-  $('drawer').hidden = !state.drawer;
-  $('partsBtn').setAttribute('aria-expanded', String(state.drawer));
-  for (const button of layersEl.children) button.setAttribute('aria-pressed', String(state.layers[button.dataset.layer] !== 'off'));
-  const current = state.selection?.entry;
-  for (const [key, button] of Object.entries(listButtons)) button.setAttribute('aria-current', String(key === current));
-  [...tonesEl.children].forEach((button, k) => button.setAttribute('aria-pressed', String(k === state.tone)));
-  for (const button of document.querySelectorAll('[data-toggle]')) button.setAttribute('aria-pressed', String(state[button.dataset.toggle]));
+  const story = state.story;
+  [...tonesEl.querySelectorAll('button')].forEach((button, k) => button.setAttribute('aria-pressed', String(k === state.tone)));
+  for (const button of document.querySelectorAll('[data-toggle]')) { button.setAttribute('aria-pressed', String(state[button.dataset.toggle])); button.querySelector('span').textContent = state[button.dataset.toggle] ? 'On' : 'Off'; }
   for (const button of $('sexSwitch').children) button.setAttribute('aria-pressed', String(button.dataset.sex === state.sex));
-  $('tourBtn').setAttribute('aria-pressed', String(!!state.tour));
-  $('tourBtn').querySelector('span').textContent = state.tour ? 'End tour' : 'Guided tour';
-  $('dock').classList.toggle('open', state.dock);
-  $('dockBtn').setAttribute('aria-expanded', String(state.dock));
   $('soundBtn').setAttribute('aria-pressed', String(sound.on));
   speak();
+  renderTrail();
+  /* Contents lies over the stage and the sheet, which are out of reach until it is closed */
+  $('contents').hidden = !state.contents;
+  $('contentsBtn').textContent = state.contents ? 'Close' : 'Contents';
+  $('contentsBtn').setAttribute('aria-expanded', String(state.contents));
+  stage.inert = $('sheet').inert = state.contents;
+  $('sheet').hidden = !!story;
+  /* the strip: the layers at home, a story's transport, and nothing in a region or on a part */
+  $('layerStrip').hidden = !atHome();
   $('peel').value = Math.round(state.peel * 100);
-  $('peel').parentElement.hidden = !!state.region;   // the peel is of the whole body
-  renderCrumbs();
-  renderSide();
-  $('closeups').hidden = !state.closeups;
-  $('closeupsBtn').setAttribute('aria-expanded', String(state.closeups));
-  for (const button of $('closeupList').children) button.setAttribute('aria-current', String(button.dataset.region === state.region));
-  $('isolateChip').hidden = !isolating();
-  const name = state.selection ? selectionName() : '';
-  if (isolating()) $('isolateChip').innerHTML = `<span>Showing <b>${escapeHtml(name)}</b> on its own</span><span class="all">Show all</span>`;
-  const figure = state.selection?.entry ? `Fig. ${entryNumber(state.selection.entry)} · ${name}` : state.selection ? name : viewInfo().figure;
-  /* in a close-up that moves, the line under the model says what is happening, and is itself the switch: a touch stops and starts it */
-  const moves = !!MOTIONS[state.region] && !state.cut && !state.selection && (!state.tour || !!telling());   // while a part is picked out it is still, and the line is the figure's caption
-  const told = moves && !!telling();
-  $('figure').classList.toggle('live', moves); $('figure').dataset.motion = (told ? state.tour.playing : moving()) ? 'on' : 'off';
-  if (moves) { $('figure').setAttribute('role', 'button'); $('figure').tabIndex = 0; } else { $('figure').removeAttribute('role'); $('figure').removeAttribute('tabindex'); }
-  if (told) $('figure').textContent = state.tour.playing ? 'Pause' : state.tour.done ? 'Play it again' : 'Play';
-  else if (moves && !state.motion) $('figure').textContent = MOTIONS[state.region].start;
-  else if (!moves) $('figure').textContent = `${figure}${isolating() ? ', isolated' : ''} · ${state.sex === 'male' ? 'Male' : 'Female'}`;
-  else captionMotion();
-  for (const button of $('views').children) button.setAttribute('aria-pressed', String(!state.region && button.dataset.view === state.view));
-  $('hint').hidden = state.touched || !!state.selection || !!state.tour || state.dock || state.drawer;
+  for (const button of $('views').children) button.setAttribute('aria-pressed', String(button.dataset.view === state.view));
+  $('transport').hidden = !story;
+  if (story) {
+    const stepped = story.steps.length > 1, button = action => $('transport').querySelector(`[data-story="${action}"]`);
+    button('prev').hidden = button('next').hidden = $('storyCount').hidden = !stepped;
+    button('prev').disabled = story.index === 0; button('next').disabled = story.index === story.steps.length - 1;
+    $('storyCount').textContent = `${story.index + 1} / ${story.steps.length}`;
+    button('play').textContent = story.playing ? 'Pause' : story.done ? 'Play again' : 'Play';
+  }
+  renderWords();
+  $('hint').hidden = state.touched || !atHome();
   const xrayOn = state.xray >= 0.02, coverName = viewInfo().xray.map(layer => LAYER_INFO[layer].name.toLowerCase()).join(' and ');
-  $('xrayOut').textContent = xrayOn ? `On · ${Math.round(state.xray * 100)}%` : 'Off';
+  $('xrayOut').textContent = xrayOn ? `On, ${Math.round(state.xray * 100)}%` : 'Off';
   $('xraySwitch').setAttribute('aria-checked', String(xrayOn));
   $('xray').hidden = !xrayOn;
   $('xray').value = Math.round(state.xray * 100);
@@ -1258,6 +1218,7 @@ function syncUI() {
   $('body').value = Math.round(state.body * 100);
   $('bodyOut').textContent = state.layers.skin === 'off' || state.body < 0.01 ? 'Hidden' : `${Math.round(state.body * 100)}%`;
   for (const range of document.querySelectorAll('input[type="range"]')) range.style.setProperty('--fill', `${(range.value - range.min) / (range.max - range.min) * 100}%`);
+  resize();   // the strip and the words take room from the model, or give it back
 }
 /* a picked structure is named for itself, unless it is a piece of a whole organ; a chosen entry by the entry's name */
 const selectionName = () => {
@@ -1267,15 +1228,15 @@ const selectionName = () => {
   return entry.name;
 };
 /* internal parts are isolated (solid, everything else faint); parts on the surface of their layer just get highlighted */
-const shouldIsolate = parts => parts.every(index => !['skin'].includes(body.parts[index].layer)) && viewInfo().isolate && !moving();   // a moving close-up stays whole: a chosen part is lit, the rest goes on moving
+const shouldIsolate = parts => parts.every(index => !['skin'].includes(body.parts[index].layer)) && viewInfo().isolate;
 function select(selection) {
   state.selection = selection;
   if (selection) {
-    state.inspectorOpen = true; state.sheet = 'peek'; state.dock = false; state.closeups = false;
+    state.sheet = 'peek';
     for (const index of selection.parts) { const layer = body.parts[index].layer; if (state.layers[layer] === 'off') state.layers[layer] = 'solid'; }
     ensureLayers();
   }
-  applyVisibility(); renderInspector(); syncUI();
+  applyVisibility(); renderSheet(); syncUI();
 }
 function selectEntry(key) {
   const parts = body.entries[key];
@@ -1308,13 +1269,13 @@ function ensureLayers() {
   return Promise.all([...wanted.map(layer => loadLayer(body, layer)), loadClothing(body)]).then(() => { if (body.sex === sex) $('fetching').hidden = true; });
 }
 function applyView(name) {
-  if (isolating() && !state.tour) state.selection = null;
-  if (state.region) { state.selection = null; state.region = null; useIndex(body, null); buildPartsList(); buildTags(); measureTags(); }
+  if (isolating()) state.selection = null;
+  if (state.region) { state.selection = null; state.region = null; useIndex(body, null); buildTags(); measureTags(); }
   state.view = name; state.peel = PEEL.indexOf(name); state.blend = null;
   const view = VIEW_INFO[name];
   Object.assign(state.layers, view.layers);
   state.xray = 0; state.body = view.body;
-  ensureLayers(); applyVisibility(); renderInspector(); syncUI();
+  ensureLayers(); applyVisibility(); renderSheet(); syncUI();
 }
 /* The peel: the views in order from the outside in. Between two of them every layer is as solid as its share of the way
    from one to the other, so the body fades from skin to skeleton without a jump. */
@@ -1332,7 +1293,7 @@ function setPeel(value) {
     state.layers[layer] = state.blend[layer] > 0.002 ? (layer === 'skin' ? 'ghost' : 'solid') : 'off';
   }
   state.body = state.blend.skin;
-  ensureLayers(); applyVisibility(); renderInspector(); syncUI();
+  ensureLayers(); applyVisibility(); renderSheet(); syncUI();
 }
 /* a layer's name under the line glides the body there */
 let glide = null;
@@ -1350,21 +1311,19 @@ function stepGlide(now) {
   setPeel(t >= 1 ? to : glide.from + (to - glide.from) * eased);
   invalidate();
 }
-$('peel').addEventListener('input', event => { glide = null; stopTour(); setPeel(event.target.value / 100); });
-/* a close-up: its own numbered parts, and only the layers its parts and context are in */
+$('peel').addEventListener('input', event => { glide = null; setPeel(event.target.value / 100); });
+/* a region: its own numbered parts, and only the layers its parts and context are in. It opens still. */
 function applyRegion(id) {
   const region = REGIONS[id];
-  if (region.sex && region.sex !== body.sex) throw new Error(`the ${body.sex} body has no ${id} close-up`);
+  if (region.sex && region.sex !== body.sex) throw new Error(`the ${body.sex} body has no ${id} region`);
   state.selection = null; state.region = id; state.blend = null; glide = null;
-  state.motion = !reducedMotion();   // each close-up opens moving, whatever the last one was left doing
   useIndex(body, region);
-  buildPartsList(); buildTags(); measureTags();
+  buildTags(); measureTags();
   for (const layer of LAYERS) state.layers[layer] = 'off';
   for (const index of [...body.around.own, ...body.around.context]) state.layers[body.parts[index].layer] = 'solid';
   state.layers.skin = 'ghost';
   state.xray = 0; state.body = viewInfo().body;
-  state.inspectorOpen = true;
-  ensureLayers(); applyVisibility(); renderInspector(); syncUI();
+  ensureLayers(); applyVisibility(); renderSheet(); syncUI();
 }
 function setRegion(id) {
   applyRegion(id);
@@ -1372,20 +1331,12 @@ function setRegion(id) {
   flyTo(frame.position, frame.target, V(0, 1, 0));
 }
 const resetView = () => (state.region ? setRegion(state.region) : setView(state.view));
-/* each view keeps its direction but sets its distance so its subject fills the screen space the panels leave free */
+/* each view keeps its direction but sets its distance so its subject fills the part of the stage it has to itself: all
+   of it but a margin, and what the strip and a story's words take at the bottom */
 function freeRect() {
-  const box = stage.getBoundingClientRect(), rect = el => el.getBoundingClientRect();
-  const inspector = $('inspector'), sheetOpen = !inspector.hidden && !inspector.classList.contains('empty');
-  if (phone.matches) return { left: 12, right: box.width - 12, top: (state.region ? rect(document.querySelector('.top-right')).bottom : rect($('views')).bottom) - box.top + 16,
-    bottom: rect(sheetOpen ? inspector : document.querySelector('.rail')).top - box.top - 28 };
-  const { left, right } = insets();
-  return { left: left + 24, right: box.width - right - 24, top: rect(document.querySelector('.masthead')).bottom - box.top + 24, bottom: state.region ? box.height - 56 : rect($('peel')).top - box.top - 34 };
-}
-/* how much of the stage the columns take on each side (desktop): the tools and the story on the left, the card or the stops on the right */
-function insets() {
-  const box = stage.getBoundingClientRect(), inspector = $('inspector'), side = $('side');
-  const left = Math.max(document.querySelector('.rail').getBoundingClientRect().right, inspector.hidden ? 0 : inspector.getBoundingClientRect().right) - box.left;
-  return { left, right: side.hidden ? 24 : box.right - side.getBoundingClientRect().left };
+  const box = stage.getBoundingClientRect(), margin = phone.matches ? 12 : 24;
+  const taken = ['layerStrip', 'transport', 'say'].map($).filter(el => !el.hidden).map(el => el.getBoundingClientRect().top - box.top);
+  return { left: margin, right: box.width - margin, top: margin, bottom: Math.min(box.height, ...taken) - margin };
 }
 const corner = new THREE.Vector3();
 function boxPoints(parts, margin = 0) {
@@ -1445,47 +1396,52 @@ function focusSelection(fromView = null) {
   const frame = fitFrame(boxPoints(parts, Math.max(state.region ? 0.8 : 2.5, size * 0.2)), direction, V(0, 1, 0), 0.85);
   flyTo(frame.position, frame.target, V(0, 1, 0));
 }
-for (const button of $('views').children) button.addEventListener('click', () => { stopTour(); glideTo(button.dataset.view); });
-$('resetBtn').addEventListener('click', () => { stopTour(); resetView(); });
-$('isolateChip').addEventListener('click', () => { select(null); resetView(); });
-$('manualBtn').addEventListener('click', () => document.querySelector('.manual-wrap').scrollIntoView({ behavior: reducedMotion() ? 'auto' : 'smooth' }));
+for (const button of $('views').children) button.addEventListener('click', () => glideTo(button.dataset.view));
+$('homeBtn').addEventListener('click', () => goHome());
+$('resetBtn').addEventListener('click', () => { setContents(false); resetView(); });
 for (const button of document.querySelectorAll('[data-toggle]')) button.addEventListener('click', () => {
   const key = button.dataset.toggle; state[key] = !state[key]; applyVisibility(); syncUI();
   /* the cut is looked at from the body's left, square on, from where the view already is */
   if (key === 'cut' && state.cut) { const distance = camera.position.distanceTo(controls.target); flyTo(controls.target.clone().addScaledVector(V(1, 0.06, 0.1).normalize(), distance), controls.target, V(0, 1, 0)); }
 });
-$('closeupsBtn').addEventListener('click', () => { state.closeups = !state.closeups; if (state.closeups) { state.drawer = false; state.dock = false; } syncUI(); });
 $('xraySwitch').addEventListener('click', () => { state.xray = state.xray < 0.02 ? 0.85 : 0; applyVisibility(); syncUI(); });
 $('xray').addEventListener('input', event => { state.xray = event.target.value / 100; applyVisibility(); syncUI(); });
 $('body').addEventListener('input', event => { state.body = event.target.value / 100; if (state.body > 0 && state.layers.skin === 'off') { state.layers.skin = 'ghost'; ensureLayers(); } applyVisibility(); syncUI(); });
-document.addEventListener('keydown', event => {   // arrow keys step from part to part, unless a control has the keys
-  if (event.altKey || event.ctrlKey || event.metaKey || event.target.closest('input, textarea, select')) return;
-  if (event.key === 'ArrowRight' || event.key === 'ArrowLeft') { event.preventDefault(); stepPart(event.key === 'ArrowRight' ? 1 : -1); }
+/* Escape goes up one level from anywhere but the search box, which it clears. The arrow keys step from part to part, or
+   from step to step of a story, and move the view up and down the body, unless a control or Contents has the keys. */
+document.addEventListener('keydown', event => {
+  if (event.altKey || event.ctrlKey || event.metaKey) return;
+  if (event.key === 'Escape' && event.target.id !== 'find') { goUp(); return; }
+  if (state.contents || event.target.closest('input, textarea, select')) return;
+  if (event.key === 'ArrowRight' || event.key === 'ArrowLeft') {
+    event.preventDefault();
+    const delta = event.key === 'ArrowRight' ? 1 : -1, story = state.story;
+    if (!story) stepPart(delta);
+    else if (story.steps[story.index + delta]) goStep(story.index + delta);
+  }
   if (event.key === 'ArrowUp' || event.key === 'ArrowDown') { event.preventDefault(); flight = null; controls.lift((event.key === 'ArrowUp' ? 1 : -1) * Math.max(3, visibleHeight() * 0.08)); clampLift(); invalidate(); }
-  if (event.key === 'Escape' && state.selection) { select(null); }
-  if (event.key === ' ' && state.tour && !event.target.closest('button, a, [role="button"]')) { event.preventDefault(); playTour(!state.tour.playing); }   // the space bar pauses a tour, as it does a film
+  if (event.key === ' ' && state.story && !event.target.closest('button, a, [role="button"]')) { event.preventDefault(); playStory(!state.story.playing); }   // the space bar pauses a story, as it does a film
 });
 for (const button of $('sexSwitch').children) button.addEventListener('click', () => switchSex(button.dataset.sex));
 
 /* ---------- Where you are, and finding a part ---------- */
-/* The trail from the whole body down to what is on show: each step back up is a button. */
-function renderCrumbs() {
-  const region = closeUp(), selection = state.selection, step = telling();
-  const trail = [['body', 'Whole body']];
-  if (region) trail.push(['region', region.name]);
-  else if (state.view !== 'body' && !state.blend) { const button = $('views').querySelector(`[data-view="${state.view}"]`); trail.push(['view', (button.querySelector('.long') || button).textContent]); }
-  if (step) trail.push(['step', step.title]);
-  else if (selection) trail.push(['part', selectionName()]);
-  $('crumbs').classList.toggle('below-layers', !region);
-  $('crumbs').innerHTML = trail.length === 1 ? '' : trail.map(([kind, name], k) => (k === trail.length - 1 ? `<b aria-current="page">${escapeHtml(name)}</b>`
-    : `<button type="button" data-crumb="${kind}"${kind === 'body' && region ? ' data-leave' : ''}>${escapeHtml(name)}</button><i aria-hidden="true">›</i>`)).join('');
+/* The trail runs on from the title, down to what is on show: Human Anatomy › Heart › Mitral valve. Each step before the
+   last is a button that goes back up to it; during a story the last step is the story's name. */
+function renderTrail() {
+  const region = closeUp(), story = state.story, trail = [];
+  if (state.contents) trail.push(['contents', 'Contents']);
+  else {
+    if (region) trail.push(['place', region.name]);
+    else if (!story && state.view !== 'body' && !state.blend) { const button = $('views').querySelector(`[data-view="${state.view}"]`); trail.push(['place', (button.querySelector('.long') || button).textContent]); }
+    if (story) trail.push(['story', story.name]);
+    else if (state.selection) trail.push(['part', selectionName()]);
+  }
+  $('crumbs').innerHTML = trail.map(([kind, name], k) => `<i aria-hidden="true">›</i>${k === trail.length - 1 ? `<b aria-current="page">${escapeHtml(name)}</b>` : `<button type="button" data-crumb="${kind}">${escapeHtml(name)}</button>`}`).join('');
 }
+/* the only step that can come before the last is the place a part or a story is in: its region, or its layer */
 $('crumbs').addEventListener('click', event => {
-  const kind = event.target.closest('[data-crumb]')?.dataset.crumb;
-  if (!kind) return;
-  stopTour();
-  if (kind === 'body') { if (!state.region) { select(null); setView('body'); } return; }   // out of a close-up: the document's handler leaves it (data-leave)
-  select(null); const frame = viewFrame(); flyTo(frame.position, frame.target, V(0, 1, 0));
+  if (!event.target.closest('[data-crumb]')) return;
+  if (state.story) { endStory(); resetView(); } else leavePart();
 });
 /* Everything that can be found, for this body: the close-ups, the main parts, the parts a close-up adds, and every named
    structure. Each says where it is and how to get there. */
@@ -1494,7 +1450,11 @@ function findables() {
   if (findable?.body === body) return findable.list;
   const main = body.indexes[''] ||= indexParts(body.parts, body.sex, body.height), list = [];
   const regions = Object.values(REGIONS).filter(region => !region.sex || region.sex === body.sex);
-  for (const region of regions) list.push({ name: region.name, words: `${region.name} ${region.title} ${region.note}`, note: region.note, kind: 'Close-up', rank: 0, go: () => setRegion(region.id) });
+  list.push({ name: TOUR_NAME, words: `${TOUR_NAME} guided`, note: `${storyMinutes(null)} min`, kind: 'Story', rank: 0, go: () => startStory(null) });
+  for (const region of regions) {
+    list.push({ name: region.name, words: `${region.name} ${region.title} ${region.note}`, note: region.note, kind: 'Region', rank: 0, go: () => setRegion(region.id) });
+    if (MOTIONS[region.id]) list.push({ name: storyName(region.id), words: `${storyName(region.id)} ${region.name}`, note: `${storyMinutes(region.id)} min`, kind: 'Story', rank: 1, go: () => startStory(region.id) });
+  }
   for (const key of main.order) { const entry = ALL[key]; list.push({ name: entry.name, words: `${entry.name} ${entry.short || ''} ${entry.aka || ''}`, note: entry.aka || '', kind: LAYER_INFO[body.parts[main.entries[key][0]].layer].name, rank: 1, go: () => goEntry(key, null) }); }
   for (const region of regions) for (const key of region.parts) {
     const entry = DETAILS[key];
@@ -1537,7 +1497,7 @@ function showFound() {
 function takeFound(k) {
   const item = finder.found[k];
   if (!item) return;
-  stopTour(); state.drawer = false; state.closeups = false;
+  endStory(); setContents(false);
   $('find').value = ''; $('found').hidden = true; $('find').setAttribute('aria-expanded', 'false'); $('find').blur();
   item.go();
 }
@@ -1561,22 +1521,23 @@ document.addEventListener('keydown', event => { if (event.key === '/' && !event.
 /* switching body keeps the view and, where the other body has it, the selected part (or its equivalent) */
 async function switchSex(sex) {
   if (sex === state.sex && body?.sex === sex) return;
-  stopTour();
+  endStory();
   const previous = state.selection?.entry;
   state.sex = sex; save();
   $('fetching').hidden = false; $('fetching').textContent = `Loading the ${sex} body…`;
   body = await loadBody(sex);
   makeStateTextures(body.parts.length);
-  state.selection = null; state.search = ''; $('search').value = '';
-  buildHeightRuler(); buildCloseupList(); buildSpots();
+  state.selection = null;
+  buildHeightRuler(); buildSpots();
   /* a close-up carries over when the other body has it */
   const region = state.region && (!REGIONS[state.region].sex || REGIONS[state.region].sex === sex) ? state.region : null;
   state.region = null;
-  if (region) applyRegion(region); else { buildPartsList(); buildTags(); applyView(state.view); }
+  if (region) applyRegion(region); else { buildTags(); applyView(state.view); }
   await ensureLayers();
   const swap = previous && (body.entries[previous] ? previous : ALL[previous]?.swap);
   if (swap && body.entries[swap] && (!region || body.order.includes(swap))) { selectEntry(swap); focusSelection(); }
   else { const frame = viewFrame(); flyTo(frame.position, frame.target, V(0, 1, 0)); }
+  if (state.contents) renderContents();
   measureTags(); syncUI();
 }
 
@@ -1593,13 +1554,13 @@ function buildTags() {
     tag.innerHTML = `<i>${entryNumber(key)}</i>${escapeHtml(ALL[key].short || ALL[key].name)}`;
     /* a press on a label is handed to the canvas, so dragging from a label still rotates; a clean click selects the label's part */
     tag.addEventListener('pointerdown', event => { pressedTag = key; event.preventDefault(); canvas.dispatchEvent(new PointerEvent('pointerdown', event)); });
-    tag.addEventListener('click', event => { if (event.detail === 0) { stopTour(); selectEntry(key); focusSelection(); } });   // keyboard activation
+    tag.addEventListener('click', event => { if (event.detail === 0 && !state.story) { selectEntry(key); focusSelection(); } });   // keyboard activation
     tag.hidden = true;
     labelsEl.append(tag); tagEls[key] = tag;
   }
 }
-/* The glowing points: one per close-up worth diving into from the whole body. Each stands clear of the body, in a column
-   on its side of it, with its name, and a fine line runs from it to the part it opens, so nothing sits on the body itself. */
+/* The glowing points: one per region worth going into from the whole body, and a touch opens it. Each stands clear of the
+   body, in a column on its side of it, with its name, and a fine line runs from it to the part, so nothing sits on the body itself. */
 let spotEls = [];
 function buildSpots() {
   for (const { el } of spotEls) el.remove();
@@ -1612,7 +1573,7 @@ function buildSpots() {
     const el = document.createElement('button');
     el.type = 'button'; el.className = 'spot'; el.hidden = true; el.innerHTML = `<b></b><i></i><span>${escapeHtml(name)}</span>`;
     el.setAttribute('aria-label', `Open ${REGIONS[id].title.toLowerCase()}`);
-    el.addEventListener('click', () => { if (phone.matches) { setRegion(id); return; } state.spot = id; syncUI(); });
+    el.addEventListener('click', () => setRegion(id));
     labelsEl.append(el); spotEls.push({ id, el, point: box.getCenter(new THREE.Vector3()) });
   }
 }
@@ -1636,7 +1597,6 @@ function placeSpots(width, height) {
       const x = side === 'left' ? middle - out : middle + out, y = ys[k];
       item.spot.el.classList.toggle('left', side === 'left');
       item.spot.el.style.transform = `translate(${x.toFixed(1)}px, ${y.toFixed(1)}px)`;
-      item.spot.el.setAttribute('aria-pressed', String(item.spot.id === state.spot));
       svg += `<polyline class="spot-line" points="${item.x.toFixed(1)},${item.y.toFixed(1)} ${(side === 'left' ? x + 18 : x - 18).toFixed(1)},${y.toFixed(1)} ${x.toFixed(1)},${y.toFixed(1)}"/><circle class="spot-end" cx="${item.x.toFixed(1)}" cy="${item.y.toFixed(1)}" r="2"/>`;
     });
   }
@@ -1644,7 +1604,7 @@ function placeSpots(width, height) {
 }
 function measureTags() { for (const [key, tag] of Object.entries(tagEls)) { tag.hidden = false; tagWidths[key] = tag.offsetWidth; tag.hidden = true; } invalidate(); }
 const projected = new THREE.Vector3();
-const OVERLAYS = ['#inspector', '#side', '#crumbs', '#finder', '.peel', '#dock', '#drawer', '#closeups', '.masthead h1', '.top-right', '.rail', '.views', '.hint', '.figure', '#isolateChip', '#fetching'];
+const OVERLAYS = ['#layerStrip', '#transport', '#say', '.hint', '#fetching', '#invite'];
 const leaders = document.createElementNS('http://www.w3.org/2000/svg', 'svg'); leaders.id = 'leaders'; labelsEl.prepend(leaders);
 const overlaps = (a, b) => a[0] < b[2] && a[2] > b[0] && a[1] < b[3] && a[3] > b[1];
 /* a label's anchor: of an entry's parts, the one whose dot shows on screen and sits nearest the camera */
@@ -1793,8 +1753,7 @@ let down = null, hoverEvent = null;
 canvas.addEventListener('pointerdown', event => { down = { x: event.clientX, y: event.clientY, strayed: false }; });
 canvas.addEventListener('pointermove', event => { if (down && Math.hypot(event.clientX - down.x, event.clientY - down.y) >= 5) down.strayed = true; });
 canvas.addEventListener('pointerup', event => {
-  if (down && !down.strayed && Math.hypot(event.clientX - down.x, event.clientY - down.y) < 5) {
-    stopTour();
+  if (down && !down.strayed && Math.hypot(event.clientX - down.x, event.clientY - down.y) < 5 && !state.story) {   // a story is watched: nothing is picked out of it
     if (pressedTag) { selectEntry(pressedTag); focusSelection(); }
     else {
       const index = pick(event.clientX, event.clientY);
@@ -1852,21 +1811,16 @@ heightRuler.addEventListener('keydown', event => {
 controls.addEventListener('change', updateHeightRuler);
 
 /* ---------- Loop ---------- */
-/* centre the model in the space the floating panels leave free, and keep the horizontal field of view on tall screens */
+/* The canvas is the stage. The model is centred in the part of it that the strip and a story's words leave free (the
+   camera looks at a taller picture, of which the stage is the top), and tall screens keep the horizontal field of view. */
+const drawn = { width: 0, height: 0 };
 function resize() {
   const { clientWidth: width, clientHeight: height } = stage;
-  renderer.setSize(width, height, false);
-  outlineResolution.value.set(width, height);
-  const inspector = $('inspector'), box = stage.getBoundingClientRect();
-  const sheetOpen = !inspector.hidden && inspector.offsetParent && !inspector.classList.contains('empty');
-  const columns = phone.matches ? { left: 0, right: 0 } : insets();
-  const shiftX = (columns.right - columns.left) / 2;
-  const top = phone.matches ? (state.region ? document.querySelector('.top-right') : $('views')).getBoundingClientRect().bottom - box.top : 0;
-  const bottom = phone.matches ? box.bottom - (sheetOpen ? inspector : document.querySelector('.rail')).getBoundingClientRect().top : 0;
-  const shiftY = (top - bottom) / 2;
-  camera.aspect = (width + 2 * Math.abs(shiftX)) / (height + 2 * Math.abs(shiftY));
-  camera.fov = width / height < 1.2 ? 2 * Math.atan(Math.tan(THREE.MathUtils.degToRad(16)) * 1.2 * (height + 2 * Math.abs(shiftY)) / width) * 180 / Math.PI : 32;
-  camera.setViewOffset(width + 2 * Math.abs(shiftX), height + 2 * Math.abs(shiftY), shiftX > 0 ? 2 * shiftX : 0, shiftY < 0 ? -2 * shiftY : 0, width, height);
+  if (width !== drawn.width || height !== drawn.height) { renderer.setSize(width, height, false); outlineResolution.value.set(width, height); drawn.width = width; drawn.height = height; }
+  const free = freeRect(), under = Math.max(0, height - free.bottom - free.top);   // what is taken at the bottom, beyond the margin the top has too
+  camera.aspect = width / (height + under);
+  camera.fov = width / height < 1.2 ? 2 * Math.atan(Math.tan(THREE.MathUtils.degToRad(16)) * 1.2 * (height + under) / width) * 180 / Math.PI : 32;
+  camera.setViewOffset(width, height + under, 0, under, width, height);
   updateHeightRuler();
   invalidate();
 }
@@ -1879,8 +1833,9 @@ new ResizeObserver(() => {
   }
 }).observe(stage);
 /* ---------- A screen left alone (?kiosk, for a museum or a shop window) ----------
-   When nobody has touched it for a while it shows itself off, one moving close-up after another, under an invitation
-   to touch. The first touch stops the show where it is, and turns the sound on: a touch is what a browser waits for. */
+   When nobody has touched it for a while it shows itself off, one region's motion after another, silently, under an
+   invitation to touch. The first touch ends the show where it is, leaving that motion playing with its transport, and
+   turns the sound on: a touch is what a browser waits for. */
 const KIOSK = params.has('kiosk'), LEFT_ALONE_MS = 75_000, EACH_MS = 22_000;
 const SHOWN_OFF = ['heart', 'lungs', 'brain', 'skull', 'knee', 'digestive', 'eye', 'hand', 'kidney', 'spine', 'shoulder', 'lymphatic'];
 const show = { touched: performance.now(), at: -1, next: 0 };
@@ -1895,12 +1850,12 @@ if (KIOSK) {
 }
 function stepShow(now) {
   if (!KIOSK || !body) return;
-  if (show.at < 0 && (state.tour || sound.speaking)) show.touched = now;   // someone watching a tour or listening has not left
+  const story = state.story;
+  if (show.at < 0 && (sound.speaking || (story && story.kind !== 'motion' && story.playing))) show.touched = now;   // someone listening, or watching a story that is still being told, has not left; a motion goes round for ever
   if (now - show.touched < LEFT_ALONE_MS || now < show.next) return;
   show.at = (show.at + 1) % SHOWN_OFF.length; show.next = now + EACH_MS;
-  stopTour(); state.closeups = false; state.motion = true; state.cut = false;
   if (sound.on) $('soundBtn').click();   // the last visitor's sound does not play to an empty room
-  setRegion(SHOWN_OFF[show.at]);
+  startStory(SHOWN_OFF[show.at], { aloud: false, loop: true });
   $('invite').hidden = false;
 }
 function animate(now) {
@@ -1910,7 +1865,7 @@ function animate(now) {
 }
 let visibilityDue = true, mapped = 0;
 function frame(now) {
-  stepTour(now);
+  stepStory(now);
   stepGlide(now);
   stepMotion(now); levelSounds();
   if (flight) {
@@ -1948,7 +1903,7 @@ function frame(now) {
 
 /* Test and debugging hook: read-only views of the model plus the same actions the UI uses. */
 window.bodyModel = {
-  state, camera, controls, setView, setRegion, setPeel, spots: () => spotEls.filter(spot => !spot.el.hidden).map(spot => spot.id), freeRect, switchSex, selectEntry, selectPart, stepPart, startTour, stopTour, frame, pick,
+  state, camera, controls, setView, setRegion, setPeel, spots: () => spotEls.filter(spot => !spot.el.hidden).map(spot => spot.id), freeRect, switchSex, selectEntry, selectPart, stepPart, startStory, exitStory, goHome, frame, pick,
   holdMotion: phase => { motion.held = phase; },
   motion: () => ({ moving: moving() && motion.for === motionKey(), phase: motion.phase, caption: motion.caption, open: motion.open.amount, drops: motion.rig && moving() ? motion.rig.streams.reduce((sum, stream) => sum + stream.drops.length, 0) : 0 }),
   moveOf: index => Array.from(stateTexture.moves.image.data.slice(index * 16, index * 16 + 16)),
@@ -2049,11 +2004,11 @@ $('systemRoute').innerHTML = Object.entries(VIEW_INFO).filter(([view]) => view !
 { const response = await fetch('audio/manifest.json'); if (!response.ok) throw new Error(`audio/manifest.json: ${response.status}`); sound.manifest = await response.json(); }
 body = await loadBody(state.sex);
 makeStateTextures(body.parts.length);
-buildPartsList(); buildTags(); buildSpots(); buildHeightRuler(); buildCloseupList();
+buildTags(); buildSpots(); buildHeightRuler();
 Object.assign(state.layers, VIEW_INFO[state.view].layers); state.body = VIEW_INFO[state.view].body;
 /* ?closeup=<id> opens on a close-up, when this body has it */
 { const wanted = params.get('closeup'); if (wanted && REGIONS[wanted] && (!REGIONS[wanted].sex || REGIONS[wanted].sex === state.sex)) applyRegion(wanted); }
-renderInspector(); syncUI(); resize();
+renderSheet(); syncUI();
 loading.textContent = 'Loading the 3D model…';
 await ensureLayers();
 applyVisibility();

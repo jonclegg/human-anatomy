@@ -6,7 +6,7 @@ const working = phase => ({ going: Math.max(0, Math.sin(2 * Math.PI * phase)), r
 
 /* ---------- The shoulder: the arm lifted out to the side ---------- */
 export const shoulder = {
-  cycle: 5200, skin: 0, stop: 'Stop the arm', start: 'Set the arm lifting',
+  cycle: 5200, skin: 0, watch: 'how the shoulder lifts the arm',
   build(kit) {
     const { V } = kit, bone = kit.one(/humerus$/i, kit.own), side = Math.sign(bone.centre[0]), outward = V(side, 0, 0), down = V(0, -1, 0);
     return {
@@ -25,7 +25,7 @@ export const shoulder = {
 
 /* ---------- The elbow: bent and straightened ---------- */
 export const elbow = {
-  cycle: 4600, skin: 0, stop: 'Stop the elbow', start: 'Set the elbow bending',
+  cycle: 4600, skin: 0, watch: 'how the elbow bends',
   build(kit) {
     const { V } = kit, bone = kit.one(/humerus$/i, kit.own), down = V(0, -1, 0);
     return { joint: joint(kit, { limb: ARM, pivot: kit.end(bone, down, 2), along: down, width: 4 }), axis: V(-1, 0, 0), benders: [...kit.entry('elbowBiceps'), ...kit.entry('elbowBrachialis')], straightener: kit.entry('elbowTriceps') };
@@ -40,7 +40,7 @@ export const elbow = {
 
 /* ---------- The hip: the thigh swung forward and back ---------- */
 export const hip = {
-  cycle: 5000, skin: 0, stop: 'Stop the hip', start: 'Set the thigh swinging',
+  cycle: 5000, skin: 0, watch: 'how the hip swings the thigh',
   build(kit) {
     const { V } = kit, bone = kit.one(/femur$/i, kit.own), side = Math.sign(bone.centre[0]), down = V(0, -1, 0);
     return {
@@ -58,7 +58,7 @@ export const hip = {
 
 /* ---------- The knee: bent and straightened ---------- */
 export const knee = {
-  cycle: 4800, skin: 0, stop: 'Stop the knee', start: 'Set the knee bending',
+  cycle: 4800, skin: 0, watch: 'how the knee bends',
   build(kit) {
     const { V } = kit, bone = kit.one(/femur$/i, kit.own), down = V(0, -1, 0);
     return {
@@ -77,7 +77,7 @@ export const knee = {
 
 /* ---------- The foot: up on the toes, then toes up ---------- */
 export const foot = {
-  cycle: 3600, skin: 0, stop: 'Stop the foot', start: 'Set the ankle working',
+  cycle: 3600, skin: 0, watch: 'how the ankle moves the foot',
   build(kit) {
     const { V } = kit, down = V(0, -1, 0);
     return { joint: joint(kit, { limb: LEG, pivot: kit.centre(kit.one(/talus$/i)).add(V(0, 0.6, 0)), along: down, width: 2, bones: part => (/tibia|fibula/i.test(part.name) ? 0 : 1) }), axis: V(1, 0, 0), heelCord: kit.entry('footCalcanealTendon'), lifters: kit.entry('footDorsalMuscles') };
@@ -93,7 +93,7 @@ export const foot = {
 /* ---------- The hand: a fist, finger by finger ---------- */
 const FINGERS = ['little', 'ring', 'middle', 'index'], CURL = [72, 96, 58];   // the most each knuckle bends, from the hand outward
 export const hand = {
-  cycle: 6000, skin: 0, stop: 'Stop the hand', start: 'Set the hand closing',
+  cycle: 6000, skin: 0, watch: 'how the hand makes a fist',
   build(kit) {
     const { V } = kit, bone = (segment, digit) => kit.one(new RegExp(`^${segment} phalanx of (left|right) ${digit}$`, 'i'), kit.own);
     const palm = kit.centre(kit.entry('handPalmarAponeurosis')).sub(kit.centre(kit.entry('handMetacarpals')));   // from the back of the hand toward the palm
@@ -130,7 +130,7 @@ export const hand = {
 
 /* ---------- The spine: bent forward, then to each side ---------- */
 export const spine = {
-  cycle: 9000, stop: 'Stop the spine', start: 'Set the spine bending',
+  cycle: 9000, watch: 'how the spine bends',
   build(kit) {
     const { V } = kit, up = V(0, 1, 0), base = kit.end(kit.one(/^Sacrum$/), up, 1.5), length = kit.centre(kit.one(/^Atlas$/)).y - base.y;
     return {

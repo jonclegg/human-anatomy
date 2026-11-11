@@ -11,7 +11,7 @@ const THOUGHT = [
   ['brainPrecentralGyrus', 'The motor strip sends the order down through the brainstem to the muscles'],
 ];
 export const brain = {
-  cycle: 10000, stop: 'Stop the signal', start: 'Set a signal running',
+  cycle: 10000, watch: 'how a signal crosses the brain',
   build(kit) {
     const { V } = kit, left = pattern => kit.centre(kit.one(pattern)), box = kit.box(kit.own);
     const stops = [left(/^Left occipital lobe$/), left(/^Left fusiform gyrus$/), left(/^Left middle frontal gyrus$/), left(/^Left precentral gyrus$/)];
@@ -37,7 +37,7 @@ export const brain = {
 
 /* ---------- Inside the brain: the fluid it floats in ---------- */
 export const brainDeep = {
-  cycle: 9000, stop: 'Stop the fluid', start: 'Set the fluid flowing',
+  cycle: 9000, watch: 'how fluid flows through the brain',
   look: name => (/ventricle$|^Cerebral aqueduct$|^Interventricular foramen$/i.test(name) ? { colour: '#7fd4f0', opacity: 0.5 } : null),
   build(kit) {
     const { V } = kit, middle = pattern => kit.centre(kit.one(pattern));
@@ -59,7 +59,7 @@ const GLOBE = /cornea$|sclera$|^Anterior chamber|iris$|lens$|choroid$|corona cil
 const AIMING = /rectus$|(inferior|superior) oblique$|optic nerve$/i;
 const IRIS_ROUND = 48, PUPIL = [0.36, 0.2];   // points round each ring of the iris; the pupil's radius in dim light and in bright, cm
 export const eye = {
-  cycle: 11000, stop: 'Stop the eye', start: 'Set the eye working',
+  cycle: 11000, watch: 'how the eye focuses and turns',
   /* the coats of the eyeball are glass, so the light can be followed through it, and what lies over the eye (the lids, the tear gland) is all but gone */
   look: name => (/sclera$|choroid$|retina$|vitreous body$|corona ciliaris$/i.test(name) ? { opacity: 0.3 } : /cornea$|^Anterior chamber/i.test(name) ? { opacity: 0.1 } : /lens$/i.test(name) ? { colour: '#0d1014', opacity: 0.6 } : /tarsal plate|levator palpebrae|lacrimal|canalicul|conjunctiv/i.test(name) ? { opacity: 0.08 } : null),
   build(kit) {
@@ -105,7 +105,7 @@ export const eye = {
 
 /* ---------- The skull: drawn apart along its seams, and put back ---------- */
 export const skull = {
-  cycle: 11000, stop: 'Keep the skull whole', start: 'Draw the skull apart',
+  cycle: 11000, watch: 'how the skull fits together',
   build(kit) {
     const { V } = kit, bones = kit.own.filter(part => !/tooth$|^Hyoid/i.test(part.name)), middle = kit.box(bones.filter(part => !/^Mandible$/.test(part.name))).getCenter(V(0, 0, 0));
     const jaw = kit.one(/^Mandible$/);
@@ -133,7 +133,7 @@ function jawOf(kit) {
 
 /* ---------- The teeth: chewing ---------- */
 export const teeth = {
-  cycle: 2600, stop: 'Stop the chewing', start: 'Set the jaw chewing',
+  cycle: 2600, watch: 'how the teeth cut and grind',
   build(kit) {
     const kind = pattern => kit.find(pattern);
     return { ...jawOf(kit), kinds: [kind(/incisor tooth$/i), kind(/canine tooth$/i), kind(/(premolar|molar) tooth$/i)] };
@@ -158,7 +158,7 @@ const FACES = [
   [['faceMasseter', 'faceTemporalis'], 'A bite: masseter and temporalis close the jaw. They are chewing muscles, the strongest in the head'],
 ];
 export const face = {
-  cycle: 18000, stop: 'Stop the expressions', start: 'Set the face moving',
+  cycle: 18000, watch: 'how the face makes expressions',
   build(kit) {
     return { faces: FACES.map(([keys]) => keys.filter(key => kit.has(key)).flatMap(key => kit.entry(key)).filter(part => !/aponeurosis|occipitalis|temporoparietalis/i.test(part.name)).map(part => ({ part, middle: kit.centre(part) }))) };
   },
@@ -172,7 +172,7 @@ export const face = {
 
 /* ---------- The mouth and throat: one swallow ---------- */
 export const mouth = {
-  cycle: 5200, stop: 'Stop the swallowing', start: 'Set a swallow going',
+  cycle: 5200, watch: 'how you swallow',
   build(kit) {
     const { V } = kit, tongue = kit.one(/^Tongue$/), lid = kit.one(/^Epiglottis$/), palate = [...kit.entry('mouthSoftPalate'), ...kit.entry('mouthUvula')];
     const squeezers = [/superior pharyngeal constrictor$/i, /middle pharyngeal constrictor$/i, /inferior pharyngeal constrictor$/i].map(pattern => { const parts = kit.find(pattern); return { parts, middle: kit.centre(parts) }; });
@@ -196,7 +196,7 @@ export const mouth = {
 
 /* ---------- The larynx: breathing, then a note ---------- */
 export const larynx = {
-  cycle: 7000, stop: 'Stop the voice', start: 'Set the voice going',
+  cycle: 7000, watch: 'how the voice is made',
   /* the folds lie inside the box of the larynx: its walls go clear, so they can be seen */
   look: name => (/^Thyroid cartilage$|thyrohyoid|quadrangular membrane|conus elasticus|cricothyroid$|thyro-arytenoid$|aryepiglotticus$|^Thyroid gland$|^Epiglottis$/i.test(name) ? { opacity: 0.22 } : null),
   build(kit) {
@@ -240,7 +240,7 @@ const NERVES = [
 ];
 const SCALE = [392, 440, 494, 523, 587, 659, 698, 784, 880];
 export const cranialNerves = {
-  cycle: 27000, stop: 'Stop the nerves', start: 'Go round the nerves', context: 0.45,
+  cycle: 27000, watch: 'what each cranial nerve does', context: 0.45,
   build(kit) {
     const { V } = kit, box = kit.box(kit.own), stem = V(0, box.getCenter(V(0, 0, 0)).y + 1, box.min.z + 0.35 * (box.max.z - box.min.z));   // about where the brainstem is, which they all leave from
     const slots = NERVES.map(([keys], k) => {

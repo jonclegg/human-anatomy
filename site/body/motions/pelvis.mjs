@@ -4,7 +4,7 @@ import { smooth, during, light, URINE, SEED } from './shared.mjs';
 
 /* ---------- The female pelvis: an egg, from the ovary to the uterus ---------- */
 export const femalePelvis = {
-  cycle: 13000, stop: 'Stop the egg', start: 'Set an egg on its way',
+  cycle: 13000, watch: 'how an egg reaches the uterus',
   build(kit) {
     const womb = kit.centre(kit.one(/^Body of uterus$/));
     const sides = ['Left', 'Right'].map(side => {
@@ -33,7 +33,7 @@ function outflow(kit) {
 
 /* ---------- The male pelvis: urine, and then semen, by the same way out ---------- */
 export const malePelvis = {
-  cycle: 12000, stop: 'Stop the flow', start: 'Set the flow going',
+  cycle: 12000, watch: 'how urine and semen leave the body',
   build(kit) {
     const { pool, pipe } = outflow(kit), gland = kit.centre(kit.one(/^Prostate$/)), curve = points => kit.curve(points).curve;
     const after = pipe.filter(point => point.y < gland.y - 0.5);
@@ -55,7 +55,7 @@ export const malePelvis = {
 
 /* ---------- The penis and testes: where sperm are made, and their way out ---------- */
 export const penis = {
-  cycle: 10000, stop: 'Stop the flow', start: 'Set the flow going',
+  cycle: 10000, watch: 'how sperm are made and stored',
   build(kit) {
     const sides = ['Left', 'Right'].map(side => {
       const named = pattern => kit.one(new RegExp(pattern.replace('SIDE', side))), maker = named('^SIDE testis$'), coil = named('^SIDE epididymis$'), duct = named('^SIDE deferent duct$');

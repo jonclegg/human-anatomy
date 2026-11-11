@@ -172,7 +172,7 @@ const WIDTH = { vessel: 0.6, atrium: 1.45, inflow: 0.95, ventricle: 1.35, outflo
 const exact = name => new RegExp(`^${name}$`);
 
 export const heart = {
-  cycle: CYCLE * 1000, moments: MOMENTS, cut: CUT_FACE, stop: 'Stop the heart beating', start: 'Set the heart beating', context: 0.4,
+  cycle: CYCLE * 1000, moments: MOMENTS, cut: CUT_FACE, watch: 'how the heart beats', context: 0.4,
   /* the walls as glass, so the blood shows; the cavities in the colour of their blood */
   look(name) {
     if (/^Wall of /.test(name)) return { colour: MUSCLE, opacity: 0.22 };

@@ -1,8 +1,9 @@
-// Close-ups: a region of the body shown on its own, with its own numbered parts, notes and tour.
+// Close-ups: a region of the body shown on its own, with its own numbered parts and notes.
 //
 // A region (REGIONS, in closeups/*.mjs):
-//   name, note        the menu's line: "Heart", "chambers, valves and coronary arteries"
-//   title, figure     the panel's heading and the figure caption
+//   name, note        its name in the trail, Contents and the search, and the search's line under it: "Heart", "chambers, valves and coronary arteries"
+//   title, figure     the sheet's heading and the figure caption
+//   group             (set here) the part of the body it is listed under in Contents, from the file it is in
 //   text              { any } or { female, male }: the opening paragraph
 //   sex               'female' or 'male' when only one body has it
 //   parts             the region's parts in order, as entry keys: its own (DETAILS) or the main ones (ENTRIES in parts.mjs)
@@ -23,10 +24,13 @@ import * as head from './closeups/head.mjs';
 import * as trunk from './closeups/trunk.mjs';
 import * as limbs from './closeups/limbs.mjs';
 
+/* the part of the body each file's regions belong to, in the order Contents lists them */
+const FILES = [['Head and neck', head], ['Chest and abdomen', trunk], ['Pelvis', reproductive], ['Limbs and back', limbs]];
+export const GROUPS = FILES.map(([group]) => group);
 export const REGIONS = {}, DETAILS = {};
-for (const group of [reproductive, head, trunk, limbs]) {
-  for (const [key, region] of Object.entries(group.REGIONS)) { if (REGIONS[key]) throw new Error(`two close-ups are called ${key}`); REGIONS[key] = { ...region, id: key }; }
-  for (const [key, entry] of Object.entries(group.DETAILS)) { if (DETAILS[key] || ENTRIES[key]) throw new Error(`two entries are called ${key}`); DETAILS[key] = entry; }
+for (const [group, file] of FILES) {
+  for (const [key, region] of Object.entries(file.REGIONS)) { if (REGIONS[key]) throw new Error(`two close-ups are called ${key}`); REGIONS[key] = { ...region, id: key, group }; }
+  for (const [key, entry] of Object.entries(file.DETAILS)) { if (DETAILS[key] || ENTRIES[key]) throw new Error(`two entries are called ${key}`); DETAILS[key] = entry; }
 }
 export const ALL = { ...ENTRIES, ...DETAILS };
 for (const region of Object.values(REGIONS)) for (const key of region.parts) if (!ALL[key]) throw new Error(`close-up ${region.id} lists ${key}, which is no entry`);

@@ -9,16 +9,17 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <style>
-/* Layout: a dark stage with the body in the middle. A line under it peels the body layer by layer; glowing points on
-   it lead into the close-ups. The left column tells the story of what is on show (a layer, a close-up, a part); the
-   right column holds what to do next (a close-up's card, or a close-up's stops). Tools are a slim icon column at the
-   far left. On phones the tools become a bottom bar and the story a bottom sheet over the model. A short manual follows. */
+/* Layout: four fixed places and nothing else. The model fills the stage. A thin bar on top says where you are (a trail
+   that starts at the title, which always leads home) and holds the search, the body switch, the sound and Contents. One
+   sheet at the side (at the bottom on phones) shows one thing: the home page, a region or a part. One strip at the
+   bottom of the model holds the layers at home and the transport during a story; a story hides the sheet and shows its
+   words under the model. Contents is a page laid over the stage. A short manual follows. */
 :root {
-  --bg: #0b0d0f; --stage-hi: #252b30; --stage-mid: #14181b; --panel: #161a1d; --panel-2: #20262a; --field: #0f1214;
+  --bg: #0b0d0f; --stage-hi: #252b30; --stage-mid: #14181b; --panel: #161a1d; --field: #0f1214;
   --ink: #eef1f2; --on-ink: #0d1012; --muted: #a7b1b6; --faint: #7c868c; --line: rgba(255,255,255,0.1); --line-strong: rgba(255,255,255,0.2);
   --mark: #f2c14e; --mark-ink: #0d1012;
   --face: "Inter", "Helvetica Neue", Arial, sans-serif; --display: "Inter Tight", "Inter", sans-serif; --mono: "IBM Plex Mono", ui-monospace, monospace;
-  --radius: 12px; --gutter: 24px; --rail: 52px; --column: 96px;
+  --gutter: 24px; --sheet: 360px;
   color-scheme: dark;
 }
 [hidden] { display: none !important; }
@@ -28,44 +29,34 @@ body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--f
 h1, h2, h3 { margin: 0; text-wrap: balance; font-family: var(--display); font-weight: 500; letter-spacing: -0.025em; }
 p { margin: 0; }
 button, input { font: inherit; color: inherit; }
-button:focus-visible, input:focus-visible, a:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+button:focus-visible, input:focus-visible, a:focus-visible, .contents:focus-visible, .sheet h2:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
 
-/* Stage */
-.viewer { position: relative; height: 100svh; min-height: 560px; overflow: hidden; background: radial-gradient(52% 62% at 50% 46%, var(--stage-hi) 0%, var(--stage-mid) 58%, var(--bg) 100%); }
-.stage { position: absolute; inset: 0; touch-action: none; }
-/* the columns of text stay readable where the model runs behind them */
-.viewer::after { content: ""; position: absolute; inset: 0; z-index: 2; pointer-events: none; background: linear-gradient(90deg, rgba(11,13,15,0.88) 0, rgba(11,13,15,0.7) 400px, rgba(11,13,15,0) 620px, rgba(11,13,15,0) calc(100% - 480px), rgba(11,13,15,0.6) calc(100% - 300px), rgba(11,13,15,0.8) 100%); }
-#scene { position: absolute; inset: 0; width: 100%; height: 100%; display: block; cursor: grab; }
+/* The four places */
+.viewer { height: 100svh; min-height: 560px; display: grid; grid-template-rows: auto minmax(0, 1fr); background: var(--bg); }
+.work { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) auto; min-height: 0; }
+.stage { position: relative; min-width: 0; min-height: 0; overflow: hidden; background: radial-gradient(52% 62% at 50% 46%, var(--stage-hi) 0%, var(--stage-mid) 58%, var(--bg) 100%); }
+#scene { position: absolute; inset: 0; width: 100%; height: 100%; display: block; cursor: grab; touch-action: none; }
 #scene:active { cursor: grabbing; }
 #scene.pointing { cursor: pointer; }
 .loading { position: absolute; inset: 0; display: grid; place-items: center; color: var(--muted); font-size: 14px; pointer-events: none; }
 .fetching { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); z-index: 2; padding: 6px 12px; border-radius: 5px; background: var(--panel); border: 1px solid var(--line-strong); font-size: 13px; font-weight: 600; color: var(--muted); pointer-events: none; }
 
-/* Name, top left */
-.masthead { position: absolute; top: 22px; left: 28px; z-index: 3; pointer-events: none; display: flex; align-items: baseline; gap: 14px; }
-.masthead .brand { order: 2; display: flex; gap: 6px; font-size: 12.5px; color: var(--faint); }
-.masthead .brand span + span::before { content: "·"; margin-right: 6px; }
-.masthead .brand a { color: inherit; pointer-events: auto; text-decoration: none; }
-.masthead .brand a:hover { color: var(--ink); }
-.masthead h1 { font-size: 18px; font-weight: 600; letter-spacing: -0.01em; }
-.masthead p { display: none; }
-
-/* Top right: the sex switch and the guided tour */
-.top-right { position: absolute; top: var(--gutter); right: var(--gutter); z-index: 3; display: flex; gap: 10px; align-items: center; }
-/* where you are, as a trail back up: Whole body › The eye › Cornea */
-.crumbs { position: absolute; top: 54px; left: 28px; z-index: 3; display: flex; flex-wrap: wrap; align-items: center; gap: 2px 6px; max-width: min(46vw, 560px); font-size: 13px; color: var(--faint); }
-.crumbs button { border: 0; background: transparent; color: var(--muted); font: inherit; padding: 6px 2px; cursor: pointer; text-decoration: underline; text-decoration-color: var(--line-strong); text-underline-offset: 3px; }
-.crumbs button:hover { color: var(--ink); }
-.crumbs b { color: var(--ink); font-weight: 600; padding: 6px 2px; }
-.crumbs i { font-style: normal; }
-/* find any part by name, from anywhere */
+/* The bar: the trail on the left, from the title down to what is on show; the search, the body, the sound and Contents on the right */
+.bar { position: relative; z-index: 7; display: flex; align-items: center; gap: 10px; min-width: 0; padding: 6px var(--gutter); border-bottom: 1px solid var(--line); background: var(--panel); }
+.trail { display: flex; flex-wrap: wrap; align-items: center; gap: 0 8px; min-width: 0; margin-right: auto; font-size: 14px; color: var(--faint); }
+.trail h1, .trail #crumbs { display: contents; }
+.trail button { border: 0; background: transparent; min-height: 40px; padding: 0 2px; cursor: pointer; color: var(--muted); text-decoration: underline; text-decoration-color: var(--line-strong); text-underline-offset: 4px; }
+.trail button:hover { color: var(--ink); }
+.trail .home { font: 600 17px var(--display); letter-spacing: -0.01em; color: var(--ink); text-decoration: none; white-space: nowrap; }
+.trail b { color: var(--ink); font-weight: 600; padding: 0 2px; }
+.trail i { font-style: normal; }
+/* find any part, region or story by name, from anywhere */
 .finder { position: relative; display: flex; align-items: center; }
 .finder svg { position: absolute; left: 13px; width: 16px; height: 16px; fill: none; stroke: var(--muted); stroke-width: 1.8; stroke-linecap: round; pointer-events: none; }
-.finder input { width: 190px; min-height: 44px; padding: 0 14px 0 36px; border: 1px solid var(--line-strong); border-radius: 22px; background: transparent; color: var(--ink); font-size: 13.5px; transition: width 0.18s; }
+.finder input { width: 290px; min-height: 44px; padding: 0 14px 0 36px; border: 1px solid var(--line-strong); border-radius: 22px; background: transparent; color: var(--ink); font-size: 13.5px; }
 .finder input::placeholder { color: var(--muted); }
-.finder input:focus { width: 300px; outline: none; border-color: var(--mark); background: var(--field); }
+.finder input:focus { outline: none; border-color: var(--mark); background: var(--field); }
 .found { position: absolute; top: 50px; right: 0; width: 360px; max-width: calc(100vw - 2 * var(--gutter)); max-height: min(70vh, 520px); overflow: auto; margin: 0; padding: 6px; list-style: none; border: 1px solid var(--line-strong); border-radius: 12px; background: var(--panel); box-shadow: 0 18px 50px rgba(0, 0, 0, 0.45); z-index: 9; }
-.found[hidden] { display: none; }
 .found li { display: grid; grid-template-columns: 1fr auto; gap: 2px 12px; padding: 9px 10px; border-radius: 8px; cursor: pointer; }
 .found li[aria-selected="true"], .found li:hover { background: var(--field); }
 .found li b { font-weight: 600; font-size: 14px; color: var(--ink); }
@@ -75,23 +66,20 @@ button:focus-visible, input:focus-visible, a:focus-visible { outline: 2px solid 
 .sex { display: flex; padding: 3px; gap: 2px; border: 1px solid var(--line-strong); border-radius: 22px; }
 .sex button { border: 0; background: transparent; color: var(--muted); min-height: 36px; padding: 0 14px; border-radius: 18px; cursor: pointer; font-size: 13px; font-weight: 500; }
 .sex button[aria-pressed="true"] { background: var(--ink); color: var(--on-ink); font-weight: 600; }
-.invite { position: absolute; left: 50%; top: 96px; transform: translateX(-50%); z-index: 6; margin: 0; padding: 14px 26px; border-radius: 28px; background: var(--mark); color: var(--on-ink); font: 600 17px/1.2 'Inter Tight', sans-serif; letter-spacing: 0.01em; pointer-events: none; animation: invite 2.4s ease-in-out infinite; }
-.invite[hidden] { display: none; }
-@keyframes invite { 50% { transform: translateX(-50%) scale(1.05); } }
-@media (prefers-reduced-motion: reduce) { .invite { animation: none; } }
-.sound-btn { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 16px 0 12px; border: 1px solid var(--line-strong); border-radius: 22px; background: transparent; color: var(--muted); font-size: 13px; font-weight: 500; cursor: pointer; }
+.sound-btn, .contents-btn { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 16px 0 12px; border: 1px solid var(--line-strong); border-radius: 22px; background: transparent; color: var(--muted); font-size: 13px; font-weight: 500; cursor: pointer; white-space: nowrap; }
 .sound-btn svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
 .sound-btn .waves { display: none; }
 .sound-btn[aria-pressed="true"] { color: var(--mark); border-color: var(--mark); }
 .sound-btn[aria-pressed="true"] .waves { display: inline; } .sound-btn[aria-pressed="true"] .mute { display: none; }
 .sound-btn:hover { color: var(--ink); }
-.tour-btn { display: inline-flex; align-items: center; gap: 10px; min-height: 44px; border: 0; border-radius: 22px; padding: 0 20px 0 16px; background: var(--mark); color: var(--mark-ink); font-weight: 600; font-size: 14px; cursor: pointer; }
-.tour-btn svg { width: 11px; height: 11px; }
-.tour-btn:hover { background: #ffd978; }
-.tour-btn[aria-pressed="true"] { background: transparent; color: var(--ink); box-shadow: inset 0 0 0 1px var(--line-strong); }
+.contents-btn { padding: 0 18px; min-width: 96px; justify-content: center; color: var(--ink); border-color: var(--muted); font-weight: 600; }
+.contents-btn:hover { border-color: var(--ink); }
+.invite { position: absolute; left: 50%; top: 24px; transform: translateX(-50%); z-index: 6; margin: 0; padding: 14px 26px; border-radius: 28px; background: var(--mark); color: var(--on-ink); font: 600 17px/1.2 'Inter Tight', sans-serif; letter-spacing: 0.01em; pointer-events: none; animation: invite 2.4s ease-in-out infinite; }
+@keyframes invite { 50% { transform: translateX(-50%) scale(1.05); } }
+@media (prefers-reduced-motion: reduce) { .invite { animation: none; } }
 
-/* Height ruler, bottom left: the body from the feet to the crown, the part on screen marked; drag to move */
-.height-ruler { position: absolute; left: var(--gutter); bottom: var(--gutter); z-index: 3; width: var(--rail); height: 150px; padding: 12px 8px 12px 0; border: 1px solid var(--line); border-radius: 14px; cursor: ns-resize; touch-action: none; user-select: none; }
+/* Height ruler, bottom left of the stage: the body from the feet to the crown, the part on screen marked; drag to move */
+.height-ruler { position: absolute; left: var(--gutter); bottom: var(--gutter); z-index: 3; width: 52px; height: 150px; padding: 12px 8px 12px 0; border: 1px solid var(--line); border-radius: 14px; cursor: ns-resize; touch-action: none; user-select: none; }
 .height-ruler .scale { position: relative; height: 100%; margin-left: 32px; border-left: 1px solid var(--line-strong); }
 .height-ruler .tick { position: absolute; left: 0; width: 5px; height: 1px; background: var(--line-strong); }
 .height-ruler .tick.major { width: 9px; background: var(--muted); }
@@ -100,24 +88,9 @@ button:focus-visible, input:focus-visible, a:focus-visible { outline: 2px solid 
 .height-ruler .unit { display: none; }
 .height-ruler:focus-visible { outline: 2px solid var(--mark); outline-offset: 2px; }
 
-/* Tools: a slim column of icons at the far left, each named on hover */
-.rail { position: absolute; left: var(--gutter); top: 50%; transform: translateY(-50%); z-index: 4; display: grid; gap: 2px; width: var(--rail); padding: 5px;
-  border: 1px solid var(--line); border-radius: 26px; background: rgba(22,26,29,0.7); }
-.rail hr { border: 0; height: 1px; background: var(--line); margin: 4px 8px; }
-.tool { position: relative; display: grid; place-items: center; width: 40px; height: 40px; padding: 0; border: 0; border-radius: 50%; background: transparent; color: var(--muted); cursor: pointer; font-size: 13px; font-weight: 500; text-decoration: none; }
-.tool svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
-.tool:hover { background: var(--panel-2); color: var(--ink); }
-.tool[aria-pressed="true"] { color: var(--mark); }
-.tool[aria-expanded="true"] { background: var(--ink); color: var(--on-ink); }
-@media (min-width: 821px) {
-  .tool span { position: absolute; left: -9999px; }
-  .tool:hover::after, .tool:focus-visible::after { content: attr(aria-label); position: absolute; left: 50px; top: 8px; white-space: nowrap; padding: 3px 10px; border-radius: 6px; background: var(--ink); color: var(--on-ink); font-size: 12.5px; font-weight: 600; pointer-events: none; }
-}
-.tool.phone-only { display: none; }
-.tool .short, .views .short { display: none; }
-
-/* The peel: a line under the body that fades it layer by layer, with the layers named beneath it */
-.peel { position: absolute; left: 50%; bottom: 14px; transform: translateX(-50%); z-index: 3; width: 520px; }
+/* The strip, at the bottom of the model. At home it is the peel: a line that fades the body layer by layer, with the layers named beneath it */
+.strip { position: absolute; left: 50%; bottom: 14px; transform: translateX(-50%); z-index: 3; }
+.peel { width: 520px; max-width: calc(100% - 104px); }
 .peel input[type="range"] { height: 44px; cursor: grab; }
 .peel input[type="range"]::-webkit-slider-runnable-track { height: 2px; background: linear-gradient(to right, var(--mark) var(--fill, 0%), var(--line-strong) var(--fill, 0%)); }
 .peel input[type="range"]::-moz-range-track { height: 2px; }
@@ -128,45 +101,37 @@ button:focus-visible, input:focus-visible, a:focus-visible { outline: 2px solid 
 .views button { border: 0; background: transparent; color: var(--faint); min-height: 40px; padding: 0; cursor: pointer; font-size: 13px; font-weight: 500; white-space: nowrap; }
 .views button:hover { color: var(--ink); }
 .views button[aria-pressed="true"] { color: var(--ink); font-weight: 600; }
+.views .short { display: none; }
+/* during a story it is the transport, and the words being spoken sit just above it */
+.transport { display: flex; align-items: center; gap: 4px; padding: 6px 8px; border: 1px solid var(--line-strong); border-radius: 28px; background: var(--panel); }
+.transport button { min-height: 40px; min-width: 44px; padding: 0 14px; border: 0; border-radius: 20px; background: transparent; color: var(--muted); font-size: 14px; font-weight: 500; cursor: pointer; white-space: nowrap; }
+.transport button:hover { color: var(--ink); }
+.transport button[disabled] { opacity: 0.35; cursor: default; }
+.transport [data-story="play"] { min-width: 104px; background: var(--ink); color: var(--on-ink); font-weight: 600; }
+.transport [data-story="play"]:hover { background: #fff; color: var(--on-ink); }
+.transport .count { padding: 0 10px; font: 12px var(--mono); color: var(--faint); white-space: nowrap; }
+.say { position: absolute; left: 50%; bottom: 84px; transform: translateX(-50%); z-index: 3; width: max-content; max-width: min(660px, calc(100% - 32px)); padding: 12px 22px; border-radius: 16px; background: rgba(11, 13, 15, 0.78); text-align: center; font: 500 18px/1.42 var(--face); color: var(--ink); text-wrap: balance; }
+.say:empty { visibility: hidden; min-height: 50px; }   /* a motion has no caption until its first moment: its room is kept, so the model is framed clear of it */
+.say b { font-weight: 600; color: var(--mark); }
+.say span { color: var(--faint); white-space: nowrap; }
+.say span.now { color: var(--ink); }
+.say span + span::before { content: '→'; margin: 0 12px; color: var(--faint); opacity: 0.6; }
 
-/* Glowing points on the body: the close-ups */
+/* Glowing points on the body: each opens a region */
 @keyframes ring { 0% { transform: scale(1); opacity: 0.8; } 75%, 100% { transform: scale(2.8); opacity: 0; } }
 .spot { position: absolute; left: 0; top: 0; height: 44px; margin: -22px 0 0 -11px; padding: 0 6px; border: 0; background: transparent; cursor: pointer; pointer-events: auto; display: flex; align-items: center; gap: 10px; color: var(--muted); font-size: 13px; font-weight: 500; white-space: nowrap; }
 .spot.left { flex-direction: row-reverse; margin-left: 0; translate: calc(-100% + 11px) 0; }   /* a point left of the body: its name runs away from the body */
 .spot i { position: relative; flex: none; width: 10px; height: 10px; border-radius: 50%; background: var(--mark); box-shadow: 0 0 0 3px rgba(10,12,14,0.7); }
 .spot b { position: absolute; top: 17px; width: 10px; height: 10px; border-radius: 50%; border: 1.5px solid var(--mark); animation: ring 2.4s ease-out infinite; }
 .spot:not(.left) b { left: 6px; } .spot.left b { right: 6px; }
-.spot:hover, .spot[aria-pressed="true"] { color: var(--ink); }
-.spot:hover i, .spot[aria-pressed="true"] i { background: #fff; }
+.spot:hover { color: var(--ink); }
+.spot:hover i { background: #fff; }
 #leaders .spot-line { stroke: rgba(242,193,78,0.5); stroke-width: 1; fill: none; }
 #leaders circle.spot-end { fill: var(--mark); stroke: none; }
 @media (prefers-reduced-motion: reduce) { .spot b { animation: none; } }
 
-/* Right column: a close-up's card on the whole body, a close-up's stops inside it */
-.side { position: absolute; right: 48px; top: 112px; width: 288px; max-height: calc(100% - 112px - 130px); overflow: auto; z-index: 3; display: grid; gap: 10px; align-content: start; }
-.side .hint-line { font-size: 13px; color: var(--faint); }
-.card { border: 1px solid var(--line); border-radius: 20px; background: rgba(255,255,255,0.035); overflow: hidden; }
-.card .shot { height: 196px; background: radial-gradient(70% 80% at 50% 45%, #39424a 0%, #1b2024 100%); }
-.card .shot img { display: block; width: 100%; height: 196px; object-fit: cover; }
-.card .body { padding: 20px 22px 22px; display: grid; gap: 10px; }
-.card .meta, .eyebrow { font: 12px var(--mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--faint); }
-.eyebrow { color: var(--mark); }
-.card h3 { font-size: 26px; line-height: 1.1; }
-.card p { font-size: 14.5px; color: var(--muted); }
-.go { min-height: 48px; border: 0; border-radius: 24px; background: var(--mark); color: var(--mark-ink); font-size: 15px; font-weight: 600; cursor: pointer; padding: 0 22px; }
-.go:hover { background: #ffd978; }
-.quiet { min-height: 44px; border: 0; background: transparent; color: var(--muted); font-size: 14px; font-weight: 500; cursor: pointer; }
-.quiet:hover { color: var(--ink); }
-.inspector .quiet { justify-self: start; }
-.stops { display: grid; gap: 2px; }
-.stops button { display: grid; grid-template-columns: 26px 1fr; gap: 10px; align-items: center; min-height: 40px; border: 0; border-radius: 10px; background: transparent; color: var(--faint); font-size: 14px; text-align: left; cursor: pointer; padding: 0 12px; }
-.stops button i { font: 12px var(--mono); font-style: normal; }
-.stops button:hover { background: rgba(255,255,255,0.05); color: var(--ink); }
-.stops button[aria-current="true"] { color: var(--ink); font-weight: 600; }
-.stops button[aria-current="true"] i { color: var(--mark); }
-
 /* Callouts: a numbered disc on the part, its name beside it */
-#labels { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+#labels { position: absolute; inset: 0; pointer-events: none; overflow: hidden; touch-action: none; }
 #leaders { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; }
 #leaders line, #leaders polyline { stroke: var(--muted); stroke-width: 1; fill: none; }
 #leaders circle { fill: var(--field); stroke: var(--ink); stroke-width: 1.5; }
@@ -180,61 +145,30 @@ button:focus-visible, input:focus-visible, a:focus-visible { outline: 2px solid 
 .tag.on { background: var(--mark); border-color: var(--mark); color: var(--mark-ink); }
 #tip { position: absolute; pointer-events: none; padding: 4px 9px; border-radius: 5px; background: var(--ink); color: var(--on-ink); font-size: 12.5px; font-weight: 600; transform: translate(12px, 12px); z-index: 4; }
 
-/* Panels */
-.panel { background: var(--panel); border: 1px solid var(--line-strong); border-radius: var(--radius); }
-.panel-title { font-size: 12px; font-weight: 700; color: var(--muted); margin: 0 0 8px; }
-
-/* Parts list, next to the tool column */
-.drawer { position: absolute; left: calc(var(--gutter) + var(--rail) + 12px); top: 88px; bottom: 96px; width: 330px; overflow: auto; padding: 18px; z-index: 5; }
-.layers { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 16px; }
-.chip { display: inline-flex; align-items: center; gap: 7px; border: 1px solid var(--line-strong); background: var(--panel); border-radius: 5px; padding: 4px 10px 4px 8px; font-size: 13px; font-weight: 600; cursor: pointer; color: var(--ink); }
-.chip i { width: 8px; height: 8px; border-radius: 2px; background: var(--dot); }
-.chip[aria-pressed="false"] { color: var(--faint); border-style: dashed; }
-.chip[aria-pressed="false"] i { background: transparent; box-shadow: inset 0 0 0 1.5px var(--dot); }
-.chip.plain { padding: 4px 10px; }
-.chip.plain[aria-pressed="true"] { background: var(--ink); color: var(--on-ink); border-color: var(--ink); }
-.search { width: 100%; height: 36px; border: 1px solid var(--line-strong); border-radius: 6px; padding: 0 10px; background: var(--field); font-size: 14px; margin-bottom: 4px; }
-.search-note { font-size: 12.5px; color: var(--faint); margin: 2px 0 6px; }
-.group-name { font-size: 12px; font-weight: 700; color: var(--muted); margin: 16px 0 4px; display: flex; align-items: center; gap: 7px; }
-.group-name i { width: 8px; height: 8px; border-radius: 2px; background: var(--dot); }
-.part-list { list-style: none; margin: 0; padding: 0; }
-.part-list button { width: 100%; display: grid; grid-template-columns: 30px 1fr; gap: 8px; text-align: left; background: none; border: 0; border-bottom: 1px solid var(--line); padding: 6px 4px; cursor: pointer; font-size: 14px; color: var(--ink); }
-.part-list button span { color: var(--faint); font-weight: 600; font-size: 12.5px; }
-.part-list button:hover { background: var(--panel-2); }
-.part-list button[aria-current="true"] { background: var(--mark); color: var(--mark-ink); font-weight: 600; }
-.part-list button[aria-current="true"] span { color: var(--mark-ink); }
-.part-list .minor button { font-size: 13px; color: var(--muted); padding: 4px 4px; }
-details.more summary { font-size: 12.5px; font-weight: 600; color: var(--muted); cursor: pointer; padding: 6px 4px; list-style-position: inside; }
-.tones { display: flex; gap: 8px; margin-bottom: 4px; }
-.tones button { width: 26px; height: 26px; border-radius: 50%; border: 2px solid var(--panel); box-shadow: 0 0 0 1px var(--line-strong); background: var(--sw); cursor: pointer; }
-.tones button[aria-pressed="true"] { box-shadow: 0 0 0 2px var(--ink); }
-
-/* The story, left: what is on show, in words */
-.inspector { position: absolute; left: var(--column); top: 104px; width: 380px; max-height: calc(100% - 104px - 32px); overflow: auto; scrollbar-gutter: stable; padding: 4px 16px 36px 4px; -webkit-mask-image: linear-gradient(#000 calc(100% - 30px), transparent); mask-image: linear-gradient(#000 calc(100% - 30px), transparent); z-index: 3; display: grid; gap: 18px; align-content: start; background: transparent; border: 0; }
+/* The sheet: one thing at a time, in words. The home page, a region with its parts, or a part */
+.sheet { width: var(--sheet); min-height: 0; overflow: auto; padding: 26px 22px 30px; border-left: 1px solid var(--line); background: var(--panel); display: grid; gap: 16px; align-content: start; }
 .sheet-handle { display: none; }
-.inspector-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
-.show-all { display: none !important; }
-@media (max-width: 820px) {   /* phones: category on its own line above the controls, so nothing wraps */
-  .show-all { display: inline-block !important; padding: 4px 9px; font-size: 12.5px; }
-  .inspector-head { flex-wrap: wrap; row-gap: 8px; }
-  .inspector-head .sys { flex: 1 0 calc(100% - 46px); }
-  .inspector-head .close { order: 1; }
-  .inspector-head .stepper { order: 2; margin-left: 0; margin-right: auto; }
-  .inspector-head .show-all { order: 3; }
-}
-.stepper { display: flex; align-items: center; gap: 2px; margin-left: auto; font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
-.stepper { font-family: var(--mono); font-size: 12px; }
-.stepper span { padding: 0 6px; white-space: nowrap; }
-.step-start { margin-top: 4px; }
+.eyebrow, .sub { font: 12px var(--mono); letter-spacing: 0.08em; text-transform: uppercase; }
+.eyebrow { color: var(--mark); }
+.sub { color: var(--faint); font-weight: 400; margin-top: 6px; }
+.sheet h2 { font-size: 36px; line-height: 1.04; letter-spacing: -0.03em; }
+.sheet p { font-size: 15.5px; line-height: 1.6; color: var(--muted); }
+.sheet p.lead { color: var(--ink); }
+.go { min-height: 48px; border: 0; border-radius: 24px; background: var(--mark); color: var(--mark-ink); font-size: 15px; font-weight: 600; line-height: 1.25; cursor: pointer; padding: 8px 22px; }
+.go:hover { background: #ffd978; }
+/* plain lists: a name, and a short note at the far end */
+.list { display: grid; border-bottom: 1px solid var(--line); }
+.list button, .list a { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; min-height: 44px; padding: 10px 2px; border: 0; border-top: 1px solid var(--line); background: none; color: var(--ink); font-size: 15px; text-align: left; text-decoration: none; cursor: pointer; }
+.list span { flex: none; color: var(--faint); font: 12px var(--mono); white-space: nowrap; }
+.list button:hover, .list a:hover { color: var(--mark); }
+.list.parts button { justify-content: flex-start; }
+.list.parts i { flex: none; min-width: 22px; font: 12px var(--mono); font-style: normal; color: var(--mark); }
+.sheet-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.sheet-head .count { font: 12px var(--mono); color: var(--muted); white-space: nowrap; }
 .sys { display: inline-flex; align-items: center; gap: 8px; font: 12px var(--mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--faint); }
 .sys i { width: 8px; height: 8px; border-radius: 2px; background: var(--dot); }
 .sys .no { font: 12px var(--mono); font-style: normal; color: var(--mark); }
-.close { border: 0; background: transparent; color: var(--muted); width: 30px; height: 30px; border-radius: 6px; cursor: pointer; font-size: 20px; line-height: 1; }
-.close:hover { background: var(--panel-2); color: var(--ink); }
-.inspector h2 { font-size: 46px; line-height: 1; letter-spacing: -0.03em; }
 .aka { color: var(--muted); margin-top: 6px; font-size: 14px; }
-.inspector p { font-size: 16px; line-height: 1.6; color: var(--muted); }
-.inspector p.lead { color: var(--ink); }
 .bug { border-top: 1px solid var(--line); padding-top: 14px; font-size: 15px; line-height: 1.55; color: var(--muted); }
 .bug b { display: block; font-size: 13px; font-weight: 500; color: var(--faint); margin-bottom: 4px; }
 .stats { display: grid; grid-template-columns: auto 1fr; margin: 0; font-size: 14px; border-top: 1px solid var(--line); }
@@ -246,41 +180,27 @@ details.more summary { font-size: 12.5px; font-weight: 600; color: var(--muted);
 .source { font-size: 12.5px; color: var(--muted); display: flex; gap: 8px; align-items: baseline; }
 .source em { font-style: normal; font-weight: 700; font-size: 11px; border: 1px solid var(--line-strong); border-radius: 3px; padding: 0 5px; color: var(--ink); white-space: nowrap; }
 .source em.fitted { background: var(--mark); border-color: var(--mark); color: var(--mark-ink); }
-.tour-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding-bottom: 14px; border-bottom: 1px solid var(--line); }
-.tour-bar .count { font-size: 13px; font-weight: 700; margin-right: auto; }
-.tour-bar .btn.play::before { content: ''; display: inline-block; vertical-align: -1px; margin-right: 7px; width: 9px; height: 10px; border-left: 3px solid currentColor; border-right: 3px solid currentColor; box-sizing: border-box; }
-.tour-bar .btn.play[data-playing="false"]::before { width: 0; height: 0; border: 5px solid transparent; border-left: 8px solid currentColor; border-right: 0; }
-.tour-progress { flex-basis: 100%; height: 3px; background: var(--line); border-radius: 2px; overflow: hidden; order: 9; margin-top: 6px; }
-.tour-progress span { display: block; height: 100%; background: var(--mark); }
-.btn { white-space: nowrap; border: 1px solid var(--line-strong); background: var(--panel); color: var(--ink); padding: 7px 13px; border-radius: 6px; cursor: pointer; font-size: 13.5px; font-weight: 600; text-decoration: none; display: inline-block; }
-.btn:hover { border-color: var(--ink); }
-.btn.primary { background: var(--ink); border-color: var(--ink); color: var(--on-ink); }
-.btn.primary:hover { background: #fff; }
-.btn[disabled] { opacity: 0.4; cursor: default; }
-.welcome h2 { font-size: 64px; line-height: 1; letter-spacing: -0.028em; }
-.nav-row { display: flex; gap: 10px; align-items: center; }
-.nav-row .go { flex: 1; }
-.nav-row .back { min-height: 48px; padding: 0 22px; border-radius: 24px; border: 1px solid var(--line-strong); background: transparent; color: var(--ink); font-size: 15px; font-weight: 500; cursor: pointer; }
-.exits { display: grid; border-top: 1px solid var(--line); }
-.exits button { display: grid; grid-template-columns: 26px 1fr auto; gap: 10px; align-items: center; text-align: left; background: none; border: 0; border-bottom: 1px solid var(--line); padding: 10px 0; cursor: pointer; }
-.exits button i { font: 12px var(--mono); font-style: normal; color: var(--mark); }
-.exits button b { font-weight: 500; color: var(--ink); }
-.exits button span { color: var(--muted); font-size: 14px; }
-.exits button:hover { background: var(--panel-2); }
-.closeup-list { display: grid; border-top: 1px solid var(--line); }
-.closeup-list button { display: grid; gap: 1px; text-align: left; background: none; border: 0; border-bottom: 1px solid var(--line); padding: 9px 4px; cursor: pointer; color: var(--ink); }
-.closeup-list button span { color: var(--muted); font-size: 13px; }
-.closeup-list button:hover, .closeup-list button[aria-current="true"] { background: var(--panel-2); }
-.btn.leave { justify-self: start; }
+.part-nav { display: grid; gap: 4px; }
+.part-nav button:not(.go) { min-height: 44px; padding: 0 2px; border: 0; border-bottom: 1px solid var(--line); background: none; color: var(--ink); font-size: 15px; text-align: left; cursor: pointer; }
+.part-nav button:not(.go):hover { color: var(--mark); }
 .small { font-size: 13px; color: var(--muted); }
 
-/* X-ray and body: the see-through controls, in their own panel at the bottom left */
-.dock { position: absolute; left: calc(var(--gutter) + var(--rail) + 12px); top: 50%; transform: translateY(-50%); width: 260px; padding: 16px 18px 18px; display: grid; gap: 12px; z-index: 5; }
-.dock:not(.open) { display: none; }   /* opened from the tool rail, so the model isn't boxed in by panels */
-.dock .ctl { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 2px 12px; }
-.dock .ctl input { grid-column: 1 / -1; }
-.dock label { font-size: 12px; font-weight: 700; color: var(--muted); }
-.dock output { font-size: 13px; font-weight: 700; white-space: nowrap; text-align: right; }
+/* Contents: the whole site on one page of plain lists, laid over the stage and the sheet */
+.contents { position: absolute; inset: 0; z-index: 6; overflow: auto; padding: 30px var(--gutter) 48px; background: var(--bg); display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 34px 40px; align-content: start; }
+.contents:focus { outline: none; }
+.contents #contentsRegions { display: contents; }
+.contents section { display: grid; gap: 10px; align-content: start; min-width: 0; }
+.contents .watch { grid-row: span 3; }   /* the long list keeps one column, and the short ones stack beside it */
+.contents h2 { font-size: 21px; font-weight: 600; letter-spacing: -0.02em; }
+.contents [aria-pressed="true"] span, .contents [aria-checked="true"] span { color: var(--mark); }
+.contents .slide { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 2px 12px; padding: 10px 2px; border-top: 1px solid var(--line); }
+.contents .slide input { grid-column: 1 / -1; }
+.contents .slide output { font: 12px var(--mono); color: var(--faint); }
+.contents .xray-strength { padding: 0 2px 10px; }
+.tones { display: flex; align-items: center; gap: 10px; padding: 10px 2px; border-top: 1px solid var(--line); }
+.tones b { margin-right: auto; font-weight: 400; }
+.tones button { width: 28px; height: 28px; border-radius: 50%; border: 2px solid var(--bg); box-shadow: 0 0 0 1px var(--line-strong); background: var(--sw); cursor: pointer; }
+.tones button[aria-pressed="true"] { box-shadow: 0 0 0 2px var(--ink); }
 input[type="range"] { -webkit-appearance: none; appearance: none; width: 100%; min-width: 80px; height: 24px; background: transparent; cursor: pointer; margin: 0; }
 input[type="range"]::-webkit-slider-runnable-track { height: 4px; border-radius: 2px; background: linear-gradient(to right, var(--ink) var(--fill, 0%), var(--line-strong) var(--fill, 0%)); }
 input[type="range"]::-moz-range-track { height: 4px; border-radius: 2px; background: var(--line-strong); }
@@ -289,27 +209,6 @@ input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 18p
 input[type="range"]::-moz-range-thumb { width: 14px; height: 14px; border-radius: 50%; background: var(--field); border: 2px solid var(--ink); }
 
 .hint { display: none; }
-.isolate { position: absolute; top: 76px; left: 50%; transform: translateX(-50%); z-index: 3; display: inline-flex; align-items: center; gap: 10px;
-  border: 1px solid var(--line-strong); background: var(--panel); color: var(--ink); border-radius: var(--radius); padding: 6px 6px 6px 12px; font-size: 13.5px; cursor: pointer; }
-.isolate::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--mark); }
-.isolate span { white-space: nowrap; }
-.isolate .all { background: var(--ink); color: var(--on-ink); border-radius: 4px; padding: 3px 9px; font-weight: 700; font-size: 13px; }
-.figure { position: absolute; left: 50%; transform: translateX(-50%); bottom: 100px; white-space: nowrap; z-index: 2; font: 11.5px var(--mono); letter-spacing: 0.06em; text-transform: uppercase; color: var(--faint); pointer-events: none; }
-/* while a close-up moves, the line under it says what is happening: large enough to read from a step back */
-.figure.live { bottom: 30px; width: max-content; max-width: min(580px, calc(100% - 48px)); white-space: normal; text-align: center; padding: 13px 24px; border: 1px solid var(--line); border-radius: 18px; background: rgba(11, 13, 15, 0.74); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); font: 500 17px/1.42 'Inter', sans-serif; letter-spacing: 0; text-transform: none; color: var(--ink); text-wrap: balance; pointer-events: auto; cursor: pointer; }
-.figure.live::before { content: ''; display: inline-block; vertical-align: -1px; margin-right: 12px; width: 10px; height: 12px; border-left: 3px solid var(--mark); border-right: 3px solid var(--mark); box-sizing: border-box; }
-.figure.live[data-motion="off"]::before { width: 0; height: 0; border: 6px solid transparent; border-left: 10px solid var(--mark); border-right: 0; }
-.figure.live:has(span) { max-width: min(680px, calc(100% - 48px)); }
-.figure.live span { color: var(--faint); white-space: nowrap; transition: color 0.18s; }
-.figure.live span.now { color: var(--ink); }
-.figure.live span + span::before { content: '→'; margin: 0 12px; color: var(--faint); opacity: 0.6; }
-.figure.live:hover, .figure.live:focus-visible { border-color: var(--mark); outline: none; }
-.inspector .quiet[data-motion] { display: inline-flex; align-items: center; gap: 10px; padding: 0 18px 0 14px; border: 1px solid var(--line-strong); border-radius: 22px; color: var(--ink); }
-.quiet[data-motion]::before { content: ''; width: 10px; height: 12px; border-left: 3px solid currentColor; border-right: 3px solid currentColor; box-sizing: border-box; }
-.quiet[data-motion][aria-pressed="false"]::before { width: 0; height: 0; border: 6px solid transparent; border-left: 10px solid currentColor; border-right: 0; }
-.quiet[data-motion]:hover { border-color: var(--mark); color: var(--mark); }
-.switch { justify-self: end; border: 1.5px solid var(--ink); background: var(--panel); border-radius: 999px; padding: 2px 12px; font-size: 13px; font-weight: 700; cursor: pointer; }
-.switch[aria-checked="true"] { background: var(--ink); color: var(--on-ink); }
 
 /* Manual */
 .manual-wrap { max-width: 1180px; margin: 0 auto; padding: 64px max(24px, env(safe-area-inset-right, 0px)) 24px max(24px, env(safe-area-inset-left, 0px)); }
@@ -337,87 +236,61 @@ th { font-size: 12px; font-weight: 700; color: var(--muted); }
 footer { max-width: 1180px; margin: 0 auto; padding: 32px max(24px, env(safe-area-inset-right, 0px)) 48px max(24px, env(safe-area-inset-left, 0px)); color: var(--muted); font-size: 13px; display: grid; gap: 6px; }
 footer a { color: inherit; }
 
-/* Phones: the model takes the screen; tools sit in a bar along the bottom; details open in a bottom sheet over the model */
+/* Phones: the bar takes two lines (the trail, then the controls), the model keeps the middle with the strip at its foot,
+   and the sheet sits along the bottom; its handle makes it taller or shorter */
 @media (max-width: 820px) {
   :root { --gutter: 12px; }
-  .masthead { top: 14px; left: var(--gutter); }
-  .masthead h1 { font-size: 16px; white-space: nowrap; }
-  .masthead .brand { display: none; }
-  .masthead p { display: none; }
-  .top-right { gap: 6px; }
-  .sex button { min-height: 28px; padding: 0 10px; font-size: 12.5px; }
+  .bar { flex-wrap: wrap; gap: 4px 6px; padding: 2px var(--gutter) 6px; }
+  .trail { flex: 1 0 100%; font-size: 13px; }
+  .trail button { min-height: 34px; }
+  .trail .home { font-size: 16px; }
+  .finder { flex: 1; min-width: 0; }
+  .finder input { width: 100%; min-height: 36px; padding-left: 32px; }
+  .finder svg { left: 10px; }
+  .found { position: fixed; top: 84px; left: var(--gutter); right: var(--gutter); width: auto; }
   .sex { padding: 2px; }
-  .top-right { top: 8px; right: var(--gutter); }
-  .sound-btn { min-height: 32px; padding: 0 8px; }
-  .crumbs { top: 40px; left: var(--gutter); max-width: 92vw; font-size: 12px; }
-  .crumbs.below-layers { top: 114px; }   /* on the whole body the layers' line is where the trail would be */
-  .finder input { width: 34px; min-height: 32px; padding: 0 0 0 30px; }
-  .finder input::placeholder { color: transparent; }
-  .finder svg { left: 9px; }
-  .finder input:focus { position: fixed; top: 8px; left: var(--gutter); right: var(--gutter); width: auto; z-index: 9; padding-right: 12px; background: var(--panel); }
-  .finder:focus-within svg { position: fixed; top: 16px; left: calc(var(--gutter) + 9px); z-index: 10; }
-  .found { position: fixed; top: 46px; left: var(--gutter); right: var(--gutter); width: auto; }
+  .sex button { min-height: 30px; padding: 0 10px; font-size: 12.5px; }
+  .sound-btn { min-height: 36px; padding: 0 8px; }
   .sound-btn span { display: none; }
-  .tour-btn { min-height: 32px; padding: 0 12px 0 10px; font-size: 12.5px; gap: 6px; }
-  .tour-btn svg { width: 9px; height: 9px; }
-  .tour-btn span { font-size: 0; }
-  .tour-btn span::after { content: "Tour"; font-size: 12.5px; }
-  .peel { top: 44px; bottom: auto; left: var(--gutter); right: var(--gutter); transform: none; width: auto; }
+  .contents-btn { min-height: 36px; min-width: 84px; padding: 0 12px; }
+  .work { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) auto; }
+  .sheet { width: auto; max-height: 30svh; padding: 0 16px 18px; gap: 12px; grid-auto-rows: max-content; border-left: 0; border-top: 1px solid var(--line-strong); }   /* max-content: a short sheet scrolls, and does not squeeze its clipped lines to nothing */
+  .sheet.full { max-height: 60svh; }
+  .sheet:not(.full) .lead { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }   /* short, so what to do next shows without scrolling; the handle shows it all */
+  .sheet-handle { display: block; position: sticky; top: 0; z-index: 1; width: 100%; height: 22px; margin-bottom: -6px; border: 0; background: var(--panel); cursor: pointer; }
+  .sheet-handle::before { content: ""; position: absolute; left: 50%; top: 9px; width: 40px; height: 4px; margin-left: -20px; border-radius: 4px; background: var(--line-strong); }
+  .sheet h2 { font-size: 26px; }
+  .sheet p { font-size: 15px; }
+  .strip { bottom: 8px; }
+  .peel { width: auto; max-width: none; left: var(--gutter); right: var(--gutter); transform: none; }
   .peel input[type="range"] { height: 34px; }
   .views { margin: -8px 0 0; }
   .views button { font-size: 12px; min-height: 32px; }
-  .side { display: none; }
-  .viewer::after { display: none; }
+  .views .long { display: none; }
+  .views .short { display: inline; }
+  .transport { max-width: calc(100% - 16px); }
+  .transport button { padding: 0 10px; }
+  .transport [data-story="play"] { min-width: 96px; }
+  .say { bottom: 68px; max-width: calc(100% - 16px); padding: 9px 14px; border-radius: 14px; font-size: 15px; }
+  .say span + span::before { margin: 0 7px; }
   .height-ruler { display: none; }   /* phones move the view with two fingers */
-  .rail { top: auto; bottom: calc(var(--gutter) + env(safe-area-inset-bottom, 0px)); left: var(--gutter); right: var(--gutter); transform: none; width: auto; display: flex; justify-content: space-between; padding: 4px; border-radius: 16px; background: var(--panel); }
-  .rail hr { display: none; }
-  .tool { display: grid; grid-template-rows: 20px auto; place-items: center; gap: 2px; width: auto; height: 50px; padding: 4px 2px; flex: 1; border-radius: 12px; font-size: 10.5px; font-weight: 500; }
-  .tool.phone-only { display: grid; }
-  .tool .long, .views .long { display: none; }
-  .tool .short, .views .short { display: inline; }
-  .tool span { white-space: nowrap; }
-  .drawer { left: var(--gutter); right: var(--gutter); width: auto; top: auto; bottom: calc(var(--gutter) + 66px + env(safe-area-inset-bottom, 0px)); max-height: 56%; z-index: 5; }   /* a sheet opened from the tool bar sits over the details sheet */
-  .dock { left: var(--gutter); right: var(--gutter); top: auto; transform: none; width: auto; bottom: calc(var(--gutter) + 66px + env(safe-area-inset-bottom, 0px)); z-index: 5; }
-  .tool.wide-tool { display: none; }
-  .inspector { left: var(--gutter); right: var(--gutter); bottom: calc(var(--gutter) + 62px + env(safe-area-inset-bottom, 0px)); top: auto; width: auto; max-height: 64%; border-radius: 16px; padding: 6px 18px 18px; gap: 12px; z-index: 4; background: var(--panel); border: 1px solid var(--line-strong); box-shadow: 0 -8px 30px rgba(0,0,0,0.4); }
-  .inspector.empty { display: none; }
-  .inspector.peek { max-height: 38%; overflow: hidden; }
-  .inspector.peek::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 44px; background: linear-gradient(rgba(22,26,29,0), var(--panel)); pointer-events: none; }
-  .sheet-handle { display: block; width: 100%; height: 20px; border: 0; background: none; cursor: pointer; position: relative; }
-  .sheet-handle::before { content: ""; position: absolute; left: 50%; top: 7px; width: 40px; height: 4px; margin-left: -20px; border-radius: 4px; background: var(--line-strong); }
-  .inspector h2, .welcome h2 { font-size: 28px; }
-  .inspector p { font-size: 15px; }
-  .hint { display: block; position: absolute; left: 0; right: 0; bottom: calc(var(--gutter) + 72px + env(safe-area-inset-bottom, 0px)); text-align: center; font-size: 12.5px; font-weight: 600; color: var(--muted); z-index: 2; pointer-events: none; }
+  .hint { display: block; position: absolute; left: 0; right: 0; top: 8px; text-align: center; font-size: 12.5px; font-weight: 600; color: var(--muted); z-index: 2; pointer-events: none; }
   .tag { font-size: 11.5px; height: 20px; }
-  .isolate { display: none !important; }   /* phones: Show all sits in the details sheet */
-  .figure { display: none; }
-  .figure.live { display: block; left: 12px; right: 12px; bottom: auto; top: 104px; transform: none; width: auto; max-width: none; padding: 9px 14px; border-radius: 14px; font-size: 14px; }
+  .contents { padding-top: 22px; }
 }
 @media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; transition: none !important; } }
 </style>
 </head>
 <body>
 <section class="viewer" id="viewer" aria-label="Interactive 3D model">
-  <div class="stage" id="stage">
-    <canvas id="scene" aria-label="3D model of the human body. Drag to turn, scroll or pinch to zoom, tap a part for details."></canvas>
-    <div id="labels"></div>
-    <div id="tip" hidden></div>
-    <div class="loading" id="loading">Loading the 3D model…</div>
-    <div class="fetching" id="fetching" hidden></div>
-  </div>
-
-  <header class="masthead">
-    <div class="brand"><span><a href="https://wooten-labs.com">Wooten Labs</a></span><span><a href="https://github.com/jonclegg/vagina-anatomy">Source on GitHub</a></span></div>
-    <h1>Human Anatomy</h1>
-    <p id="subtitle">The whole body: bones, muscles, organs, vessels and nerves.</p>
-  </header>
-
-  <nav class="crumbs" id="crumbs" aria-label="Where you are"></nav>
-
-  <div class="top-right">
+  <header class="bar">
+    <nav class="trail" aria-label="Where you are">
+      <h1><button type="button" class="home" id="homeBtn">Human Anatomy</button></h1>
+      <span id="crumbs"></span>
+    </nav>
     <div class="finder" id="finder" role="search">
       <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6"/><path d="M15 15l5.5 5.5"/></svg>
-      <input type="search" id="find" placeholder="Find any part" aria-label="Find any part of the body" autocomplete="off" spellcheck="false" role="combobox" aria-expanded="false" aria-controls="found">
+      <input type="search" id="find" placeholder="Search parts, regions and stories" aria-label="Search parts, regions and stories" autocomplete="off" spellcheck="false" role="combobox" aria-expanded="false" aria-controls="found">
       <ul class="found" id="found" role="listbox" hidden></ul>
     </div>
     <div class="sex" role="group" aria-label="Body" id="sexSwitch">
@@ -425,78 +298,92 @@ footer a { color: inherit; }
       <button type="button" data-sex="male" aria-pressed="true">Male</button>
     </div>
     <button type="button" class="sound-btn" id="soundBtn" aria-pressed="false" aria-label="Sound: music and a voice"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9.5v5h3.5l4.5 4v-13l-4.5 4z"/><path class="waves" d="M15.5 9a4 4 0 0 1 0 6M18 6.5a7.5 7.5 0 0 1 0 11"/><path class="mute" d="M16 9.5l5 5M21 9.5l-5 5"/></svg><span>Sound</span></button>
-    <button type="button" class="tour-btn" id="tourBtn" aria-pressed="false" aria-label="Guided tour"><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M3 1.8v10.4L12 7z" fill="currentColor"/></svg><span>Guided tour</span></button>
-  </div>
+    <button type="button" class="contents-btn" id="contentsBtn" aria-expanded="false" aria-controls="contents">Contents</button>
+  </header>
 
-  <nav class="rail" aria-label="Tools">
-    <button type="button" class="tool" id="partsBtn" aria-label="All parts" aria-expanded="false" aria-controls="drawer"><svg viewBox="0 0 24 24"><path d="M9 6h11M9 12h11M9 18h11"/><circle cx="4.5" cy="6" r="1.2"/><circle cx="4.5" cy="12" r="1.2"/><circle cx="4.5" cy="18" r="1.2"/></svg><span class="long">Parts list</span><span class="short">Parts</span></button>
-    <button type="button" class="tool wide-tool" id="labelsBtn" data-toggle="labels" aria-label="Callouts" aria-pressed="true"><svg viewBox="0 0 24 24"><path d="M3.5 12.5V4.5a1 1 0 0 1 1-1h8l8 8-9 9z"/><circle cx="8" cy="8" r="1.4"/></svg><span>Callouts</span></button>
-    <button type="button" class="tool wide-tool" id="clothedBtn" data-toggle="clothed" aria-label="Clothing" aria-pressed="true"><svg viewBox="0 0 24 24"><path d="M8.5 3.5 4 6.5l2 4 2-1v11h8v-11l2 1 2-4-4.5-3a3.5 3.5 0 0 1-7 0z"/></svg><span>Clothing</span></button>
-    <hr>
-    <button type="button" class="tool" id="dockBtn" aria-label="X-ray and body" aria-expanded="false" aria-controls="dock"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 3.5v17"/><path d="M12 3.5a8.5 8.5 0 0 1 0 17" fill="currentColor" stroke="none" opacity="0.35"/></svg><span class="long">X-ray &amp; body</span><span class="short">X-ray</span></button>
-    <button type="button" class="tool" id="closeupsBtn" aria-label="Close-ups" aria-expanded="false" aria-controls="closeups"><svg viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6"/><path d="M15 15l5.5 5.5"/><path d="M8 10.5h5M10.5 8v5"/></svg><span class="long">Close-ups</span><span class="short">Close-ups</span></button>
-    <button type="button" class="tool wide-tool" id="cutBtn" data-toggle="cut" aria-label="Midline cut" aria-pressed="false"><svg viewBox="0 0 24 24"><path d="M12 2.5v19" stroke-dasharray="2.5 2.5"/><path d="M9 6a6 6 0 0 0 0 12z"/><path d="M15 6a6 6 0 0 1 0 12" opacity="0.4"/></svg><span>Midline cut</span></button>
-    <hr>
-    <button type="button" class="tool phone-only" id="manualBtn" aria-label="Read the manual"><svg viewBox="0 0 24 24"><path d="M5 4.5h9.5a3 3 0 0 1 3 3V20H8a3 3 0 0 1-3-3z"/><path d="M5 17a3 3 0 0 1 3-3h9.5"/></svg><span>Manual</span></button>
-    <button type="button" class="tool" id="resetBtn" aria-label="Reset the view"><svg viewBox="0 0 24 24"><path d="M4.5 12a7.5 7.5 0 1 0 2.2-5.3"/><path d="M4 3.5v4h4"/></svg><span class="long">Reset view</span><span class="short">Reset</span></button>
-  </nav>
+  <div class="work">
+    <div class="stage" id="stage">
+      <canvas id="scene" aria-label="3D model of the human body. Drag to turn, scroll or pinch to zoom, tap a part for details."></canvas>
+      <div id="labels"></div>
+      <div id="tip" hidden></div>
+      <div class="loading" id="loading">Loading the 3D model…</div>
+      <div class="fetching" id="fetching" hidden></div>
 
-  <div class="height-ruler" id="heightRuler" role="slider" tabindex="0" aria-label="Height on the body: drag to move up and down" aria-valuemin="0" aria-valuemax="170" aria-valuenow="85" aria-orientation="vertical" title="Drag to move up and down the body">
-    <span class="unit">CM</span><div class="scale"><div class="window"></div></div>
-  </div>
+      <div class="height-ruler" id="heightRuler" role="slider" tabindex="0" aria-label="Height on the body: drag to move up and down" aria-valuemin="0" aria-valuemax="170" aria-valuenow="85" aria-orientation="vertical" title="Drag to move up and down the body">
+        <span class="unit">CM</span><div class="scale"><div class="window"></div></div>
+      </div>
 
-  <div class="peel">
-    <input type="range" id="peel" min="0" max="500" value="0" aria-label="Peel the body, layer by layer: skin, muscles, organs, vessels, nerves, skeleton">
-    <div class="views" role="group" aria-label="Layers" id="views">
-      <button type="button" data-view="body" aria-pressed="true">Skin</button>
-      <button type="button" data-view="muscles" aria-pressed="false">Muscles</button>
-      <button type="button" data-view="organs" aria-pressed="false">Organs</button>
-      <button type="button" data-view="vessels" aria-pressed="false">Vessels</button>
-      <button type="button" data-view="nerves" aria-pressed="false">Nerves</button>
-      <button type="button" data-view="skeleton" aria-pressed="false"><span class="long">Skeleton</span><span class="short">Bones</span></button>
+      <div class="strip peel" id="layerStrip">
+        <input type="range" id="peel" min="0" max="500" value="0" aria-label="Peel the body, layer by layer: skin, muscles, organs, vessels, nerves, skeleton">
+        <div class="views" role="group" aria-label="Layers" id="views">
+          <button type="button" data-view="body" aria-pressed="true">Skin</button>
+          <button type="button" data-view="muscles" aria-pressed="false">Muscles</button>
+          <button type="button" data-view="organs" aria-pressed="false">Organs</button>
+          <button type="button" data-view="vessels" aria-pressed="false">Vessels</button>
+          <button type="button" data-view="nerves" aria-pressed="false">Nerves</button>
+          <button type="button" data-view="skeleton" aria-pressed="false"><span class="long">Skeleton</span><span class="short">Bones</span></button>
+        </div>
+      </div>
+
+      <p class="say" id="say" aria-live="polite" hidden></p>
+      <div class="strip transport" id="transport" role="group" aria-label="Story" hidden>
+        <button type="button" data-story="prev" aria-label="Previous step">←</button>
+        <button type="button" data-story="play">Pause</button>
+        <button type="button" data-story="next" aria-label="Next step">→</button>
+        <span class="count" id="storyCount"></span>
+        <button type="button" data-story="exit">Exit</button>
+      </div>
+
+      <p class="invite" id="invite" hidden>Touch the screen to explore the body</p>
+      <p class="hint" id="hint">Drag to turn · Pinch to zoom · Two fingers to move · Tap a part</p>
+    </div>
+
+    <aside class="sheet" id="sheet" aria-live="polite"></aside>
+
+    <div class="contents" id="contents" tabindex="-1" aria-label="Contents" hidden>
+      <section class="watch">
+        <h2>Watch</h2>
+        <div class="list" id="contentsWatch"></div>
+      </section>
+      <div id="contentsRegions"></div>
+      <section>
+        <h2>Layers</h2>
+        <div class="list">
+          <button type="button" data-layer="body">Skin</button>
+          <button type="button" data-layer="muscles">Muscles</button>
+          <button type="button" data-layer="organs">Organs</button>
+          <button type="button" data-layer="vessels">Vessels</button>
+          <button type="button" data-layer="nerves">Nerves</button>
+          <button type="button" data-layer="skeleton">Skeleton</button>
+        </div>
+      </section>
+      <section>
+        <h2>View</h2>
+        <div class="list">
+          <button type="button" data-toggle="labels" aria-pressed="true">Callouts<span></span></button>
+          <button type="button" data-toggle="clothed" aria-pressed="true">Clothing<span></span></button>
+          <button type="button" data-toggle="cut" aria-pressed="false">Midline cut<span></span></button>
+          <button type="button" id="xraySwitch" role="switch" aria-checked="false">X-ray<span id="xrayOut">Off</span></button>
+          <div class="xray-strength"><input type="range" id="xray" min="0" max="100" value="0" aria-label="X-ray strength"><p class="small" id="xrayNote"></p></div>
+          <div class="slide"><label for="body">Skin</label><output id="bodyOut" for="body">25%</output><input type="range" id="body" min="0" max="100" value="25"></div>
+          <div class="tones" id="tones" role="group" aria-label="Skin tone"><b>Skin tone</b></div>
+          <button type="button" id="resetBtn">Reset the view</button>
+        </div>
+      </section>
+      <section>
+        <h2>About</h2>
+        <div class="list">
+          <button type="button" data-manual="systems">The body's systems</button>
+          <button type="button" data-manual="differences">Female and male differences</button>
+          <button type="button" data-manual="bugs">Common misconceptions</button>
+          <button type="button" data-manual="sources">Where the shapes come from</button>
+          <button type="button" data-manual="credits">Credits and licences</button>
+          <a href="https://wooten-labs.com">Wooten Labs</a>
+          <a href="https://github.com/jonclegg/vagina-anatomy">Source on GitHub</a>
+        </div>
+      </section>
     </div>
   </div>
-
-  <aside class="drawer panel" id="drawer" aria-label="Layers and parts" hidden>
-    <button type="button" class="btn step-start" data-step="1">Step through the parts →</button>
-    <h2 class="panel-title" style="margin-top:14px">Display</h2>
-    <div class="layers"><button type="button" class="chip plain" data-toggle="labels" aria-pressed="true">Callouts</button><button type="button" class="chip plain" data-toggle="clothed" aria-pressed="true">Clothing</button><button type="button" class="chip plain" data-toggle="cut" aria-pressed="false">Midline cut</button></div>
-    <h2 class="panel-title">Show</h2>
-    <div class="layers" id="layers"></div>
-    <h2 class="panel-title">Skin tone</h2>
-    <div class="tones" id="tones" role="group" aria-label="Skin tone"></div>
-    <h2 class="panel-title" style="margin-top:16px">Find a part</h2>
-    <input type="search" class="search" id="search" placeholder="Femur, liver, deltoid…" aria-label="Find a part" autocomplete="off">
-    <p class="search-note" id="searchNote"></p>
-    <div id="partGroups"></div>
-  </aside>
-
-  <aside class="drawer panel" id="closeups" aria-label="Close-ups" hidden>
-    <h2 class="panel-title">Close-ups</h2>
-    <p class="small" style="margin-bottom:10px">A region on its own, with its parts numbered and explained.</p>
-    <div class="closeup-list" id="closeupList"></div>
-  </aside>
-
-  <aside class="inspector panel" id="inspector" aria-live="polite"></aside>
-  <aside class="side" id="side" aria-label="Close-ups and stops" hidden></aside>
-  <div class="dock panel" id="dock">
-    <div class="ctl">
-      <label for="xray">X-ray</label>
-      <button type="button" class="switch" id="xraySwitch" role="switch" aria-checked="false" aria-label="X-ray"><span id="xrayOut">Off</span></button>
-      <input type="range" id="xray" min="0" max="100" value="0" aria-label="X-ray strength">
-    </div>
-    <div class="ctl">
-      <label for="body">Skin</label>
-      <output id="bodyOut" for="body">25%</output>
-      <input type="range" id="body" min="0" max="100" value="25">
-    </div>
-    <p class="small" id="xrayNote"></p>
-  </div>
-
-  <button type="button" class="isolate" id="isolateChip" hidden></button>
-  <p class="figure" id="figure"></p>
-  <p class="invite" id="invite" hidden>Touch the screen to explore the body</p>
-  <p class="hint" id="hint">Drag to turn · Pinch to zoom · Two fingers to move · Tap a part</p>
 </section>
 
 <div class="manual-wrap">
@@ -537,7 +424,7 @@ footer a { color: inherit; }
   <span>The rest of the female body is the male body, reshaped to that skin, not scanned from a woman.</span>
   <span>Measurements from Gray's Anatomy (42nd ed.), Standring 2020, Moore's Clinically Oriented Anatomy, and published studies (some named in a part's details).</span>
   <span>Educational model, simplified for clarity. Bodies vary widely. Not medical advice.</span>
-  <span>Open source (MIT): <a href="https://github.com/jonclegg/vagina-anatomy">github.com/jonclegg/vagina-anatomy</a>. Corrections welcome. The female pelvis is in the Close-ups; for how it changes with arousal, and its cross-sections, see <a href="https://vagina.wooten-labs.com">Vagina Anatomy</a>.</span>
+  <span>Open source (MIT): <a href="https://github.com/jonclegg/vagina-anatomy">github.com/jonclegg/vagina-anatomy</a>. Corrections welcome. The female pelvis is under Pelvis in Contents; for how it changes with arousal, and its cross-sections, see <a href="https://vagina.wooten-labs.com">Vagina Anatomy</a>.</span>
 </footer>
 
 <script type="importmap">

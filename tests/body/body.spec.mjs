@@ -2,6 +2,8 @@ import { test, expect } from '@playwright/test';
 import { ENTRIES } from '../../site/body/parts.mjs';
 import { REGIONS, DETAILS } from '../../site/body/closeups.mjs';
 import { STORIES } from '../../site/body/stories.mjs';
+import { MOTIONS } from '../../site/body/motions.mjs';
+import { NARRATION } from '../../site/body/narration.mjs';
 
 /* the tests turn the sound on: it plays, but silently, so a test run is never heard on the machine it runs on */
 test.beforeEach(async ({ page }) => {
@@ -26,6 +28,17 @@ async function open(page, { sex = 'male', view } = {}) {
 const model = (page, script, arg) => page.evaluate(script, arg);
 const isPhone = page => page.viewportSize().width <= 820;
 const desktopOnly = testInfo => test.skip(testInfo.project.name === 'iphone', 'desktop interaction');
+/* straight to a region, which opens still */
+async function openRegion(page, id, sex = 'male') {
+  const errors = [];
+  page.on('pageerror', error => errors.push(error.message));
+  await page.goto(`/?sex=${sex}&closeup=${id}`);
+  await page.waitForSelector('html[data-model-ready="true"]', { timeout: 60_000 });
+  await model(page, () => window.bodyModel.ready());
+  await settle(page);
+  return errors;
+}
+const place = page => model(page, () => { const { region, view, selection, story, contents } = window.bodyModel.state; return { region, view, entry: selection?.entry ?? null, story: story ? story.kind : null, contents }; });
 
 test.describe('loading', () => {
   test.use({ reducedMotion: 'reduce' });
@@ -74,7 +87,7 @@ test.describe('both bodies', () => {
     expect(female.parts).toBeGreaterThan(2000);
     expect(female.entries).toEqual(expect.arrayContaining(['uterus', 'ovary', 'breast', 'heart', 'lungs']));
     expect(female.entries).not.toContain('prostate');
-    await expect(page.locator('#figure')).toContainText('Female');
+    await expect(page.locator('#sexSwitch [data-sex="female"]')).toHaveAttribute('aria-pressed', 'true');
     expect(await model(page, () => window.bodyModel.coverage())).toBeGreaterThan(0.02);
     // her callouts, not his: the labels are rebuilt for the new body
     await expect(page.locator('#labels .tag:not([hidden])').first()).toBeVisible();
@@ -87,19 +100,19 @@ test.describe('both bodies', () => {
     await model(page, () => window.bodyModel.selectEntry('testis'));
     await page.locator('#sexSwitch [data-sex="female"]').click();
     await settle(page);
-    await expect(page.locator('#inspectorTitle')).toHaveText('Ovaries');
+    await expect(page.locator('#sheetTitle')).toHaveText('Ovaries');
     await model(page, () => window.bodyModel.selectEntry('femur'));
     await page.locator('#sexSwitch [data-sex="male"]').click();
     await settle(page);
-    await expect(page.locator('#inspectorTitle')).toHaveText('Femur');
+    await expect(page.locator('#sheetTitle')).toHaveText('Femur');
   });
 
   test('fitted female parts say so, scanned ones say where they come from', async ({ page }) => {
     await open(page, { sex: 'female', view: 'skeleton' });
     await model(page, () => window.bodyModel.selectEntry('humerus'));
-    await expect(page.locator('#inspector .source em')).toHaveText('Fitted');
+    await expect(page.locator('#sheet .source em')).toHaveText('Fitted');
     await model(page, () => window.bodyModel.selectEntry('uterus'));
-    await expect(page.locator('#inspector .source')).toContainText('Visible Human Female');
+    await expect(page.locator('#sheet .source')).toContainText('Visible Human Female');
   });
 });
 
@@ -131,8 +144,9 @@ test.describe('clothing', () => {
       expect(await model(page, () => window.bodyModel.clothing())).toMatchObject({ shown: true, opacity: 1 });
       expect((await model(page, () => window.bodyModel.clothing())).triangles).toBeGreaterThan(500);   // modelled garments: his cut-off jeans are about 700 triangles
       if (sex === 'male') expect(await model(page, index => window.bodyModel.opacityOf(index), await model(page, () => window.bodyModel.findPart('Pubic hair')))).toBe(0);
-      await page.locator(isPhone(page) ? '#partsBtn' : '#clothedBtn').click();
-      if (isPhone(page)) await page.locator('#drawer [data-toggle="clothed"]').click();
+      await page.locator('#contentsBtn').click();
+      await page.locator('#contents [data-toggle="clothed"]').click();
+      await expect(page.locator('#contents [data-toggle="clothed"]')).toHaveText('ClothingOff');
       expect((await model(page, () => window.bodyModel.clothing())).shown).toBe(false);
     });
   }
@@ -182,29 +196,34 @@ test.describe('parts', () => {
     await expect(page.locator('#found li').first()).toContainText('Cornea');
     await page.keyboard.press('Enter');
     await settle(page);
-    expect(await model(page, () => ({ region: window.bodyModel.state.region, entry: window.bodyModel.state.selection.entry }))).toEqual({ region: 'eye', entry: 'eyeCornea' });
-    await expect(page.locator('#crumbs')).toHaveText('Whole body›Eye›Cornea');
-    await page.locator('#crumbs [data-crumb="region"]').click();
-    expect(await model(page, () => ({ region: window.bodyModel.state.region, selection: window.bodyModel.state.selection }))).toEqual({ region: 'eye', selection: null });
-    /* a main part, by its everyday name, from inside a close-up: out onto the whole body, in its layer */
+    expect(await place(page)).toMatchObject({ region: 'eye', entry: 'eyeCornea' });
+    await expect(page.locator('#crumbs')).toHaveText('›Eye›Cornea');
+    await page.locator('#crumbs [data-crumb]').click();
+    expect(await place(page)).toMatchObject({ region: 'eye', entry: null });
+    /* a main part, by its everyday name, from inside a region: out onto the whole body, in its layer */
     await page.locator('#find').fill('thigh bone');
     await page.keyboard.press('Enter');
     await settle(page);
-    expect(await model(page, () => ({ region: window.bodyModel.state.region, view: window.bodyModel.state.view, entry: window.bodyModel.state.selection.entry }))).toEqual({ region: null, view: 'skeleton', entry: 'femur' });
-    await page.locator('#crumbs [data-crumb="body"]').click();
-    await expect(page.locator('#crumbs')).toHaveText('');
+    expect(await place(page)).toMatchObject({ region: null, view: 'skeleton', entry: 'femur' });
+    await expect(page.locator('#crumbs')).toHaveText('›Skeleton›Femur');
+    await page.locator('#crumbs [data-crumb]').click();
+    expect(await place(page)).toMatchObject({ region: null, view: 'skeleton', entry: null });
+    await expect(page.locator('#crumbs')).toHaveText('›Skeleton');
+    /* a story, by what it shows */
+    await page.locator('#find').fill('swallow');
+    await expect(page.locator('#found li').first()).toContainText('How you swallow');
     await page.locator('#find').fill('zzzz');
     await expect(page.locator('#found')).toContainText('Nothing by that name');
   });
-  test('every structure is named and can be found in the parts list', async ({ page }) => {
+  test('every structure is named and can be found by the search', async ({ page }) => {
     await open(page);
     const names = await model(page, () => window.bodyModel.body().parts.map(part => part.name));
     expect(names.every(name => name && name.length > 2)).toBe(true);
-    if (isPhone(page) || !(await page.locator('#drawer').isVisible())) await page.locator('#partsBtn').click();
-    await page.locator('#search').fill('renal artery');
-    await expect(page.locator('#partGroups button').first()).toBeVisible();
-    await page.locator('#partGroups [data-part]').first().click();
-    await expect(page.locator('#inspectorTitle')).toContainText(/renal artery/i);
+    await page.locator('#find').fill('renal artery');
+    await expect(page.locator('#found li').first()).toContainText(/renal artery/i);
+    await page.keyboard.press('Enter');
+    await settle(page);
+    await expect(page.locator('#sheetTitle')).toContainText(/renal artery/i);
   });
 
   test('both bodies have more than 2,900 structures, with Z-Anatomy\'s additions credited', async ({ page }) => {
@@ -215,7 +234,7 @@ test.describe('parts', () => {
       expect(found.entries, sex).toEqual(expect.arrayContaining(['latissimusDorsi', 'rectusAbdominis', 'facialMuscles', 'thyroid', 'lymphNodes', 'legNerves', 'armNerves', 'brachialPlexus']));
     }
     await model(page, () => window.bodyModel.selectEntry('thyroid'));
-    await expect(page.locator('#inspector .source')).toContainText('Z-Anatomy');
+    await expect(page.locator('#sheet .source')).toContainText('Z-Anatomy');
   });
 
   for (const sex of ['male', 'female']) {
@@ -257,7 +276,7 @@ test.describe('parts', () => {
   });
 });
 
-test.describe('picking and inspector', () => {
+test.describe('picking and the sheet', () => {
   test.use({ reducedMotion: 'reduce' });
   test('clicking the model selects the structure under the pointer', async ({ page }, testInfo) => {
     desktopOnly(testInfo);
@@ -266,8 +285,8 @@ test.describe('picking and inspector', () => {
     const point = await model(page, index => window.bodyModel.screenOf(index), femur);
     await page.mouse.click(point.x, point.y);
     await settle(page);
-    await expect(page.locator('#inspectorTitle')).toHaveText('Left femur');
-    await expect(page.locator('#inspector .aka')).toContainText('Femur');
+    await expect(page.locator('#sheetTitle')).toHaveText('Left femur');
+    await expect(page.locator('#sheet .aka')).toContainText('Femur');
   });
 
   test('picking a piece of an organ selects the organ on that side', async ({ page }) => {
@@ -277,8 +296,8 @@ test.describe('picking and inspector', () => {
     const chosen = await model(page, index => { window.bodyModel.selectPart(index); return window.bodyModel.state.selection.parts.map(other => window.bodyModel.sideOf(other)); }, segment.index);
     expect(chosen.length).toBeGreaterThan(5);
     expect(new Set(chosen)).toEqual(new Set(['left']));
-    await expect(page.locator('#inspectorTitle')).toHaveText('Lungs');
-    await expect(page.locator('#inspector .aka')).toContainText(segment.name);
+    await expect(page.locator('#sheetTitle')).toHaveText('Lungs');
+    await expect(page.locator('#sheet .aka')).toContainText(segment.name);
   });
 
   test('choosing a part isolates it: it stays solid and the rest fades', async ({ page }) => {
@@ -287,19 +306,22 @@ test.describe('picking and inspector', () => {
     const opacities = await model(page, () => { const m = window.bodyModel; return { liver: m.opacityOf(m.entryParts('liver')[0]), heart: m.opacityOf(m.entryParts('heart')[0]) }; });
     expect(opacities.liver).toBe(1);
     expect(opacities.heart).toBeLessThan(0.2);
-    if (!isPhone(page)) { await page.locator('#isolateChip').click(); expect(await model(page, () => window.bodyModel.state.selection)).toBeNull(); }
+    await page.locator('#sheet [data-up]').click();   // Back to the organs
+    expect(await model(page, () => window.bodyModel.state.selection)).toBeNull();
   });
 
-  test('Back, Next and the arrow keys step through the main parts in number order', async ({ page }) => {
+  test('Next, Previous and the arrow keys step through the main parts in number order', async ({ page }) => {
     await open(page, { view: 'skeleton' });
     await model(page, () => window.bodyModel.selectEntry('skull'));
-    await page.locator('#inspector [data-step="1"]').click();
-    await expect(page.locator('#inspectorTitle')).toHaveText('Mandible');
-    await page.locator('#inspector [data-step="-1"]').click();
-    await expect(page.locator('#inspectorTitle')).toHaveText('Skull');
+    await expect(page.locator('#sheet [data-step="1"]')).toHaveText('Next: Mandible');
+    await page.locator('#sheet [data-step="1"]').click();
+    await expect(page.locator('#sheetTitle')).toHaveText('Mandible');
+    await expect(page.locator('#sheet [data-step="-1"]')).toHaveText('Previous: Skull');
+    await page.locator('#sheet [data-step="-1"]').click();
+    await expect(page.locator('#sheetTitle')).toHaveText('Skull');
     if (!isPhone(page)) {
       await page.keyboard.press('ArrowRight'); await page.keyboard.press('ArrowRight');
-      await expect(page.locator('#inspectorTitle')).toHaveText('Hyoid bone');
+      await expect(page.locator('#sheetTitle')).toHaveText('Hyoid bone');
     }
   });
 
@@ -307,7 +329,7 @@ test.describe('picking and inspector', () => {
     await open(page, { view: 'muscles' });
     const deltoid = await model(page, () => window.bodyModel.entryParts('deltoid')[0]);
     expect(await model(page, index => window.bodyModel.opacityOf(index), deltoid)).toBe(1);
-    await page.locator('#dockBtn').click();
+    await page.locator('#contentsBtn').click();
     await page.locator('#xraySwitch').click();
     expect(await model(page, index => window.bodyModel.opacityOf(index), deltoid)).toBeLessThan(0.5);
     await page.locator('#body').fill('60');
@@ -345,21 +367,21 @@ test.describe('close-ups', () => {
         const seen = await model(page, async id => {
           const m = window.bodyModel; m.setRegion(id); await m.ready();
           const body = m.body(), around = m.around(), order = m.entries();
-          return { parts: order.length, listed: document.querySelectorAll('#side .stops button').length,
+          return { parts: order.length, order, listed: [...document.querySelectorAll('#sheet .parts button')].map(button => button.dataset.entry), eyebrow: document.querySelector('#sheet .eyebrow').textContent, moving: m.motion().moving, strip: !document.querySelector('#layerStrip').hidden,
             own: [...around.own].filter(index => body.parts[index].layer !== 'skin' && m.opacityOf(index) < 1).length,
             context: [...around.context].filter(index => m.opacityOf(index) === 0 || m.opacityOf(index) > 0.5).length,
             others: body.parts.filter((part, index) => part.layer !== 'skin' && !around.own.has(index) && !around.context.has(index) && m.opacityOf(index) > 0).length,
-            clothing: m.clothing().opacity, coverage: m.coverage(), pressed: document.querySelectorAll('#views [aria-pressed="true"]').length };
+            clothing: m.clothing().opacity, coverage: m.coverage() };
         }, id);
         expect(seen.parts, id).toBe(REGIONS[id].parts.filter(key => !(DETAILS[key] || ENTRIES[key]).sex || (DETAILS[key] || ENTRIES[key]).sex === sex).length);   // every listed part is in this body
-        expect(seen.listed, id).toBe(STORIES[id] ? STORIES[id].length : seen.parts);   // beside it: its story's steps where it has a story, else its parts
-        expect({ own: seen.own, context: seen.context, others: seen.others, clothing: seen.clothing, pressed: seen.pressed }, id).toEqual({ own: 0, context: 0, others: 0, clothing: 0, pressed: 0 });
+        expect(seen.listed, id).toEqual(seen.order);   // the sheet lists its numbered parts, in order
+        expect({ own: seen.own, context: seen.context, others: seen.others, clothing: seen.clothing, eyebrow: seen.eyebrow, moving: seen.moving, strip: seen.strip }, id).toEqual({ own: 0, context: 0, others: 0, clothing: 0, eyebrow: 'Region', moving: false, strip: false });   // and the strip of layers is the whole body's
         expect(seen.coverage, id).toBeGreaterThan(0.03);
       }
       expect(errors).toEqual([]);
     });
   }
-  test('stepping and the tour stay inside a close-up; leaving it brings the whole body back', async ({ page }, testInfo) => {
+  test('stepping and the story stay inside a region; leaving it brings the whole body back', async ({ page }, testInfo) => {
     desktopOnly(testInfo);
     await open(page);
     await model(page, async () => { window.bodyModel.setRegion('heart'); await window.bodyModel.ready(); });
@@ -367,34 +389,45 @@ test.describe('close-ups', () => {
     const first = REGIONS.heart.parts.slice(0, 2);
     await page.keyboard.press('ArrowRight');
     expect(await model(page, () => window.bodyModel.state.selection.entry)).toBe(first[0]);
-    await expect(page.locator('#inspector .stepper span')).toHaveText(new RegExp(`^1 of ${REGIONS.heart.parts.length}$`));
+    await expect(page.locator('#sheet .count')).toHaveText(`1 of ${REGIONS.heart.parts.length}`);
     await page.keyboard.press('ArrowRight');
-    expect(await model(page, () => window.bodyModel.state.selection.entry)).toBe(first[1]);
-    expect(await model(page, () => window.bodyModel.state.region)).toBe('heart');
-    await page.locator('#tourBtn').click();
-    await expect(page.locator('#tourCount')).toHaveText(`Tour 1 of ${STORIES.heart.length}`);   // the heart's tour is its story
-    await expect(page.locator('#inspectorTitle')).toHaveText(STORIES.heart[0].title);
-    await expect(page.locator('#soundBtn')).toHaveAttribute('aria-pressed', 'true');   // a tour is told aloud
-    await page.locator('#side [data-story="3"]').click();                               // a later step: one stretch of the beat, slowed, one side's blood, its own labels
-    await expect(page.locator('#inspectorTitle')).toHaveText(STORIES.heart[3].title);
+    expect(await place(page)).toMatchObject({ region: 'heart', entry: first[1] });
+    await page.locator('#sheet [data-up]').click();   // Back to the heart
+    expect(await place(page)).toMatchObject({ region: 'heart', entry: null });
+    await page.locator('#sheet [data-watch="heart"]').click();
+    await expect(page.locator('#storyCount')).toHaveText(`1 / ${STORIES.heart.length}`);   // the heart's story has steps
+    await expect(page.locator('#say')).toHaveText(STORIES.heart[0].say);
+    await expect(page.locator('#sheet')).toBeHidden();                                   // a story takes the whole stage
+    await expect(page.locator('#crumbs')).toHaveText('›Heart›How the heart beats');
+    await expect(page.locator('#soundBtn')).toHaveAttribute('aria-pressed', 'true');   // a story is told aloud
+    for (let k = 0; k < 3; k++) await page.locator('#transport [data-story="next"]').click();   // a later step: one side of the heart, its own labels
+    await expect(page.locator('#storyCount')).toHaveText(`4 / ${STORIES.heart.length}`);
+    await expect(page.locator('#say')).toHaveText(STORIES.heart[3].say);
     await expect.poll(() => model(page, () => window.bodyModel.sound().key)).toBe('story:heart:3');
     await expect.poll(() => page.locator('#labels .tag:not([hidden])').allTextContents()).toEqual(expect.arrayContaining([expect.stringContaining('Right ventricle'), expect.stringContaining('Pulmonary valve')]));
-    await page.locator('#tourBtn').click();
-    await page.keyboard.press('Escape');
-    await page.locator('#crumbs [data-leave]').click();
+    await page.locator('#scene').click({ position: { x: 5, y: 5 } });
+    await page.keyboard.press('ArrowLeft');   // the arrow keys step through a story too
+    await expect(page.locator('#storyCount')).toHaveText(`3 / ${STORIES.heart.length}`);
+    await page.locator('#transport [data-story="exit"]').click();
+    await settle(page);
+    expect(await place(page)).toMatchObject({ region: 'heart', entry: null, story: null });   // Exit: back to where it was started
+    await page.locator('#homeBtn').click();
     await settle(page);
     expect(await model(page, () => ({ region: window.bodyModel.state.region, femur: window.bodyModel.entries().includes('femur'), numbered: window.bodyModel.entries().length }))).toEqual({ region: null, femur: true, numbered: expect.any(Number) });
     await expect(page.locator('#views [data-view="body"]')).toHaveAttribute('aria-pressed', 'true');
   });
-  test('the close-ups menu lists this body\'s close-ups and opens one; it carries over to the other body when that body has it', async ({ page }) => {
+  test('Contents lists this body\'s regions and opens one; it carries over to the other body when that body has it', async ({ page }) => {
     await open(page, { sex: 'female' });
-    await page.locator('#closeupsBtn').click();
-    await expect(page.locator('#closeupList [data-region="vulva"]')).toBeVisible();
-    await expect(page.locator('#closeupList [data-region="malePelvis"]')).toHaveCount(0);
-    await page.locator('#closeupList [data-region="knee"]').click();
+    await page.locator('#contentsBtn').click();
+    await expect(page.locator('#contentsBtn')).toHaveText('Close');
+    await expect(page.locator('#contents [data-region="vulva"]')).toBeVisible();
+    await expect(page.locator('#contents [data-region="malePelvis"]')).toHaveCount(0);
+    expect(await page.locator('#contents h2').allTextContents()).toEqual(['Watch', 'Head and neck', 'Chest and abdomen', 'Pelvis', 'Limbs and back', 'Layers', 'View', 'About']);
+    expect(await page.locator('#contents [data-region]').count()).toBe(await model(page, () => window.bodyModel.regions().length));
+    await page.locator('#contents [data-region="knee"]').click();
     await settle(page);
-    await expect(page.locator('#closeups')).toBeHidden();
-    await expect(page.locator('#inspector h2')).toHaveText(REGIONS.knee.title);
+    await expect(page.locator('#contents')).toBeHidden();
+    await expect(page.locator('#sheetTitle')).toHaveText(REGIONS.knee.title);
     await page.locator('#sexSwitch [data-sex="male"]').click();
     await settle(page);
     expect(await model(page, () => [window.bodyModel.state.sex, window.bodyModel.state.region])).toEqual(['male', 'knee']);
@@ -406,11 +439,12 @@ test.describe('close-ups', () => {
     await open(page, { view: 'skeleton' });
     const femurs = await model(page, () => ['Left femur', 'Right femur'].map(name => window.bodyModel.findPart(name)));
     expect(Math.min(...femurs)).toBeGreaterThanOrEqual(0);
-    await page.locator('#cutBtn').click();
+    const cut = async () => { await page.locator('#contentsBtn').click(); await page.locator('#contents [data-toggle="cut"]').click(); await page.locator('#contentsBtn').click(); };
+    await cut();
     await settle(page);
     await page.waitForTimeout(300);
     expect(await model(page, femurs => femurs.map(index => window.bodyModel.visibleNow(index)), femurs)).toEqual([false, true]);
-    await page.locator('#cutBtn').click();
+    await cut();
     await settle(page);
     expect(await model(page, femurs => window.bodyModel.visibleNow(femurs[0]), femurs)).toBe(true);
   });
@@ -465,31 +499,77 @@ test.describe('peel and glowing points', () => {
     expect(await model(page, () => window.bodyModel.state.view)).toBe('skeleton');
     await expect(page.locator('#views [data-view="skeleton"]')).toHaveAttribute('aria-pressed', 'true');
   });
-  test('glowing points on the whole body open a close-up\'s card, and the card starts its tour', async ({ page }, testInfo) => {
+  test('glowing points on the whole body open a region, and the region\'s button starts its story', async ({ page }, testInfo) => {
     desktopOnly(testInfo);
     await open(page);
     const spots = await model(page, () => { window.bodyModel.frame(performance.now()); return window.bodyModel.spots(); });
     expect(spots).toEqual(expect.arrayContaining(['brain', 'heart', 'hand', 'knee', 'foot']));
-    await expect(page.locator('#side .card h3')).toHaveText(REGIONS.heart.title);
     await page.locator('.spot[aria-label="Open the knee"]').click();
-    await expect(page.locator('#side .card h3')).toHaveText(REGIONS.knee.title);
-    await page.locator('#side [data-tour-region="knee"]').click();
     await settle(page);
-    expect(await model(page, () => [window.bodyModel.state.region, !!window.bodyModel.state.tour, window.bodyModel.state.selection?.entry])).toEqual(['knee', true, REGIONS.knee.parts[0]]);
-    await expect(page.locator('#tourCount')).toHaveText(`Tour 1 of ${REGIONS.knee.parts.length}`);
-    await expect(page.locator('#side .stops button[aria-current="true"]')).toHaveCount(1);
-    expect(await model(page, () => window.bodyModel.spots())).toEqual([]);   // the points belong to the whole body
+    await expect(page.locator('#sheetTitle')).toHaveText(REGIONS.knee.title);
+    expect(await model(page, () => { window.bodyModel.frame(performance.now()); return window.bodyModel.spots(); })).toEqual([]);   // the points belong to the whole body
+    await expect(page.locator('#layerStrip')).toBeHidden();                                                                          // and so do the layers
+    await expect(page.locator('#sheet [data-watch="knee"]')).toHaveText(/^Watch: how the knee bends, \d+ min$/);
+    await page.locator('#sheet [data-watch="knee"]').click();
+    expect(await place(page)).toMatchObject({ region: 'knee', story: 'motion' });
   });
 });
 
 test.describe('motion', () => {
-  test('in the heart close-up the chambers squeeze in turn, the valves open and shut, and blood runs through both sides', async ({ page }, testInfo) => {
+  test('a region opens still, and its story sets it moving', async ({ page }) => {
+    const errors = await openRegion(page, 'lungs');
+    const still = () => model(page, () => { const m = window.bodyModel; return { ...m.motion(), moved: m.body().parts.filter((part, index) => m.moveOf(index)[3] > 0).length }; });
+    expect(await still()).toMatchObject({ moving: false, drops: 0, moved: 0 });
+    const before = await model(page, () => window.bodyModel.renders());
+    await page.waitForTimeout(1500);
+    expect(await model(page, () => window.bodyModel.renders())).toBe(before);   // nothing is being redrawn
+    await expect(page.locator('#transport')).toBeHidden();
+    await expect(page.locator('#say')).toBeHidden();
+    await expect(page.locator('#layerStrip')).toBeHidden();                      // in a region the strip is empty
+    await page.locator('#sheet [data-watch="lungs"]').click();
+    await expect.poll(() => model(page, () => window.bodyModel.motion().moving)).toBe(true);
+    expect(errors).toEqual([]);
+  });
+  test('a one-step story plays the region\'s motion with its words under the model, pauses, and exits to the region at rest', async ({ page }) => {
+    const errors = await openRegion(page, 'knee');
+    await expect(page.locator('#sheet [data-watch="knee"]')).toHaveText(/^Watch: how the knee bends, \d+ min$/);
+    await page.locator('#sheet [data-watch="knee"]').click();
+    await expect(page.locator('#sheet')).toBeHidden();
+    await expect(page.locator('#crumbs')).toHaveText('›Knee›How the knee bends');
+    await expect.poll(() => model(page, () => window.bodyModel.motion().moving)).toBe(true);
+    /* its strip has just Pause and Exit */
+    await expect(page.locator('#transport button:visible')).toHaveText(['Pause', 'Exit']);
+    await expect(page.locator('#storyCount')).toBeHidden();
+    /* the words are the motion's caption for the moment, and change through the cycle */
+    const captions = await model(page, () => { const m = window.bodyModel, seen = []; for (const phase of [0.25, 0.75]) { m.holdMotion(phase); m.frame(performance.now()); seen.push([m.motion().caption, document.querySelector('#say').textContent]); } m.holdMotion(null); return seen; });
+    for (const [caption, shown] of captions) { expect(caption.length).toBeGreaterThan(12); expect(shown).toBe(caption); }
+    expect(captions[0][0]).not.toBe(captions[1][0]);
+    expect(await model(page, () => window.bodyModel.sound())).toMatchObject({ on: true, key: 'region:knee' });   // the region's opening, spoken once
+    const phases = () => page.evaluate(async () => { const seen = new Set(); for (let k = 0; k < 8; k++) { seen.add(window.bodyModel.motion().phase); await new Promise(done => setTimeout(done, 100)); } return seen.size; });
+    expect(await phases()).toBeGreaterThan(3);
+    /* the space bar pauses, as it does a film: the motion, the voice and the music all wait */
+    await page.locator('#transport [data-story="play"]').blur();
+    await page.keyboard.press(' ');
+    await expect(page.locator('#transport [data-story="play"]')).toHaveText('Play');
+    expect(await phases()).toBe(1);
+    expect(await model(page, () => window.bodyModel.sound())).toMatchObject({ voicePaused: true, musicPlaying: false });
+    await page.locator('#transport [data-story="play"]').click();
+    await expect(page.locator('#transport [data-story="play"]')).toHaveText('Pause');
+    expect(await phases()).toBeGreaterThan(3);
+    await page.locator('#transport [data-story="exit"]').click();
+    await settle(page);
+    expect(await place(page)).toMatchObject({ region: 'knee', story: null });
+    expect(await model(page, () => { const m = window.bodyModel; return { ...m.motion(), moved: m.body().parts.filter((part, index) => m.moveOf(index)[3] > 0).length }; })).toMatchObject({ moving: false, drops: 0, moved: 0 });
+    await expect(page.locator('#sheetTitle')).toHaveText(REGIONS.knee.title);
+    await expect(page.locator('#transport')).toBeHidden();
+    expect(errors).toEqual([]);
+  });
+  test('while the heart beats the chambers squeeze in turn, the valves open and shut, and blood runs through both sides', async ({ page }, testInfo) => {
     desktopOnly(testInfo);
-    const errors = [];
-    page.on('pageerror', error => errors.push(error.message));
-    await page.goto('/?sex=male&closeup=heart');
-    await page.waitForSelector('html[data-model-ready="true"]', { timeout: 60_000 });
-    await model(page, () => window.bodyModel.ready());
+    const errors = await openRegion(page, 'heart');
+    await model(page, () => window.bodyModel.startStory('heart', { aloud: false, loop: true }));   // the beat on its own, as a screen left alone shows it
+    await expect.poll(() => model(page, () => window.bodyModel.motion().moving)).toBe(true);
+    await settle(page);   // the view widens as the sheet goes
     const at = phase => model(page, phase => {
       const m = window.bodyModel, parts = m.body().parts, find = pattern => parts.findIndex(part => pattern.test(part.name)), opacity = pattern => m.opacityOf(find(pattern));
       m.holdMotion(phase); m.frame(performance.now());
@@ -506,8 +586,8 @@ test.describe('motion', () => {
     expect(refilling.mitral).toMatchObject({ shown: true, solid: 1 });                    // a valve is always there to see: it opens, it does not fade,
     expect([ejecting.leaflet, refilling.leaflet]).toEqual([0, 0]);                        // and the source's shut leaflets are not drawn under it
     expect([refilling.atrium, refilling.ventricle]).toEqual([1, 1]);
-    await expect(page.locator('#figure span')).toHaveText(['Atria squeeze', 'Ventricles squeeze', 'Heart refills']);   // the three moments stay put,
-    await expect(page.locator('#figure span.now')).toHaveText('Heart refills');                                          // and the one it is in is lit
+    await expect(page.locator('#say span')).toHaveText(['Atria squeeze', 'Ventricles squeeze', 'Heart refills']);   // the three moments stay put,
+    await expect(page.locator('#say span.now')).toHaveText('Heart refills');                                          // and the one it is in is lit
     expect(refilling.wall).toBeLessThan(0.4);                                             // the walls are glass, so the blood shows
     const before = await model(page, () => { window.bodyModel.holdMotion(null); return window.bodyModel.renders(); });
     /* the labels hold their places while the heart moves under them */
@@ -520,13 +600,13 @@ test.describe('motion', () => {
     expect(layouts).toHaveLength(1); expect(layouts[0]).toContain('Right atrium');
     await page.waitForTimeout(700);
     expect(await model(page, () => window.bodyModel.renders())).toBeGreaterThan(before);   // it keeps moving
-    await page.locator('#inspector [data-motion]').click();
+    await page.locator('#transport [data-story="exit"]').click();
     expect(await model(page, () => ({ ...window.bodyModel.motion(), wall: window.bodyModel.opacityOf(window.bodyModel.findPart('Wall of ventricle')), still: window.bodyModel.moveOf(window.bodyModel.findPart('Wall of ventricle')).every(value => value === 0) }))).toMatchObject({ moving: false, drops: 0, wall: 1, still: true });
-    expect(await model(page, () => ({ models: window.bodyModel.models().length, leaflet: window.bodyModel.opacityOf(window.bodyModel.findPart('Anterior leaflet of mitral valve')) }))).toEqual({ models: 0, leaflet: 1 });   // stopped, the valves are the source's again
+    expect(await model(page, () => ({ models: window.bodyModel.models().length, leaflet: window.bodyModel.opacityOf(window.bodyModel.findPart('Anterior leaflet of mitral valve')) }))).toEqual({ models: 0, leaflet: 1 });   // at rest, the valves are the source's again
     expect(errors).toEqual([]);
   });
   for (const sex of ['male', 'female']) {
-    test(`every close-up of the ${sex} body that has a motion runs it, with a caption for each moment`, async ({ page }, testInfo) => {
+    test(`every region of the ${sex} body that has a motion has a story that runs it, with a caption for each moment`, async ({ page }, testInfo) => {
       desktopOnly(testInfo);
       test.setTimeout(240_000);
       const errors = [];
@@ -539,22 +619,28 @@ test.describe('motion', () => {
         const seen = await model(page, async id => {
           const m = window.bodyModel, wait = ms => new Promise(done => setTimeout(done, ms));
           m.setRegion(id); await m.ready();
+          const button = document.querySelector('#sheet [data-watch]').textContent, still = m.motion().moving;
+          m.startStory(id, { aloud: false, loop: true });
           for (let tries = 0; tries < 100 && !m.motion().moving; tries++) await wait(50);   // its layers arrive, then it starts
           const moments = [];
           for (const phase of [0.05, 0.3, 0.55, 0.8]) {
             m.holdMotion(phase); m.frame(performance.now());
             const moves = m.body().parts.map((part, index) => m.moveOf(index)), moved = moves.filter(move => move[3] > 0);
-            moments.push({ ...m.motion(), moved: moved.length, finite: moves.flat().every(Number.isFinite), switch: document.querySelector('#inspector [data-motion]')?.textContent });
+            moments.push({ ...m.motion(), moved: moved.length, finite: moves.flat().every(Number.isFinite), words: document.querySelector('#say').textContent, trail: document.querySelector('#crumbs').textContent });
           }
-          m.holdMotion(null);
-          return moments;
+          m.holdMotion(null); m.exitStory();
+          return { button, still, moments };
         }, id);
-        for (const moment of seen) {
+        expect(seen.still, `${id} opens still`).toBe(false);
+        expect(seen.button, id).toMatch(new RegExp(`^Watch: ${MOTIONS[id].watch}, \\d+ min$`));
+        expect(NARRATION[`region:${id}`], `${id} has words for the voice`).toBeTruthy();
+        for (const moment of seen.moments) {
           expect(moment, id).toMatchObject({ moving: true, finite: true });
           expect(moment.caption.length, `${id} has a caption`).toBeGreaterThan(12);
-          expect(moment.caption.length, `${id}'s caption fits the line under the figure`).toBeLessThan(190);
+          expect(moment.caption.length, `${id}'s caption fits under the model`).toBeLessThan(190);
           expect(moment.moved + moment.drops, `${id} moves something or has something flowing`).toBeGreaterThan(0);
-          expect(moment.switch, id).toMatch(/^(Stop|Keep) /);
+          expect(moment.words.length, `${id}'s words are under the model`).toBeGreaterThan(12);
+          expect(moment.trail, id).toBe(`›${REGIONS[id].name}›${MOTIONS[id].watch.charAt(0).toUpperCase()}${MOTIONS[id].watch.slice(1)}`);
         }
       }
       expect(errors).toEqual([]);
@@ -562,11 +648,11 @@ test.describe('motion', () => {
   }
   test('a step of the heart\'s story plays its own stretch of the beat, slowed, with one side\'s blood', async ({ page }, testInfo) => {
     desktopOnly(testInfo);
-    await page.goto('/?sex=male&closeup=heart');
-    await page.waitForSelector('html[data-model-ready="true"]', { timeout: 60_000 });
-    await model(page, () => window.bodyModel.ready());
-    await expect.poll(() => model(page, () => window.bodyModel.motion().moving)).toBe(true);
-    await page.locator('#side [data-story="3"]').click();
+    await openRegion(page, 'heart');
+    expect(await model(page, () => window.bodyModel.motion().moving)).toBe(false);
+    await page.locator('#sheet [data-watch="heart"]').click();
+    for (let k = 0; k < 3; k++) await page.locator('#transport [data-story="next"]').click();
+    await expect(page.locator('#say')).toHaveText(STORIES.heart[3].say);
     await page.waitForTimeout(500);
     const phases = await page.evaluate(async () => { const seen = []; for (let k = 0; k < 30; k++) { seen.push(window.bodyModel.motion().phase); await new Promise(done => setTimeout(done, 100)); } return seen; });
     const [from, to] = STORIES.heart[3].span;
@@ -579,34 +665,154 @@ test.describe('motion', () => {
     /* a modelled valve is picked as the part it stands in for */
     const picked = await model(page, () => { const m = window.bodyModel, at = m.screenOf(m.findPart('Anterior leaflet of tricuspid valve')), names = new Set(); for (let dx = -30; dx <= 30; dx += 10) for (let dy = -30; dy <= 30; dy += 10) { const hit = m.pick(at.x + dx, at.y + dy); if (hit >= 0) names.add(m.part(hit).name); } return [...names]; });
     expect(picked.some(name => /leaflet of tricuspid valve$/.test(name))).toBe(true);
-    /* the line under the heart is the tour's pause button, not the beat's caption: paused, the motion and the voice both wait */
-    await expect(page.locator('#figure')).toHaveText('Pause');
-    await page.locator('#figure').click();
-    await expect(page.locator('#figure')).toHaveText('Play');
-    await expect(page.locator('#inspector [data-tour="play"]')).toHaveText('Play');
+    /* Pause, in the strip under the heart: the motion and the voice both wait */
+    const play = page.locator('#transport [data-story="play"]');
+    await expect(play).toHaveText('Pause');
+    await play.click();
+    await expect(play).toHaveText('Play');
     const held = await page.evaluate(async () => { const seen = new Set(); for (let k = 0; k < 8; k++) { seen.add(window.bodyModel.motion().phase); await new Promise(done => setTimeout(done, 100)); } return seen.size; });
     expect(held).toBe(1);
     expect(await model(page, () => window.bodyModel.sound())).toMatchObject({ key: 'story:heart:3', voicePaused: true, musicPlaying: false });
-    await page.locator('#inspector [data-tour="play"]').click();
-    await expect(page.locator('#figure')).toHaveText('Pause');
+    await play.click();
+    await expect(play).toHaveText('Pause');
     const resumed = await page.evaluate(async () => { const seen = new Set(); for (let k = 0; k < 20; k++) { seen.add(window.bodyModel.motion().phase); await new Promise(done => setTimeout(done, 100)); } return seen.size; });
     expect(resumed).toBeGreaterThan(3);   // watched for long enough to outlast the breath at the end of a stretch
     expect(await model(page, () => window.bodyModel.sound())).toMatchObject({ key: 'story:heart:3', voicePaused: false, musicPlaying: true });
-    await page.locator('#inspector [data-tour="stop"]').click();
+    await page.locator('#transport [data-story="exit"]').click();
     await page.waitForTimeout(1500);
-    expect(await model(page, () => ({ moving: window.bodyModel.motion().moving, open: window.bodyModel.motion().open, models: window.bodyModel.models().length }))).toEqual({ moving: false, open: 0, models: 0 });   // the tour over, the heart is closed up and at rest
-    await expect(page.locator('#figure')).toHaveText('Set the heart beating');   // and the line under it sets it going again
+    expect(await model(page, () => ({ moving: window.bodyModel.motion().moving, open: window.bodyModel.motion().open, models: window.bodyModel.models().length }))).toEqual({ moving: false, open: 0, models: 0 });   // the story over, the heart is closed up and at rest
+    await expect(page.locator('#sheet [data-watch="heart"]')).toHaveText(/^Watch: how the heart beats, \d+ min$/);   // and its button starts it again
   });
-  test('with reduced motion nothing moves until it is asked to', async ({ browser }, testInfo) => {
+  test('with reduced motion a story shows its steps and its words, and nothing moves', async ({ browser }, testInfo) => {
     desktopOnly(testInfo);
     const context = await browser.newContext({ reducedMotion: 'reduce' }), page = await context.newPage();
-    await page.goto('/?sex=male&closeup=knee');
-    await page.waitForSelector('html[data-model-ready="true"]', { timeout: 60_000 });
-    await model(page, () => window.bodyModel.ready());
-    expect(await model(page, () => window.bodyModel.motion().moving)).toBe(false);
-    await page.locator('#inspector [data-motion]').click();
-    await expect.poll(() => model(page, () => window.bodyModel.motion().moving)).toBe(true);
+    await page.addInitScript(() => { const play = HTMLMediaElement.prototype.play; HTMLMediaElement.prototype.play = function () { this.muted = true; return play.call(this); }; });
+    await openRegion(page, 'knee');
+    await page.locator('#sheet [data-watch="knee"]').click();
+    await expect(page.locator('#say')).toHaveText(NARRATION['region:knee']);   // no moments to caption: the words are the ones the voice says
+    await expect(page.locator('#transport button:visible')).toHaveText(['Pause', 'Exit']);
+    await page.waitForTimeout(600);
+    expect(await model(page, () => window.bodyModel.motion())).toMatchObject({ moving: false, drops: 0 });
+    await openRegion(page, 'heart');
+    await page.locator('#sheet [data-watch="heart"]').click();
+    for (let k = 0; k < 3; k++) await page.locator('#transport [data-story="next"]').click();
+    await expect(page.locator('#say')).toHaveText(STORIES.heart[3].say);
+    await page.waitForTimeout(600);
+    expect(await model(page, () => window.bodyModel.motion())).toMatchObject({ moving: false, open: 0 });   // the heart is not cut open, and does not beat
     await context.close();
+  });
+});
+
+test.describe('navigation', () => {
+  test.use({ reducedMotion: 'reduce' });
+  test('the title goes home from anywhere: out of the region, the selection cleared, the skin layer, the camera reset', async ({ page }) => {
+    await open(page);
+    const start = await model(page, () => ({ position: window.bodyModel.camera.position.toArray(), target: window.bodyModel.controls.target.toArray() }));
+    await page.locator('#find').fill('mitral valve');
+    await page.keyboard.press('Enter');
+    await settle(page);
+    expect(await place(page)).toMatchObject({ region: 'heart', entry: 'heartMitralValve' });
+    await expect(page.locator('.trail')).toHaveText(/^\s*Human Anatomy\s*›Heart›Mitral valve\s*$/);
+    await page.locator('#homeBtn').click();
+    await settle(page);
+    expect(await place(page)).toEqual({ region: null, view: 'body', entry: null, story: null, contents: false });
+    await expect(page.locator('#crumbs')).toHaveText('');
+    await expect(page.locator('#layerStrip')).toBeVisible();
+    await expect(page.locator('#sheetTitle')).toHaveText('The body');
+    const home = await model(page, () => ({ position: window.bodyModel.camera.position.toArray(), target: window.bodyModel.controls.target.toArray() }));
+    for (const key of ['position', 'target']) home[key].forEach((value, axis) => expect(value, `${key} ${axis}`).toBeCloseTo(start[key][axis], 1));
+    /* from another layer, and from a story */
+    await page.locator('#views [data-view="skeleton"]').click();
+    await settle(page);
+    await page.locator('#sheet [data-watch=""]').click();   // Tour the body
+    expect(await place(page)).toMatchObject({ story: 'tour' });
+    await expect(page.locator('#crumbs')).toHaveText('›Tour of the body');
+    await page.locator('#homeBtn').click();
+    await settle(page);
+    expect(await place(page)).toEqual({ region: null, view: 'body', entry: null, story: null, contents: false });
+  });
+  test('Escape goes up one level: Contents closes, a story exits, a part goes back to its region, a region goes home', async ({ page }) => {
+    await open(page);
+    await page.locator('#contentsBtn').click();
+    await page.locator('#contents [data-region="heart"]').click();
+    await settle(page);
+    await page.locator('#sheet [data-entry="heartMitralValve"]').click();
+    await settle(page);
+    expect(await place(page)).toMatchObject({ region: 'heart', entry: 'heartMitralValve' });
+    await page.locator('#contentsBtn').click();
+    await expect(page.locator('#contents')).toBeVisible();
+    await expect(page.locator('#crumbs')).toHaveText('›Contents');
+    await page.keyboard.press('Escape');
+    await expect(page.locator('#contents')).toBeHidden();
+    await expect(page.locator('#contentsBtn')).toHaveText('Contents');
+    expect(await place(page)).toMatchObject({ region: 'heart', entry: 'heartMitralValve' });   // what was under it kept its place
+    await page.keyboard.press('Escape');
+    expect(await place(page)).toMatchObject({ region: 'heart', entry: null });
+    await page.locator('#sheet [data-watch="heart"]').click();
+    expect(await place(page)).toMatchObject({ region: 'heart', story: 'steps' });
+    await page.keyboard.press('Escape');
+    await settle(page);
+    expect(await place(page)).toMatchObject({ region: 'heart', entry: null, story: null });
+    await page.keyboard.press('Escape');
+    await settle(page);
+    expect(await place(page)).toMatchObject({ region: null, entry: null, story: null });
+    /* on the whole body a part goes back to its layer */
+    await page.locator('#views [data-view="skeleton"]').click();
+    await settle(page);
+    await model(page, () => window.bodyModel.selectEntry('femur'));
+    await expect(page.locator('#sheet [data-up]')).toHaveText('Back to the skeleton');
+    await expect(page.locator('#layerStrip')).toBeHidden();   // on a part the strip is empty
+    await page.keyboard.press('Escape');
+    expect(await place(page)).toMatchObject({ region: null, view: 'skeleton', entry: null });
+    await expect(page.locator('#layerStrip')).toBeVisible();
+  });
+  test('Contents starts a story, and Exit returns to where it was started', async ({ page }) => {
+    await open(page, { sex: 'female' });
+    await page.locator('#sheet [data-contents]').click();   // Everything on this site
+    await expect(page.locator('#contents')).toBeVisible();
+    const watch = await page.locator('#contentsWatch button').allTextContents();
+    const moving = await model(page, () => window.bodyModel.regions().filter(id => window.bodyModel.motions().includes(id)));
+    expect(watch).toHaveLength(moving.length + 1);   // every region of this body that has a motion, and the tour
+    for (const row of watch) expect(row).toMatch(/\d+ min$/);
+    expect(watch[0]).toMatch(/^Tour of the body/);
+    await page.locator('#contents [data-watch="lungs"]').click();
+    await expect(page.locator('#contents')).toBeHidden();
+    expect(await place(page)).toMatchObject({ region: 'lungs', story: 'motion', contents: false });
+    await expect(page.locator('#crumbs')).toHaveText('›Lungs and airways›How you breathe');
+    await expect(page.locator('#say')).toHaveText(NARRATION['region:lungs']);   // nothing moves here (reduced motion), so the words are the voice's
+    await page.locator('#transport [data-story="exit"]').click();
+    await settle(page);
+    expect(await place(page)).toEqual({ region: null, view: 'body', entry: null, story: null, contents: false });   // home, where it was started
+    /* the layers, and the links to the reading under the viewer */
+    await page.locator('#contentsBtn').click();
+    await page.locator('#contents [data-layer="nerves"]').click();
+    await settle(page);
+    expect(await place(page)).toMatchObject({ region: null, view: 'nerves', contents: false });
+    await page.locator('#contentsBtn').click();
+    await expect(page.locator('#contents a', { hasText: 'Wooten Labs' })).toHaveAttribute('href', 'https://wooten-labs.com');
+    await page.locator('#contents [data-manual="sources"]').click();
+    await expect(page.locator('#contents')).toBeHidden();
+    await expect(page.locator('#sources')).toBeInViewport();
+  });
+  test('the tour of the body steps through the main parts, each with its name and notes under the model', async ({ page }, testInfo) => {
+    desktopOnly(testInfo);
+    await open(page);
+    await expect(page.locator('#sheet [data-watch=""]')).toHaveText(/^Tour the body, \d+ min$/);
+    await page.locator('#sheet [data-watch=""]').click();
+    await settle(page);
+    const stops = await model(page, () => window.bodyModel.state.story.steps.map(step => step.entry));
+    expect(stops.length).toBeGreaterThan(25);
+    expect(await place(page)).toMatchObject({ story: 'tour', entry: stops[0], view: 'skeleton' });
+    await expect(page.locator('#storyCount')).toHaveText(`1 / ${stops.length}`);
+    await expect(page.locator('#say')).toHaveText(`${ENTRIES[stops[0]].name}. ${ENTRIES[stops[0]].what} ${ENTRIES[stops[0]].does}`);
+    await expect.poll(() => model(page, () => window.bodyModel.sound().key)).toBe(`entry:${stops[0]}`);
+    await expect(page.locator('#transport [data-story="prev"]')).toBeDisabled();
+    await page.locator('#transport [data-story="next"]').click();
+    await settle(page);
+    expect(await place(page)).toMatchObject({ story: 'tour', entry: stops[1] });
+    await page.locator('#transport [data-story="exit"]').click();
+    await settle(page);
+    expect(await place(page)).toEqual({ region: null, view: 'body', entry: null, story: null, contents: false });
   });
 });
 
@@ -620,11 +826,11 @@ test.describe('sound', () => {
     await expect(page.locator('#soundBtn')).toHaveAttribute('aria-pressed', 'true');
     await expect.poll(() => model(page, () => window.bodyModel.sound())).toMatchObject({ on: true, key: 'view:body', clip: 'view-body.mp3', speaking: true, music: 'music.mp3', musicPlaying: true });
     expect((await model(page, () => window.bodyModel.sound())).musicLevel).toBeLessThan(0.1);   // the music drops under the voice
-    await page.locator('#side [data-tour-region="heart"]').click();
+    await page.locator('#sheet [data-watch="heart"]').click();
     await settle(page);
     await expect.poll(() => model(page, () => window.bodyModel.sound().key)).toBe('story:heart:0');
     await page.waitForTimeout(1500);
-    expect(await model(page, () => window.bodyModel.state.tour.index)).toBe(0);   // the tour waits for the voice
+    expect(await model(page, () => window.bodyModel.state.story.index)).toBe(0);   // the story waits for the voice
     await page.locator('#soundBtn').click();
     expect(await model(page, () => window.bodyModel.sound())).toMatchObject({ on: false, speaking: false, musicPlaying: false });
     expect(errors).toEqual([]);
@@ -640,15 +846,33 @@ test.describe('layout', () => {
     expect((free.right - free.left) * (free.bottom - free.top)).toBeGreaterThan(viewport.width * viewport.height * (isPhone(page) ? 0.35 : 0.3));
   });
 
-  test('on phones the tools sit along the bottom and details open in a sheet over the model', async ({ page }, testInfo) => {
-    test.skip(testInfo.project.name !== 'iphone', 'phone layout');
+  test('four places and nothing over another: the bar, the model with its strip, the sheet, and Contents over the stage', async ({ page }) => {
     await open(page);
-    const rail = await page.locator('.rail').boundingBox(), viewport = page.viewportSize();
-    expect(rail.y + rail.height).toBeGreaterThan(viewport.height - 80);
+    const viewport = page.viewportSize(), box = selector => page.locator(selector).boundingBox();
+    const check = async strip => {
+      const [bar, stage, sheet, under] = [await box('.bar'), await box('#stage'), await box('#sheet'), await box(strip)];
+      expect(bar.y).toBe(0); expect(stage.y).toBeGreaterThanOrEqual(bar.y + bar.height - 1);
+      expect(under.y).toBeGreaterThanOrEqual(stage.y); expect(under.y + under.height).toBeLessThanOrEqual(stage.y + stage.height);   // the strip is at the foot of the model
+      if (!sheet) return;
+      if (isPhone(page)) { expect(sheet.y).toBeGreaterThanOrEqual(stage.y + stage.height - 1); expect(sheet.width).toBeGreaterThan(viewport.width - 2); expect(sheet.y + sheet.height).toBeCloseTo(viewport.height, 0); }   // phones: the sheet along the bottom, under the strip
+      else { expect(sheet.x).toBeGreaterThanOrEqual(stage.x + stage.width - 1); expect(sheet.width).toBeGreaterThanOrEqual(340); expect(sheet.width).toBeLessThanOrEqual(380); }                                               // else at the side
+    };
+    await check('#layerStrip');
     await model(page, () => window.bodyModel.selectEntry('heart'));
-    const sheet = await page.locator('#inspector').boundingBox();
-    expect(sheet.width).toBeGreaterThan(viewport.width - 40);
-    expect(sheet.y).toBeGreaterThan(viewport.height * 0.3);
+    expect(await box('#layerStrip')).toBeNull();
+    await page.locator('#sheet [data-up]').click();
+    await page.locator('#sheet [data-watch="heart"]').click();
+    await settle(page);
+    await expect(page.locator('#sheet')).toBeHidden();   // a story has the whole stage
+    await check('#transport');
+    const [say, transport] = [await box('#say'), await box('#transport')];
+    expect(say.y + say.height).toBeLessThanOrEqual(transport.y);   // its words sit just above the strip
+    await page.locator('#contentsBtn').click();             // which ends the story
+    const [bar, contents] = [await box('.bar'), await box('#contents')];
+    expect(contents.width).toBeGreaterThan(viewport.width - 2);
+    expect(contents.y).toBeGreaterThanOrEqual(bar.y + bar.height - 1);
+    expect(contents.y + contents.height).toBeCloseTo(viewport.height, 0);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   });
 });
 

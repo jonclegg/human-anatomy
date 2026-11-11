@@ -6,7 +6,7 @@ import { smooth, during, chain, light, SPENT, FRESH, AIR, FOOD, URINE, BILE, LYM
    0.00-0.42 in: the diaphragm flattens, the ribs lift, the lungs fill; 0.42-0.95 out: it all springs back; then a pause */
 const breathAt = phase => smooth(0, 0.42, phase) * (1 - smooth(0.42, 0.95, phase));
 export const lungs = {
-  cycle: 5200, stop: 'Stop the breathing', start: 'Set the lungs breathing',
+  cycle: 5200, watch: 'how you breathe',
   look: name => (/segment of (left|right) lung$/i.test(name) ? { opacity: 0.55 } : null),   // the lobes part-clear, so the airways show in them
   build(kit) {
     const { V } = kit, up = V(0, 1, 0), trachea = kit.one(/^Trachea$/), top = kit.end(trachea, up, 1.5), fork = kit.end(trachea, V(0, -1, 0), 1.5);
@@ -45,7 +45,7 @@ const MEAL = [
   [1.01, 'colon', 'The colon takes back water and salt; what is left collects in the rectum'],
 ];
 export const digestive = {
-  cycle: 16000, stop: 'Stop the meal moving', start: 'Set the meal moving',
+  cycle: 16000, watch: 'how a meal moves through the gut',
   build(kit) {
     const { V } = kit, part = key => kit.entry(key), down = V(0, -1, 0);
     const gullet = kit.line(part('esophagus'), { from: kit.end(part('esophagus'), V(0, 1, 0), 1) });
@@ -75,7 +75,7 @@ export const digestive = {
 
 /* ---------- The liver: blood in by two routes and out by one; bile stored, then sent to the gut ---------- */
 export const liver = {
-  cycle: 12000, stop: 'Stop the flow', start: 'Set the blood and bile flowing',
+  cycle: 12000, watch: 'how blood and bile flow through the liver',
   look: name => (/^Hepatovenous segment|^Caudate lobe of liver$/.test(name) ? { opacity: 0.72 } : null),   // the liver part-clear, so its vessels and ducts show
   build(kit) {
     const { V } = kit, named = pattern => kit.one(pattern), up = V(0, 1, 0);
@@ -107,7 +107,7 @@ export const liver = {
 
 /* ---------- The kidney: blood in and out, urine down to the bladder, and the bladder emptying ---------- */
 export const kidney = {
-  cycle: 15000, stop: 'Stop the flow', start: 'Set the blood and urine flowing',
+  cycle: 15000, watch: 'how the kidneys make urine',
   look: name => (/^Left kidney$/.test(name) ? { opacity: 0.45 } : null),
   build(kit) {
     const { V } = kit, up = V(0, 1, 0), down = V(0, -1, 0), organ = kit.one(/^Left kidney$/), middle = kit.centre(organ), bladder = kit.one(/^Urinary bladder$/), pool = kit.centre(bladder);
@@ -136,7 +136,7 @@ export const kidney = {
 
 /* ---------- The lymph: seeping up from the limbs, node to node, back to the blood ---------- */
 export const lymphatic = {
-  cycle: 9000, stop: 'Stop the lymph', start: 'Set the lymph flowing',
+  cycle: 9000, watch: 'how lymph drains',
   build(kit) {
     const { V } = kit, side = (key, sign) => kit.entry(key).filter(part => Math.sign(part.centre[0]) === sign), middle = (key, sign) => kit.centre(side(key, sign));
     /* where the lymph rejoins the blood: the meeting of the great veins under each collarbone */
@@ -162,7 +162,7 @@ export const lymphatic = {
 
 /* ---------- The breast: milk from the lobes to the nipple, lymph to the armpit ---------- */
 export const breast = {
-  cycle: 10000, stop: 'Stop the flow', start: 'Set the milk and lymph flowing',
+  cycle: 10000, watch: 'how milk and lymph flow in the breast',
   look: name => (/^Fat of left breast$/.test(name) ? { opacity: 0.18 } : null),
   build(kit) {
     const { V } = kit, nipple = kit.centre(kit.entry('breastNipple')), lobes = kit.entry('breastLobes'), gland = kit.centre(lobes), size = kit.box(lobes).getSize(V(0, 0, 0));

@@ -59,7 +59,7 @@ export const penis = {
   build(kit) {
     const sides = ['Left', 'Right'].map(side => {
       const named = pattern => kit.one(new RegExp(pattern.replace('SIDE', side))), maker = named('^SIDE testis$'), coil = named('^SIDE epididymis$'), duct = named('^SIDE deferent duct$');
-      const stored = kit.line(coil, { from: kit.end(coil, kit.V(0, 1, 0), 0.6), radius: 0.6 }), away = kit.line(duct, { from: stored.at(-1), radius: 0.6 });
+      const stored = kit.line(coil, { from: kit.end(coil, kit.V(0, 1, 0), 0.6), radius: 0.6 }), away = kit.line(duct, { from: kit.end(duct, kit.V(0, -1, 0), 0.8), radius: 1 });   // from the duct's own low end, where it leaves the epididymis
       return { maker, coil, way: kit.curve([kit.centre(maker), ...stored, ...away]) };
     });
     return { makers: sides.map(side => side.maker), coils: sides.map(side => side.coil), streams: sides.map(({ way }) => ({ curve: way.curve, colour: SEED, count: 336, size: 0.36, spread: 0.08, speed: () => 0.07 })) };

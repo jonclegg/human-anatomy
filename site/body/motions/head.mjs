@@ -43,8 +43,13 @@ export const brainDeep = {
     const { V } = kit, middle = pattern => kit.centre(kit.one(pattern));
     const third = middle(/^Third ventricle$/), duct = middle(/^Cerebral aqueduct$/), fourth = middle(/^Fourth ventricle$/), door = middle(/^Interventricular foramen$/);
     const streams = [/^Left lateral ventricle$/, /^Right lateral ventricle$/].map(pattern => {
-      const chamber = kit.one(pattern), horn = kit.end(chamber, V(0, 0, -1), 1.5);
-      return { curve: kit.curve([horn, kit.centre(chamber), kit.end(chamber, V(0, 0, 1), 2).lerp(door, 0.5), door, third, duct, fourth, fourth.clone().add(V(0, -1.5, -1))]).curve, colour: '#9be7ff', count: 264, size: 0.36, spread: 0.18, speed: () => 0.09 };
+      /* the fluid runs forward along the body of the chamber, inside it, to the opening near its front; the way is
+         walked back from the front horn through the chamber's own shape, as far as where it turns down into the temple */
+      const chamber = kit.one(pattern), box = kit.box(chamber), turning = box.min.z + 0.3 * (box.max.z - box.min.z);
+      const body = kit.line(chamber, { from: kit.end(chamber, V(0, 0, 1), 1), radius: 1.1 }), bend = body.findIndex(point => point.z < turning);
+      const way = kit.curve([...body.slice(0, bend < 0 ? body.length : Math.max(2, bend)).reverse(), door, third, duct, fourth, fourth.clone().add(V(0, -1.5, -1))]), out = way.whereOf(door);
+      /* while it is being made it shows in the chamber; while it drains, from the opening on down */
+      return { curve: way.curve, colour: '#9be7ff', count: 264, size: 0.36, spread: 0.12, speed: () => 0.09, stretch: phase => (phase < 0.5 ? [0, out] : [out - 0.03, 1]) };
     });
     return { plexus: kit.entry('brainDeepChoroidPlexus'), streams };
   },
@@ -177,7 +182,7 @@ export const mouth = {
     const { V } = kit, tongue = kit.one(/^Tongue$/), lid = kit.one(/^Epiglottis$/), palate = [...kit.entry('mouthSoftPalate'), ...kit.entry('mouthUvula')];
     const squeezers = [/superior pharyngeal constrictor$/i, /middle pharyngeal constrictor$/i, /inferior pharyngeal constrictor$/i].map(pattern => { const parts = kit.find(pattern); return { parts, middle: kit.centre(parts) }; });
     const top = kit.end(tongue, V(0, 1, 0), 0.8), throat = kit.centre(kit.one(/^Oropharynx$/)), lower = kit.centre(kit.one(/^Laryngopharynx$/));
-    const way = kit.curve([top.clone().add(V(0, 0.4, 1.2)), top.clone().add(V(0, 0.5, -1)), throat, lower, lower.clone().add(V(0, -3, -0.3))]);
+    const way = kit.curve([top.clone().add(V(0, 0.4, 1.2)), top.clone().add(V(0, 0.5, -1)), throat, lower, lower.clone().add(V(0, -1.2, -0.2))]);   // it ends at the top of the oesophagus, where the close-up's own parts end
     return {
       V, turn: kit.turn, tongue, lid, hingeOfLid: kit.end(lid, V(0, -1, 0), 0.5), palate, squeezers,
       streams: [{ curve: way.curve, colour: FOOD, count: 50, size: 1.3, spread: 0.3, packed: 0.08, place: phase => 0.1 + 0.98 * smooth(0.18, 0.86, phase), shown: phase => during(phase, 0.02, 0.92) }],

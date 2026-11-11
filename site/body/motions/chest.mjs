@@ -57,11 +57,14 @@ export const digestive = {
     const falling = kit.line(part('digestiveDescendingColon'), { from: across.at(-1), radius: 3 });
     const rectum = kit.line(part('rectum'), { from: kit.end(part('rectum'), V(0, 1, 0), 1.5), radius: 2.5 });
     const way = kit.curve([...gullet, ...stomach, ...duodenum, ...coils, ...rising, ...across, ...falling, ...rectum]);
+    /* where along the way each stage of the meal ends: the food shows only in the stretch being told, so none of it is seen adrift in parts that are not */
+    const ends = [way.whereOf(gullet.at(-1)), way.whereOf(stomach.at(-1)), way.whereOf(coils.at(-1)), 1];
     return {
       V, stomach: part('stomach')[0], middle: kit.centre(part('stomach')),
       lit: { esophagus: part('esophagus'), stomach: part('stomach'), small: [...part('duodenum'), ...part('digestiveJejunum'), ...part('digestiveIleum')], colon: [...part('digestiveAscendingColon'), ...part('digestiveTransverseColon'), ...part('digestiveDescendingColon'), ...part('rectum')] },
       /* it moves in mouthfuls: waves of squeezing travel down the gut and carry the food with them */
-      streams: [{ curve: way.curve, colour: FOOD, to: '#8a5a2b', count: 1500, size: 0.6, spread: 0.28, speed: (where, phase, time) => 0.02 * (0.55 + 0.9 * Math.sin(Math.PI * (where * 30 - time * 3)) ** 2) }],
+      streams: [{ curve: way.curve, colour: FOOD, to: '#8a5a2b', count: 1500, size: 0.6, spread: 0.28, speed: (where, phase, time) => 0.02 * (0.55 + 0.9 * Math.sin(Math.PI * (where * 30 - time * 3)) ** 2),
+        stretch: phase => { const at = MEAL.findIndex(([until]) => phase < until); return [at ? ends[at - 1] : 0, ends[at]]; } }],
     };
   },
   step(rig, phase, act, time) {

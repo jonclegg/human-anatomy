@@ -18,6 +18,7 @@ const COLON = ['digestiveAscendingColon', 'digestiveTransverseColon', 'digestive
 const LIVER = ['liverRightLiver', 'liverLeftLiver'];
 const MILK = [0, 1, 2, 3, 4, 5, 6, 7, 8];   // the breast's streams of milk; its lymph is the one after
 const BRAIN = ['frontalLobe', 'parietalLobe', 'temporalLobe', 'occipitalLobe', 'cerebellum'];
+const NERVES_OF_HEAD = ['opticNerve', 'cranialNervesOphthalmic', 'cranialNervesMandibular', 'cranialNervesFacial', 'cranialNervesHypoglossal'];   // the cranial nerves are each shown against the same view of the head
 const SKULL = ['skullFrontalBone', 'skullParietalBone', 'skullOccipitalBone', 'skullTemporalBone', 'skullMaxilla', 'skullZygomaticBone', 'mandible'];
 export const STORIES = {
   heart: [
@@ -217,10 +218,10 @@ export const STORIES = {
       ['Trigeminal nerve', 'cranialNervesTrigeminal', 'The trigeminal nerve, number five. It carries feeling from the whole face and the teeth, and it works the chewing muscles.'],
       ['Facial nerve', 'cranialNervesFacial', 'The facial nerve, number seven. It works the muscles of expression, and carries taste from the front of the tongue.'],
       ['Glossopharyngeal nerve', 'cranialNervesGlossopharyngeal', 'The glossopharyngeal nerve, number nine. It carries taste and feeling from the back of the tongue and the throat.'],
-      ['Vagus nerve', 'cranialNervesVagus', 'The vagus nerve, number ten. It runs down to the heart, the lungs and the gut.'],
+      ['Vagus nerve', 'cranialNervesVagus', 'The vagus nerve, number ten. It runs down to the heart, the lungs and the gut.', ['cranialNervesVagus']],   // the long one: seen whole
       ['Accessory nerve', 'cranialNervesAccessory', 'The accessory nerve, number eleven. It turns the head and shrugs the shoulders.'],
       ['Hypoglossal nerve', 'cranialNervesHypoglossal', 'The hypoglossal nerve, number twelve. It moves the tongue.'],
-    ].map(([title, entry, say], k) => ({ title, entry, frame: [entry], fill: 0.55, keep: 'all', span: [k / 9, (k + 1) / 9], seconds: 4, say })),
+    ].map(([title, entry, say, frame = NERVES_OF_HEAD], k) => ({ title, entry, frame, from: [k % 2 ? 0.95 : 0.8, 0.1, k % 2 ? 0.3 : 0.6], keep: 'all', span: [k / 9, (k + 1) / 9], seconds: 4, say })),
   ],
 
   shoulder: [
@@ -281,9 +282,9 @@ export const STORIES = {
   hand: [
     { title: 'Twenty-seven bones', entry: 'handMetacarpals', labels: ['handMetacarpals', 'handFingerBones'], span: [0, 0.04], seconds: 4,
       say: 'The hand has twenty-seven bones. Most of the muscles that move the fingers are not in the hand at all.' },
-    { title: 'Making a fist', entry: 'handFingerBones', frame: ['handMetacarpals', 'handFingerBones'], from: [-0.2, -0.35, 1], labels: ['handFingerBones'], keep: 'all', span: [0, 0.5], seconds: 5,
+    { title: 'Making a fist', entry: 'handMetacarpals', frame: ['handMetacarpals', 'handFingerBones'], from: [-0.2, -0.35, 1], labels: ['handMetacarpals'], keep: 'all', span: [0, 0.5], seconds: 5,
       say: 'To make a fist, tendons pull the fingers closed. The tendons come from muscles up in the forearm.' },
-    { title: 'No muscles in the fingers', entry: 'handFingerBones', frame: ['handMetacarpals', 'handFingerBones'], from: [0, -1, 0.75], labels: ['handFingerBones'], keep: 'all', span: [0.5, 1], seconds: 5,
+    { title: 'No muscles in the fingers', entry: 'handMetacarpals', frame: ['handMetacarpals', 'handFingerBones'], from: [0, -1, 0.75], labels: ['handMetacarpals'], keep: 'all', span: [0.5, 1], seconds: 5,
       say: 'The fingers themselves contain bones and tendons, and no muscles.' },
     { title: 'Small muscles in the palm', entry: 'handThenar', frame: ['handThenar', 'handHypothenar', 'handMetacarpals'], labels: ['handThenar', 'handHypothenar', 'handInterossei'], keep: 'all', span: [0, 0.04], seconds: 4,
       say: 'Small muscles in the palm do the fine work. The pad at the base of the thumb moves the thumb across to meet the fingers.' },

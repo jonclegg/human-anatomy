@@ -978,6 +978,7 @@ function stepMotion(now) {
     stream.cloud.material.depthTest = open > 0;   // an opened close-up has solid walls, and its blood shows only where the cut lets it be seen
     stream.cloud.material.uniforms.uSize.value = (stream.size ?? 0.8) * (1 + 0.25 * open);   // and is seen closer
     const lay = stream.lay?.(phase, time);   // a stream that knows where each of its drops is, by its place in the queue
+    const stretch = stream.stretch?.(phase, time);   // the stretch of the way that shows at this moment: [from, to], in shares of it
     stream.drops.forEach((drop, k) => {
       if (lay) drop.where = lay(drop.label);
       else if (stream.place) drop.where = THREE.MathUtils.clamp(stream.place(phase, time) - drop.behind, 0, 1);
@@ -996,7 +997,8 @@ function stepMotion(now) {
         x = x * cos + drop.other.x * sin; y = y * cos + drop.other.y * sin; z = z * cos + drop.other.z * sin;
       }
       position.setXYZ(k, spot.x + x * narrow, spot.y + y * narrow, spot.z + z * narrow);
-      alpha.setX(k, (stream.strength ?? 0.92) * shown * (stream.place ? 1 - 0.85 * drop.behind / stream.packed : Math.min(1, drop.where / 0.04, (1 - drop.where) / 0.05)));   // a free stream fades in at its start and out at its end; one that keeps time trails off behind its head
+      const inStretch = stretch ? THREE.MathUtils.clamp(Math.min(drop.where - stretch[0], stretch[1] - drop.where) / 0.015, 0, 1) : 1;
+      alpha.setX(k, (stream.strength ?? 0.92) * shown * inStretch * (stream.place ? 1 - 0.85 * drop.behind / stream.packed : Math.min(1, drop.where / 0.04, (1 - drop.where) / 0.05)));   // a free stream fades in at its start and out at its end; one that keeps time trails off behind its head
       tint.setXYZ(k, stream.from.r + (stream.to.r - stream.from.r) * drop.where, stream.from.g + (stream.to.g - stream.from.g) * drop.where, stream.from.b + (stream.to.b - stream.from.b) * drop.where);
     });
     position.needsUpdate = alpha.needsUpdate = tint.needsUpdate = true;

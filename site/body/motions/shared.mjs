@@ -36,10 +36,13 @@ export function joint(kit, { pivot, along, width = 4, bones, limb }) {
     if (isBone(part)) { const share = bones ? bones(part) : kit.V(...part.centre).sub(pivot).dot(along) > 0 ? 1 : 0; if (share) movers.push({ part, share }); }
     else movers.push({ part });
   }
-  return { turn: kit.turn, pivot, along, width, movers };
+  /* the bones and ligaments of the other kind of limb that the close-up happens to catch a piece of (a hand beside the hip, the hip joint beside an elbow) are not shown: cut off as they are, they read as stray fragments */
+  const other = limb === ARM ? /femur|patella|tibia$|fibula$|hip|sacr|coccyx|pub(o|ic)|triradiate|frenula|obturator/i : new RegExp(`${ARM.source}|elbow|shoulder`, 'i');
+  return { turn: kit.turn, pivot, along, width, movers, apart: kit.context.filter(part => part.layer === 'skeleton' && other.test(part.name)) };
 }
-export function flex(act, { turn: turnBy, pivot, along, width, movers }, axis, degrees) {
+export function flex(act, { turn: turnBy, pivot, along, width, movers, apart }, axis, degrees) {
   const turn = turnBy(axis, degrees);
+  for (const part of apart) act.fade(part, 0);
   for (const { part, share } of movers) {
     if (share === undefined) act.bend(part, { pivot, turn, along, from: -width, to: width });
     else act.rigid(part, { pivot, turn: share === 1 ? turn : turnBy(axis, degrees * share) });

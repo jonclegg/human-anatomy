@@ -638,8 +638,32 @@ function exitStory() {
   endStory();
   if (from.region) setRegion(from.region); else { state.selection = null; setView(from.view); }
 }
+/* How long a step runs: with the sound on, as long as its clip and a breath more; read, as long as its words take */
+const stepClip = (story, index) => (story.kind === 'steps' ? `story:${story.region}:${index}` : story.kind === 'motion' ? `region:${story.region}` : `entry:${story.steps[index].entry}`);
+function stepLength(story, index) {
+  const seconds = sound.on && sound.manifest.narration[stepClip(story, index)]?.seconds;
+  return seconds ? seconds * 1000 + AFTER_VOICE_MS : Math.max(STEP_MS, stepWords(story.kind, story.region, story.steps[index]).length * READ_MS);
+}
+/* The playback bar: how much of the story has been told, and how long it is in all. A region's motion goes round after
+   its words are done, and the bar stays full. */
+const clock = ms => `${Math.floor(ms / 60_000)}:${String(Math.floor(ms / 1000) % 60).padStart(2, '0')}`;
+let timeShown = null;
+function renderProgress(now) {
+  const story = state.story;
+  if (!story) return;
+  const lengths = story.steps.map((step, index) => stepLength(story, index)), total = lengths.reduce((sum, ms) => sum + ms, 0);
+  const before = lengths.slice(0, story.index).reduce((sum, ms) => sum + ms, 0);
+  const played = story.done ? total : before + Math.min(lengths[story.index], story.playing ? now - story.stepStart : story.spent);
+  const time = `${clock(played)} / ${clock(total)}`;
+  if (time === timeShown) return;
+  timeShown = time;
+  $('storyTime').textContent = time;
+  $('storyBar').firstElementChild.style.width = `${(played / total) * 100}%`;
+  $('storyBar').setAttribute('aria-valuenow', String(Math.round((played / total) * 100)));
+}
 function stepStory(now) {
   const story = state.story;
+  renderProgress(now);
   if (!story?.playing || story.kind === 'motion') return;   // a motion goes round until it is left
   /* with the sound on, a step that is spoken lasts as long as the voice, and a breath more */
   const unspoken = Math.max(STEP_MS, stepWords(story.kind, story.region, story.steps[story.index]).length * READ_MS);

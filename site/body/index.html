@@ -110,6 +110,9 @@ button:focus-visible, input:focus-visible, a:focus-visible, .contents:focus-visi
 .transport [data-story="play"] { min-width: 104px; background: var(--ink); color: var(--on-ink); font-weight: 600; }
 .transport [data-story="play"]:hover { background: #fff; color: var(--on-ink); }
 .transport .count { padding: 0 10px; font: 12px var(--mono); color: var(--faint); white-space: nowrap; }
+/* how far through the story is, and how long it runs */
+.transport .progress { flex: none; width: 120px; height: 4px; margin-left: 10px; border-radius: 2px; background: var(--line-strong); overflow: hidden; }
+.transport .progress i { display: block; height: 100%; width: 0; background: var(--mark); }
 .say { position: absolute; left: 50%; bottom: 84px; transform: translateX(-50%); z-index: 3; width: max-content; max-width: min(660px, calc(100% - 32px)); padding: 12px 22px; border-radius: 16px; background: rgba(11, 13, 15, 0.78); text-align: center; font: 500 18px/1.42 var(--face); color: var(--ink); text-wrap: balance; }
 .say:empty { visibility: hidden; min-height: 50px; }   /* a motion has no caption until its first moment: its room is kept, so the model is framed clear of it */
 .say b { font-weight: 600; color: var(--mark); }
@@ -264,6 +267,8 @@ footer a { color: inherit; }
   .sheet h2 { font-size: 26px; }
   .sheet p { font-size: 15px; }
   .strip { bottom: 8px; }
+  .transport .progress { width: 56px; margin-left: 4px; }
+  .transport .count { padding: 0 6px; }
   .peel { width: auto; max-width: none; left: var(--gutter); right: var(--gutter); transform: none; }
   .peel input[type="range"] { height: 34px; }
   .views { margin: -8px 0 0; }
@@ -333,6 +338,8 @@ footer a { color: inherit; }
         <button type="button" data-story="play">Pause</button>
         <button type="button" data-story="next" aria-label="Next step">→</button>
         <span class="count" id="storyCount"></span>
+        <span class="progress" id="storyBar" role="progressbar" aria-label="Played" aria-valuemin="0" aria-valuemax="100"><i></i></span>
+        <span class="count" id="storyTime"></span>
         <button type="button" data-story="exit">Exit</button>
       </div>
 

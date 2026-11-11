@@ -560,6 +560,7 @@ test.describe('motion', () => {
       await expect(page.locator('#sheet [aria-current="true"]')).toHaveCount(0);
     }
     await expect(page.locator('#crumbs')).toHaveText('›Knee›How the knee bends');
+    await expect(page.locator('#storyTime')).toHaveText(/^\d:\d\d \/ \d:\d\d$/);   // how far through it is, and how long it runs
     await expect.poll(() => model(page, () => window.bodyModel.motion().moving)).toBe(true);
     /* its strip has just Pause and Exit */
     await expect(page.locator('#transport button:visible')).toHaveText(['Pause', 'Exit']);

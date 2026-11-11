@@ -6,6 +6,7 @@
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import { NARRATION, VOICE, MUSIC } from '../../site/body/narration.mjs';
 import { REGIONS, ALL } from '../../site/body/closeups.mjs';
 import { TOUR } from '../../site/body/parts.mjs';
@@ -69,5 +70,7 @@ if (!manifest.music || again === 'music') {
     console.log(`music: made (${(audio.length / 1024).toFixed(0)} KB)`);
   }
 }
+/* how long each clip runs, for the app's playback bar */
+for (const clip of Object.values(manifest.narration)) clip.seconds = Math.round(Number(execFileSync('ffprobe', ['-v', 'error', '-show_entries', 'format=duration', '-of', 'csv=p=0', fileURLToPath(new URL(clip.file, folder))], { encoding: 'utf8' })) * 10) / 10;
 writeFileSync(manifestFile, JSON.stringify(manifest, null, 1));
 console.log(`audio/manifest.json: ${Object.keys(manifest.narration).length} voice clips, music ${manifest.music ? 'yes' : 'no'}`);

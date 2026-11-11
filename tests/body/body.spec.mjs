@@ -430,7 +430,7 @@ test.describe('close-ups', () => {
     await expect(page.locator('#contentsBtn')).toHaveText('Close');
     await expect(page.locator('#contents [data-region="vulva"]')).toBeVisible();
     await expect(page.locator('#contents [data-region="malePelvis"]')).toHaveCount(0);
-    expect(await page.locator('#contents h2').allTextContents()).toEqual(['Watch', 'Head and neck', 'Chest and abdomen', 'Pelvis', 'Limbs and back', 'Layers', 'View', 'About']);
+    expect(await page.locator('#contents h2').allTextContents()).toEqual(['Watch', 'Head and neck', 'Chest and abdomen', 'Pelvis', 'Limbs and back', 'Layers', 'View', 'About', 'Credits and licences']);
     expect(await page.locator('#contents [data-region]').count()).toBe(await model(page, () => window.bodyModel.regions().length));
     await page.locator('#contents [data-region="knee"]').click();
     await settle(page);
@@ -807,16 +807,15 @@ test.describe('navigation', () => {
     await page.locator('#transport [data-story="exit"]').click();
     await settle(page);
     expect(await place(page)).toEqual({ region: null, view: 'body', entry: null, story: null, contents: false });   // home, where it was started
-    /* the layers, and the links to the reading under the viewer */
+    /* the layers, and the credits */
     await page.locator('#contentsBtn').click();
     await page.locator('#contents [data-layer="nerves"]').click();
     await settle(page);
     expect(await place(page)).toMatchObject({ region: null, view: 'nerves', contents: false });
     await page.locator('#contentsBtn').click();
     await expect(page.locator('#contents a', { hasText: 'Wooten Labs' })).toHaveAttribute('href', 'https://wooten-labs.com');
-    await page.locator('#contents [data-manual="sources"]').click();
-    await expect(page.locator('#contents')).toBeHidden();
-    await expect(page.locator('#sources')).toBeInViewport();
+    await expect(page.locator('#contents #credits')).toContainText('BodyParts3D');   // the credits are in Contents: the page is the viewer and nothing else
+    expect(await page.evaluate(() => document.documentElement.scrollHeight <= window.innerHeight + 1)).toBe(true);
   });
   test('the tour of the body steps through the main parts, each with its name and notes under the model', async ({ page }, testInfo) => {
     desktopOnly(testInfo);

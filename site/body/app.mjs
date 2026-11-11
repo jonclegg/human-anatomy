@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
-import { LAYER_INFO, GROUP_INFO, VIEW_INFO, TOUR, BUGS, DIFFERENCES, GAPS, colourOf, SHOWN_WHEN_CHOSEN } from './parts.mjs';
+import { LAYER_INFO, GROUP_INFO, VIEW_INFO, TOUR, colourOf, SHOWN_WHEN_CHOSEN } from './parts.mjs';
 import { REGIONS, GROUPS, DETAILS, ALL, indexParts, regionContext, sideOfPart } from './closeups.mjs';
 import { MOTIONS } from './motions.mjs';
 import { STORIES } from './stories.mjs';
@@ -524,9 +524,6 @@ const save = () => { try { localStorage.setItem('wl-body', JSON.stringify({ tone
 /* every entry has a number, as in a parts diagram: the callouts on the model and the sheet's list of parts share it */
 const entryNumber = key => body.order.indexOf(key) + 1;   // 0 for an entry that is not among the numbered parts (inside a region)
 const entryLayer = key => body.parts[body.entries[key][0]].layer;
-$('bugList').innerHTML = BUGS.map(([title, fix]) => `<li><b>${escapeHtml(title)}</b><span>${escapeHtml(fix)}</span></li>`).join('');
-$('differenceRows').innerHTML = DIFFERENCES.map(([female, male]) => `<tr><td>${escapeHtml(female)}</td><td>${escapeHtml(male)}</td></tr>`).join('');
-$('gapList').innerHTML = GAPS.map(([title, text]) => `<li><b>${escapeHtml(title)}.</b> ${escapeHtml(text)}</li>`).join('');
 
 /* ---------- Stories ----------
    A story has the stage: the sheet lists its sections, the model moves, the words being spoken are shown under it, and
@@ -1211,7 +1208,7 @@ function goUp() {
   else if (state.region) setView(state.view);
 }
 document.addEventListener('click', event => {
-  const target = event.target.closest('[data-entry],[data-step],[data-go],[data-up],[data-sheet],[data-region],[data-watch],[data-contents],[data-layer],[data-story],[data-manual]');
+  const target = event.target.closest('[data-entry],[data-step],[data-go],[data-up],[data-sheet],[data-region],[data-watch],[data-contents],[data-layer],[data-story]');
   if (!target) return;
   if (target.hasAttribute('data-sheet')) { state.sheet = state.sheet === 'peek' ? 'full' : 'peek'; renderSheet(); }
   else if (target.hasAttribute('data-contents')) { setContents(true); $('contents').focus(); }
@@ -1221,7 +1218,6 @@ document.addEventListener('click', event => {
   else if (target.dataset.layer) goHome(target.dataset.layer);
   else if (target.dataset.step) stepPart(Number(target.dataset.step));
   else if (target.dataset.go) goStep(Number(target.dataset.go));
-  else if (target.dataset.manual) { setContents(false); $(target.dataset.manual).scrollIntoView({ behavior: reducedMotion() ? 'auto' : 'smooth', block: 'start' }); }
   else if (target.dataset.story) {
     const story = state.story, action = target.dataset.story;
     if (action === 'exit') { exitStory(); $('sheetTitle').focus(); }
@@ -1235,12 +1231,11 @@ document.addEventListener('click', event => {
     if (target.dataset.view ? state.region || view !== state.view : !state.region && view !== state.view) applyView(view);   // a region's own parts stay in it
     selectEntry(key);
     focusSelection(viewInfo());
-    if (target.closest('.manual')) $('viewer').scrollIntoView({ behavior: reducedMotion() ? 'auto' : 'smooth', block: 'start' });
   }
 });
 
 /* ---------- Contents: the whole site on one page, laid over the stage ----------
-   The stories to watch, the regions by part of the body, the six layers, how the model is drawn, and the reading. What
+   The stories to watch, the regions by part of the body, the six layers, how the model is drawn, and the credits. What
    is under it keeps its place, and shows again when the page is closed. Opening it ends a story. */
 function renderContents() {
   const regions = Object.values(REGIONS).filter(region => !region.sex || region.sex === body.sex);
@@ -2081,10 +2076,6 @@ window.bodyModel = {
 /* ---------- Start ---------- */
 const loading = $('loading');
 for (const [view, info] of Object.entries(VIEW_INFO)) info.name = view;
-$('systemRoute').innerHTML = Object.entries(VIEW_INFO).filter(([view]) => view !== 'body').map(([view, info]) => {
-  const [key] = info.items[0];
-  return `<button type="button" data-entry="${key}" data-view="${view}" data-route><i>${LAYER_INFO[info.main].short}</i>${escapeHtml(info.title)} <span>${escapeHtml(info.route)}</span></button>`;
-}).join('');
 { const response = await fetch('audio/manifest.json'); if (!response.ok) throw new Error(`audio/manifest.json: ${response.status}`); sound.manifest = await response.json(); }
 body = await loadBody(state.sex);
 makeStateTextures(body.parts.length);

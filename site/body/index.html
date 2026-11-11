@@ -13,7 +13,7 @@
    that starts at the title, which always leads home) and holds the search, the body switch, the sound and Contents. One
    sheet at the side (at the bottom on phones) shows one thing: the home page, a region or a part. One strip at the
    bottom of the model holds the layers at home and the transport during a story; a story lists its sections in the sheet and shows its
-   words under the model. Contents is a page laid over the stage. A short manual follows. */
+   words under the model. Contents is a page laid over the stage, and holds the credits. The page is the viewer and nothing else. */
 :root {
   --bg: #0b0d0f; --stage-hi: #252b30; --stage-mid: #14181b; --panel: #161a1d; --field: #0f1214;
   --ink: #eef1f2; --on-ink: #0d1012; --muted: #a7b1b6; --faint: #7c868c; --line: rgba(255,255,255,0.1); --line-strong: rgba(255,255,255,0.2);
@@ -222,30 +222,9 @@ input[type="range"]::-moz-range-thumb { width: 14px; height: 14px; border-radius
 .hint { display: none; }
 
 /* Manual */
-.manual-wrap { max-width: 1180px; margin: 0 auto; padding: 64px max(24px, env(safe-area-inset-right, 0px)) 24px max(24px, env(safe-area-inset-left, 0px)); }
-.manual-intro { font: 500 clamp(26px, 3.2vw, 40px)/1.08 var(--display); max-width: 26ch; margin-bottom: 44px; letter-spacing: -0.025em; }
-.manual-intro mark { background: var(--mark); color: var(--mark-ink); padding: 0 6px; }
-.manual { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 330px), 1fr)); gap: 40px; }
-.manual section { display: grid; gap: 14px; align-content: start; min-width: 0; padding-top: 14px; border-top: 1px solid var(--line-strong); }
-.manual h2 { font-size: 22px; line-height: 1.1; }
-.manual p { max-width: 60ch; }
-.route { display: grid; }
-.route button { display: grid; grid-template-columns: 26px 1fr auto; gap: 10px; align-items: center; text-align: left; background: none; border: 0; border-bottom: 1px solid var(--line); padding: 10px 0; cursor: pointer; font-size: 15px; font-weight: 500; }
-.route button i { font: 12px var(--mono); font-style: normal; color: var(--mark); }
-.route button span { color: var(--muted); font-size: 13.5px; font-weight: 400; }
-.route button:hover { background: var(--panel); }
-.table-wrap { overflow-x: auto; }
-table { border-collapse: collapse; width: 100%; font-size: 14.5px; }
-th, td { text-align: left; padding: 9px 12px 9px 0; border-bottom: 1px solid var(--line); vertical-align: top; }
-th { font-size: 12px; font-weight: 700; color: var(--muted); }
-.bugs { display: grid; margin: 0; padding: 0; list-style: none; }
-.bugs li { padding: 10px 0; border-bottom: 1px solid var(--line); }
-.bugs b { display: block; }
-.bugs span { color: var(--muted); font-size: 14px; }
-.fitted-list { margin: 0; padding-left: 18px; color: var(--muted); font-size: 14.5px; display: grid; gap: 4px; }
-.fitted-list b { color: var(--ink); }
-footer { max-width: 1180px; margin: 0 auto; padding: 32px max(24px, env(safe-area-inset-right, 0px)) 48px max(24px, env(safe-area-inset-left, 0px)); color: var(--muted); font-size: 13px; display: grid; gap: 6px; }
-footer a { color: inherit; }
+.contents .credits { grid-column: 1 / -1; }
+.contents .credits p { max-width: 90ch; font-size: 13px; line-height: 1.5; color: var(--muted); }
+.contents .credits a { color: inherit; }
 
 /* Phones: the bar takes two lines (the trail, then the controls), the model keeps the middle with the strip at its foot,
    and the sheet sits along the bottom; its handle makes it taller or shorter */
@@ -390,59 +369,24 @@ footer a { color: inherit; }
       <section>
         <h2>About</h2>
         <div class="list">
-          <button type="button" data-manual="systems">The body's systems</button>
-          <button type="button" data-manual="differences">Female and male differences</button>
-          <button type="button" data-manual="bugs">Common misconceptions</button>
-          <button type="button" data-manual="sources">Where the shapes come from</button>
-          <button type="button" data-manual="credits">Credits and licences</button>
           <a href="https://wooten-labs.com">Wooten Labs</a>
           <a href="https://github.com/jonclegg/vagina-anatomy">Source on GitHub</a>
         </div>
       </section>
+      <section class="credits" id="credits">
+        <h2>Credits and licences</h2>
+        <p>Male body: BodyParts3D, © The Database Center for Life Science, licensed under CC Attribution 4.0 International (<a href="https://dbarchive.biosciencedbc.jp/en/bodyparts3d/">dbarchive.biosciencedbc.jp</a>). Simplified and re-coloured for this model.</p>
+        <p>Female uterus, vagina, ovaries, tubes, ligaments and breasts, and the male lungs and spinal cord: Human Reference Atlas 3D reference organs (HuBMAP, NIH), from the Visible Human Project, U.S. National Library of Medicine; CC BY 4.0 (<a href="https://humanatlas.io/3d-reference-library">humanatlas.io</a>). Simplified and aligned for this model.</p>
+        <p>Muscles of the face, jaw, back and abdominal wall, ligaments and joint capsules, peripheral and cranial nerves, lymph nodes, the thyroid gland and many vessels: Z-Anatomy, the libre 3D atlas of anatomy (<a href="https://www.z-anatomy.com">z-anatomy.com</a>), CC BY-SA 4.0, itself built on BodyParts3D; cranial nerves after the University of Dundee CAHID model, CC BY 4.0. Aligned and simplified for this model. The 3D data on this site is therefore shared under CC BY-SA 4.0.</p>
+        <p>Female skin: MakeHuman base mesh and young-female shape targets, CC0 (<a href="https://github.com/makehumancommunity/makehuman">makehumancommunity/makehuman</a>).</p>
+        <p>The rest of the female body is the male body, reshaped to that skin, not scanned from a woman.</p>
+        <p>Measurements from Gray's Anatomy (42nd ed.), Standring 2020, Moore's Clinically Oriented Anatomy, and published studies (some named in a part's details).</p>
+        <p>Educational model, simplified for clarity. Bodies vary widely. Not medical advice.</p>
+        <p>Open source (MIT): <a href="https://github.com/jonclegg/vagina-anatomy">github.com/jonclegg/vagina-anatomy</a>. Corrections welcome. The female pelvis is under Pelvis in Contents; for how it changes with arousal, and its cross-sections, see <a href="https://vagina.wooten-labs.com">Vagina Anatomy</a>.</p>
+      </section>
     </div>
   </div>
 </section>
-
-<div class="manual-wrap">
-  <p class="manual-intro">An adult has about 206 bones and more than 600 muscles. The largest internal organ is the <mark>liver</mark>.</p>
-  <main class="manual">
-    <section id="systems">
-      <h2>The body's systems</h2>
-      <p>Each view shows one system, with the rest as faint context. Pick a part below to jump to it.</p>
-      <div class="route" id="systemRoute"></div>
-    </section>
-    <section id="differences">
-      <h2>Female and male differences</h2>
-      <p>Most of the body is built the same way. The clearest differences are in the pelvis, the reproductive organs and overall size.</p>
-      <div class="table-wrap"><table>
-        <thead><tr><th>Female</th><th>Male</th></tr></thead>
-        <tbody id="differenceRows"></tbody>
-      </table></div>
-    </section>
-    <section id="bugs">
-      <h2>Common misconceptions</h2>
-      <ul class="bugs" id="bugList"></ul>
-    </section>
-    <section id="sources">
-      <h2>Where the shapes come from</h2>
-      <p>The male body is one scanned adult man from BodyParts3D, with lungs and spinal cord from the NIH Visible Human Male, and the face, jaw, back and abdominal muscles, ligaments, nerves, lymph nodes and thyroid that BodyParts3D lacks from Z-Anatomy.</p>
-      <p>No free model of a whole female body exists: scans of women give organs, but no skeleton or muscles that belong with them. So the female body here is the male body reshaped. Her skin is a slim young woman's from MakeHuman, and everything inside the man was carried across to it in one smooth change of shape, skin point to matching skin point, so each part keeps its place among the others. Parts that came this way say <b>Fitted</b> in their details.</p>
-      <p>The parts that only the female body has are scanned from a woman: her uterus, vagina, ovaries, tubes and their ligaments, and her breasts, from the NIH Visible Human Female, fitted into this body's pelvis and under its skin. The man's own reproductive organs are left out.</p>
-      <ul class="fitted-list" id="gapList"></ul>
-    </section>
-  </main>
-</div>
-
-<footer id="credits">
-  <span>Male body: BodyParts3D, © The Database Center for Life Science, licensed under CC Attribution 4.0 International (<a href="https://dbarchive.biosciencedbc.jp/en/bodyparts3d/">dbarchive.biosciencedbc.jp</a>). Simplified and re-coloured for this model.</span>
-  <span>Female uterus, vagina, ovaries, tubes, ligaments and breasts, and the male lungs and spinal cord: Human Reference Atlas 3D reference organs (HuBMAP, NIH), from the Visible Human Project, U.S. National Library of Medicine; CC BY 4.0 (<a href="https://humanatlas.io/3d-reference-library">humanatlas.io</a>). Simplified and aligned for this model.</span>
-  <span>Muscles of the face, jaw, back and abdominal wall, ligaments and joint capsules, peripheral and cranial nerves, lymph nodes, the thyroid gland and many vessels: Z-Anatomy, the libre 3D atlas of anatomy (<a href="https://www.z-anatomy.com">z-anatomy.com</a>), CC BY-SA 4.0, itself built on BodyParts3D; cranial nerves after the University of Dundee CAHID model, CC BY 4.0. Aligned and simplified for this model. The 3D data on this site is therefore shared under CC BY-SA 4.0.</span>
-  <span>Female skin: MakeHuman base mesh and young-female shape targets, CC0 (<a href="https://github.com/makehumancommunity/makehuman">makehumancommunity/makehuman</a>).</span>
-  <span>The rest of the female body is the male body, reshaped to that skin, not scanned from a woman.</span>
-  <span>Measurements from Gray's Anatomy (42nd ed.), Standring 2020, Moore's Clinically Oriented Anatomy, and published studies (some named in a part's details).</span>
-  <span>Educational model, simplified for clarity. Bodies vary widely. Not medical advice.</span>
-  <span>Open source (MIT): <a href="https://github.com/jonclegg/vagina-anatomy">github.com/jonclegg/vagina-anatomy</a>. Corrections welcome. The female pelvis is under Pelvis in Contents; for how it changes with arousal, and its cross-sections, see <a href="https://vagina.wooten-labs.com">Vagina Anatomy</a>.</span>
-</footer>
 
 <script type="importmap">
 { "imports": {

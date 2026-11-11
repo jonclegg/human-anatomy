@@ -53,35 +53,35 @@ export const VIEW_INFO = {
     labels: { any: ['frontalLobe', 'heart', 'lungs', 'liver', 'stomach', 'kidney', 'smallIntestine', 'colon', 'bladder', 'skull', 'femur', 'hipBone', 'ribs', 'spleen', 'uterus'] },
   },
   skeleton: {
-    route: 'about 206 bones', title: 'The skeleton', figure: 'Fig. 1 · The skeleton', main: 'skeleton',
+    title: 'The skeleton', figure: 'Fig. 1 · The skeleton', main: 'skeleton',
     text: { any: 'An adult skeleton has about 206 bones. The skull, spine and rib cage protect the brain, spinal cord and chest organs. The limbs are levers for the muscles.' },
     layers: { skeleton: 'solid', muscles: 'off', organs: 'off', vessels: 'off', nerves: 'off', skin: 'ghost' }, body: 0.1, xray: ['skeleton'], isolate: true,
     items: [['femur', 'the longest bone'], ['skull', '22 bones'], ['lumbarVertebrae', 'carry the most weight'], ['hipBone', 'differs most between the sexes']],
     labels: { any: ['skull', 'mandible', 'clavicle', 'scapula', 'sternum', 'ribs', 'humerus', 'radius', 'ulna', 'lumbarVertebrae', 'hipBone', 'sacrum', 'femur', 'patella', 'tibia', 'fibula', 'carpals', 'metatarsals'] },
   },
   muscles: {
-    route: 'more than 600', title: 'The muscles', figure: 'Fig. 2 · The muscles', main: 'muscles',
+    title: 'The muscles', figure: 'Fig. 2 · The muscles', main: 'muscles',
     text: { any: 'More than 600 skeletal muscles move the bones, hold the posture and make heat. A muscle can pull but cannot push.' },
     layers: { skeleton: 'solid', muscles: 'solid', organs: 'off', vessels: 'off', nerves: 'off', skin: 'off' }, body: 0, xray: ['muscles'], isolate: true,
     items: [['gluteusMaximus', 'the heaviest muscle'], ['deltoid', 'lifts the arm'], ['diaphragm', 'the main breathing muscle']],
     labels: { any: ['facialMuscles', 'sternocleidomastoid', 'trapezius', 'deltoid', 'pectoralisMajor', 'rectusAbdominis', 'latissimusDorsi', 'bicepsBrachii', 'tricepsBrachii', 'externalOblique', 'serratusAnterior', 'forearmFlexors', 'rectusFemoris', 'vastusLateralis', 'vastusMedialis', 'sartorius', 'adductors', 'tibialisAnterior', 'gastrocnemius', 'gluteusMaximus', 'hamstrings'] },
   },
   organs: {
-    route: 'chest, abdomen and pelvis', title: 'The organs', figure: 'Fig. 3 · The organs, bones see-through', main: 'organs',
+    title: 'The organs', figure: 'Fig. 3 · The organs, bones see-through', main: 'organs',
     text: { any: 'The organs of the chest, abdomen and pelvis, with the skeleton as a faint outline for reference.' },
     layers: { skeleton: 'ghost', muscles: 'off', organs: 'solid', vessels: 'off', nerves: 'solid', skin: 'ghost' }, body: 0.12, xray: ['organs'], isolate: true,
     items: [['liver', 'about 1.5 kg'], ['lungs', 'about 6 litres of air'], ['smallIntestine', 'about 6 m long'], ['kidney', 'filter 180 litres a day']],
     labels: { any: ['thyroid', 'larynx', 'trachea', 'lungs', 'heart', 'liver', 'stomach', 'spleen', 'pancreas', 'gallbladder', 'kidney', 'smallIntestine', 'colon', 'bladder', 'rectum', 'eye', 'uterus', 'ovary', 'breast', 'prostate', 'testis'] },
   },
   vessels: {
-    route: 'arteries and veins', title: 'The blood vessels', figure: 'Fig. 4 · Arteries and veins', main: 'vessels',
+    title: 'The blood vessels', figure: 'Fig. 4 · Arteries and veins', main: 'vessels',
     text: { any: 'Arteries (red) carry blood away from the heart and veins (blue) bring it back. Laid end to end, an adult\'s vessels would measure tens of thousands of kilometres (the popular figure is 100,000 km). Most of that length is capillaries, which are too small to show.' },
     layers: { skeleton: 'ghost', muscles: 'off', organs: 'ghost', vessels: 'solid', nerves: 'off', skin: 'ghost' }, body: 0.1, xray: ['vessels'], isolate: true,
     items: [['aorta', 'the largest artery'], ['venaCava', 'returns blood to the heart'], ['legArteries', 'the pulse in the groin']],
     labels: { any: ['aorta', 'venaCava', 'carotid', 'neckVeins', 'pulmonaryArteries', 'coronaryArteries', 'renalVessels', 'iliacVessels', 'legArteries', 'legVeins', 'armArteries', 'armVeins', 'portalVein', 'brainArteries'] },
   },
   nerves: {
-    route: 'brain and spinal cord', title: 'The nervous system', figure: 'Fig. 5 · Brain and spinal cord', main: 'nerves',
+    title: 'The nervous system', figure: 'Fig. 5 · Brain and spinal cord', main: 'nerves',
     text: { any: 'The brain and spinal cord form the central nervous system. The cranial and spinal nerves carry its signals to and from every part of the body.' },
     layers: { skeleton: 'ghost', muscles: 'off', organs: 'off', vessels: 'off', nerves: 'solid', skin: 'ghost' }, body: 0.1, xray: ['nerves'], isolate: true,
     items: [['frontalLobe', 'plans and moves'], ['spinalCord', 'about 45 cm long'], ['legNerves', 'the sciatic, the thickest nerve']],
@@ -98,41 +98,10 @@ export const TOUR = [
   ['aorta', 'vessels'], ['venaCava', 'vessels'], ['frontalLobe', 'nerves'], ['cerebellum', 'nerves'], ['spinalCord', 'nerves'], ['brachialPlexus', 'nerves'], ['legNerves', 'nerves'],
 ];
 
-export const BUGS = [
-  ['The heart is on the left', 'The heart sits behind the breastbone, with about two-thirds of it left of the midline. Its tip points down and to the left.'],
-  ['We use 10% of our brain', 'Scans show activity across the whole brain over a day. No large part sits idle.'],
-  ['Men have one rib fewer', 'Both sexes have 12 pairs of ribs.'],
-  ['Bones are dry and dead', 'Bone is living tissue with blood vessels and nerves. The whole skeleton is replaced about every 10 years.'],
-  ['The appendix is useless', 'It holds lymphoid tissue and gut bacteria that may restock the colon after illness.'],
-  ['The stomach is behind the belly button', 'Most of it sits higher, under the left ribs. The navel overlies the small intestine.'],
-  ['Blood in the veins is blue', 'It is dark red. Veins look blue through skin because of how skin scatters light.'],
-  ['Muscle turns into fat', 'Muscle and fat are different tissues. One cannot become the other. Their amounts change separately.'],
-];
-
-export const DIFFERENCES = [
-  ['Wider, shallower pelvis with a round inlet; subpubic angle 80–90°', 'Narrower, deeper pelvis with a heart-shaped inlet; subpubic angle 50–60°'],
-  ['On average about 7% shorter than men of the same population', 'On average about 7% taller than women of the same population'],
-  ['Ovaries, fallopian tubes, uterus, vagina, vulva', 'Testes, epididymides, seminal vesicles, prostate, penis'],
-  ['Mammary glands develop at puberty', 'Mammary glands stay rudimentary'],
-  ['Heart about 250–300 g', 'Heart about 300–350 g'],
-  ['Larynx smaller; vocal folds 12.5–17.5 mm', 'Larynx larger, the thyroid notch forms the "Adam\'s apple"; vocal folds 17–25 mm'],
-  ['Urethra about 4 cm', 'Urethra about 20 cm'],
-  ['Same 206 bones, 12 pairs of ribs, same muscles', 'Same 206 bones, 12 pairs of ribs, same muscles'],
-];
-
 /* Shown only when chosen (from the parts list or by search): the platysma is a paper-thin sheet in the skin of the neck
    that would cover the sternocleidomastoid and the muscles of the throat, as atlases draw the neck with it lifted away */
 export const SHOWN_WHEN_CHOSEN = /platysma$/i;
 
-/* what the free models do not have, said plainly */
-export const GAPS = [
-  ['Female body', 'No free model of a whole female body exists. The female body here is the male model reshaped to a young woman\'s build, so its bones, muscles and most organs are the male ones, refitted. The uterus, vagina, ovaries, tubes and breasts are scanned from a woman. The vulva, clitoris and urethra are modelled from published measurements.'],
-  ['Male pelvis', 'No free model has the muscles over the bulb and crura of the penis, the bulbourethral glands or the spermatic cord, so his close-ups lack them.'],
-  ['Joints', 'The knee has no menisci or collateral ligaments and the shoulder has no ligaments, because the free models leave them out.'],
-  ['Female skin and build', 'Made with MakeHuman as a slim young woman. It is not a scan.'],
-  ['Inner ear', 'Left out, because the only free model is licensed for non-commercial use.'],
-  ['Small structures', 'Simplified for speed. Very small vessels and nerves are not shown.'],
-];
 
 /* ---------- The main parts ----------
    pattern: matched against structure names; layer limits it to one layer; whole: true selects every structure of the

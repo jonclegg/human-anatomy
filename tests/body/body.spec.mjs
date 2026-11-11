@@ -569,7 +569,7 @@ test.describe('motion', () => {
     const captions = await model(page, () => { const m = window.bodyModel, seen = []; for (const phase of [0.25, 0.75]) { m.holdMotion(phase); m.frame(performance.now()); seen.push([m.motion().caption, document.querySelector('#say').textContent]); } m.holdMotion(null); return seen; });
     for (const [caption, shown] of captions) { expect(caption.length).toBeGreaterThan(12); expect(shown).toBe(caption); }
     expect(captions[0][0]).not.toBe(captions[1][0]);
-    expect(await model(page, () => window.bodyModel.sound())).toMatchObject({ on: true, key: 'region:knee' });   // the region's opening, spoken once
+    expect(await model(page, () => window.bodyModel.sound())).toMatchObject({ on: true, key: 'region:knee' });   // the region's opening, spoken once over its motion
     const phases = () => page.evaluate(async () => { const seen = new Set(); for (let k = 0; k < 8; k++) { seen.add(window.bodyModel.motion().phase); await new Promise(done => setTimeout(done, 100)); } return seen.size; });
     expect(await phases()).toBeGreaterThan(3);
     /* the space bar pauses, as it does a film: the motion, the voice and the music all wait */
@@ -842,17 +842,17 @@ test.describe('navigation', () => {
 
 test.describe('sound', () => {
   test.use({ reducedMotion: 'reduce' });
-  test('sound is off until asked for; then music plays, and the voice speaks for what is on show', async ({ page }, testInfo) => {
+  test('sound is off until asked for; then music plays alone, and the voice speaks only inside a story', async ({ page }, testInfo) => {
     desktopOnly(testInfo);
     const errors = await open(page);
     expect(await model(page, () => window.bodyModel.sound())).toMatchObject({ on: false, clip: null, musicPlaying: false });
     await page.locator('#soundBtn').click();
     await expect(page.locator('#soundBtn')).toHaveAttribute('aria-pressed', 'true');
-    await expect.poll(() => model(page, () => window.bodyModel.sound())).toMatchObject({ on: true, key: 'view:body', clip: 'view-body.mp3', speaking: true, music: 'music.mp3', musicPlaying: true });
-    expect((await model(page, () => window.bodyModel.sound())).musicLevel).toBeLessThan(0.1);   // the music drops under the voice
+    await expect.poll(() => model(page, () => window.bodyModel.sound())).toMatchObject({ on: true, key: null, clip: null, speaking: false, music: 'music.mp3', musicPlaying: true });   // music, and no voice: nothing is told until a story is started
     await page.locator('#sheet [data-watch="heart"]').click();
     await settle(page);
-    await expect.poll(() => model(page, () => window.bodyModel.sound().key)).toBe('story:heart:0');
+    await expect.poll(() => model(page, () => window.bodyModel.sound())).toMatchObject({ key: 'story:heart:0', speaking: true });
+    expect((await model(page, () => window.bodyModel.sound())).musicLevel).toBeLessThan(0.1);   // the music drops under the voice
     await page.waitForTimeout(1500);
     expect(await model(page, () => window.bodyModel.state.story.index)).toBe(0);   // the story waits for the voice
     await page.locator('#soundBtn').click();

@@ -635,8 +635,6 @@ function exitStory() {
   const { from } = state.story;
   endStory();
   if (from.region) setRegion(from.region); else { state.selection = null; setView(from.view); }
-  /* the place it goes back to has an opening of its own, which is not spoken again: after a story it would sound like the story starting over */
-  sound.voice.pause(); sound.speaking = false; sound.music.volume = MUSIC_LEVEL;
 }
 /* How long a step runs: with the sound on, as long as its clip and a breath more; read, as long as its words take */
 const stepClip = (story, index) => (story.kind === 'steps' ? `story:${story.region}:${index}` : story.kind === 'motion' ? `region:${story.region}` : `entry:${story.steps[index].entry}`);
@@ -1061,12 +1059,8 @@ const MUSIC_LEVEL = 0.2, UNDER_VOICE = 0.07, AFTER_VOICE_MS = 900;
 const sound = { on: false, manifest: null, music: new Audio(), voice: new Audio(), key: null, clip: null, speaking: false, endedAt: 0 };
 sound.music.loop = true; sound.music.volume = MUSIC_LEVEL;
 sound.voice.addEventListener('ended', () => { sound.speaking = false; sound.endedAt = performance.now(); sound.music.volume = MUSIC_LEVEL; invalidate(); });
-const voiceKey = () => {
-  const story = state.story;
-  if (story?.kind === 'steps') return `story:${story.region}:${story.index}`;
-  if (story?.kind === 'motion') return `region:${story.region}`;
-  return state.selection?.entry ? `entry:${state.selection.entry}` : state.region ? `region:${state.region}` : state.selection || state.blend ? null : `view:${state.view}`;
-};
+/* The voice speaks only inside a story: the step being told. Anywhere else the sound is the music alone. */
+const voiceKey = () => (state.story ? stepClip(state.story, state.story.index) : null);
 /* a browser may still refuse to play (no click yet): the sound goes back off. A clip cut short by the next one is not a refusal. */
 const refused = error => { if (error.name === 'AbortError') return; sound.on = false; sound.music.pause(); sound.voice.pause(); sound.speaking = false; syncUI(); };
 function speak() {

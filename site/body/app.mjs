@@ -1164,6 +1164,7 @@ function sheetContent() {
     <div class="list">${HOME_STORIES.map(id => `<button type="button" data-watch="${id}">${escapeHtml(storyName(id))}<span>${storyMinutes(id)} min</span></button>`).join('')}
       <button type="button" data-contents>Everything on this site<span>Contents</span></button></div>`;
   if (!selection) return `
+    <button type="button" class="back" data-up>Back to the whole body</button>
     <div class="eyebrow">Region</div>
     ${heading}
     ${MOTIONS[state.region] ? `<button type="button" class="go" data-watch="${state.region}">Watch guide</button>` : ''}
@@ -1179,6 +1180,7 @@ function sheetContent() {
   const facts = entry ? entry.stats : [['Size (this model)', `${Math.max(...size).toFixed(1)} cm across`], ['Layer', LAYER_INFO[part.layer].name]];
   const equivalent = entry && (entry.other?.[otherSex()] ?? entry.other?.any);
   return `
+    <button type="button" class="back" data-up>Back to ${escapeHtml(lowerFirst(viewInfo().title))}</button>
     <div class="sheet-head"><span class="sys" style="--dot:${LAYER_INFO[part.layer].dot}">${at >= 0 ? `<em class="no">${at + 1}</em>` : ''}${escapeHtml(GROUP_INFO[part.group]?.name || LAYER_INFO[part.layer].name)}</span>${at >= 0 ? `<span class="count">${at + 1} of ${body.order.length}</span>` : ''}</div>
     <div><h2 id="sheetTitle" tabindex="-1">${escapeHtml(title)}</h2><div class="aka">${escapeHtml(aka || '')}</div></div>
     ${entry ? `<p>${escapeHtml(entry.what)}</p><p>${escapeHtml(entry.does)}</p><div class="bug"><b>Worth knowing</b>${escapeHtml(entry.bug)}</div>` : `<p>One of the ${body.parts.length} structures in this model, in the ${escapeHtml((GROUP_INFO[part.group]?.name || part.group).toLowerCase())}. The main parts have full notes.</p>`}
@@ -1188,13 +1190,12 @@ function sheetContent() {
     ${partNav(at)}
     ${sourceNote(selection.parts)}`;
 }
-/* Next and Previous, each named for the part it leads to (the numbered parts, in order), and the way back up: to the
-   region, or on the whole body to the layer */
+/* Next and Previous, each named for the part it leads to (the numbered parts, in order). The way back up (to the
+   region, or on the whole body to the layer) is at the top of the sheet, where it is always in sight. */
 function partNav(at) {
-  const up = `<button type="button" data-up>Back to ${escapeHtml(lowerFirst(viewInfo().title))}</button>`;
-  if (at < 0) return `<div class="part-nav">${up}</div>`;
+  if (at < 0) return '';
   const name = k => { const entry = ALL[body.order[(k + body.order.length) % body.order.length]]; return escapeHtml(entry.short || entry.name); };
-  return `<div class="part-nav"><button type="button" class="go" data-step="1">Next: ${name(at + 1)}</button><button type="button" data-step="-1">Previous: ${name(at - 1)}</button>${up}</div>`;
+  return `<div class="part-nav"><button type="button" class="go" data-step="1">Next: ${name(at + 1)}</button><button type="button" data-step="-1">Previous: ${name(at - 1)}</button></div>`;
 }
 const HOTSPOTS = [['brain', 'frontalLobe', null, 'Brain'], ['eye', 'eye', 'right', 'Eye'], ['heart', 'heart', null, 'Heart'], ['shoulder', 'scapula', 'right', 'Shoulder'], ['digestive', 'smallIntestine', null, 'Gut'], ['hand', 'carpals', 'right', 'Hand'], ['knee', 'patella', 'right', 'Knee'], ['foot', 'talus', 'right', 'Foot']];
 const atHome = () => !state.region && !state.selection && !state.story;
@@ -1214,7 +1215,7 @@ document.addEventListener('click', event => {
   if (!target) return;
   if (target.hasAttribute('data-sheet')) { state.sheet = state.sheet === 'peek' ? 'full' : 'peek'; renderSheet(); }
   else if (target.hasAttribute('data-contents')) { setContents(true); $('contents').focus(); }
-  else if (target.hasAttribute('data-up')) leavePart();
+  else if (target.hasAttribute('data-up')) goUp();
   else if (target.hasAttribute('data-watch')) { startStory(target.dataset.watch || null); $('transport').querySelector('[data-story="play"]').focus(); }
   else if (target.dataset.region) { endStory(); setContents(false); setRegion(target.dataset.region); }
   else if (target.dataset.layer) goHome(target.dataset.layer);
@@ -1662,7 +1663,7 @@ function buildSpots() {
 }
 /* places the points and returns their lines (SVG); the columns stand a little outside the body's widest reach on screen */
 function placeSpots(width, height) {
-  const shown = atHome() && !isolating();
+  const shown = atHome() && !isolating() && state.labels;   // the glowing points are labels too: the Labels button hides them
   const skin = body.parts.find(part => part.name === 'Skin'), at = point => { projected.copy(point).project(camera); return [(projected.x + 1) / 2 * width, (1 - projected.y) / 2 * height, projected.z]; };
   const middle = at(V(0, body.height / 2, 0))[0], reach = Math.abs(at(V(skin.max[0], body.height / 2, 0))[0] - at(V(skin.min[0], body.height / 2, 0))[0]) / 2;
   const columns = { left: [], right: [] };

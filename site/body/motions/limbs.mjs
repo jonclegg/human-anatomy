@@ -96,22 +96,31 @@ export const hand = {
   cycle: 6000, skin: 0, watch: 'how the hand makes a fist',
   build(kit) {
     const { V } = kit, bone = (segment, digit) => kit.one(new RegExp(`^${segment} phalanx of (left|right) ${digit}$`, 'i'), kit.own);
-    const palm = kit.centre(kit.entry('handPalmarAponeurosis')).sub(kit.centre(kit.entry('handMetacarpals')));   // from the back of the hand toward the palm
+    /* From the back of the hand toward the palm: square to the flat of the hand, which the finger bones give (the way
+       they point, and the way across them). The soft parts of the palm only say which of its two faces is the palm:
+       they lie too nearly in the flat of the hand to give the direction themselves. */
+    const length = kit.centre(bone('Distal', 'middle finger')).sub(kit.centre(bone('Proximal', 'middle finger'))).normalize();
+    const across = kit.centre(bone('Proximal', 'little finger')).sub(kit.centre(bone('Proximal', 'index finger'))).normalize();   // from the index finger to the little finger
+    const flat = across.clone().cross(length).normalize(), soft = kit.centre(['handPalmarAponeurosis', 'handLumbricals', 'handThenar', 'handHypothenar'].flatMap(key => kit.entry(key))).sub(kit.centre(kit.entry('handMetacarpals')));
+    const palm = flat.multiplyScalar(Math.sign(flat.dot(soft)));
     const digit = (bones, toward) => {
       const along = kit.centre(bones.at(-1)).sub(kit.centre(bones[0])).normalize(), axis = kit.swing(along, toward.clone().addScaledVector(along, -toward.dot(along)).normalize());
       return { axis, bones: bones.map(part => ({ part, knuckle: kit.end(part, along.clone().negate(), 0.35) })) };
     };
     const fingers = FINGERS.map(name => digit(['Proximal', 'Middle', 'Distal'].map(segment => bone(segment, `${name} finger`)), palm));
-    const across = kit.centre(bone('Proximal', 'little finger')).sub(kit.centre(bone('Proximal', 'index finger'))).normalize();   // the thumb closes across the palm, toward the little finger
-    /* the thumb folds from its base: the bone in the palm swings across first, and carries the two beyond it */
-    const thumb = digit([kit.one(/^(left|right) first metacarpal bone$/i, kit.own), ...['Proximal', 'Distal'].map(segment => bone(segment, 'thumb'))], palm.clone().normalize().add(across));
+    /* The thumb points out to the side of the hand. Closing, each of its three bones turns about the length of the
+       hand: that swings it round in front of the palm and on across the curled fingers. */
+    const thumb = digit([kit.one(/^(left|right) first metacarpal bone$/i, kit.own), ...['Proximal', 'Distal'].map(segment => bone(segment, 'thumb'))], palm);
+    const reachOfThumb = kit.centre(thumb.bones[2].part).sub(thumb.bones[0].knuckle);
+    thumb.axis = length.clone().multiplyScalar(-Math.sign(length.clone().cross(reachOfThumb).dot(palm)));
     /* what else reaches into the fingers (their nerves and arteries, and the sheaths of the palm's tough sheet) is not carried with the bones */
     const knuckles = kit.centre(fingers.map(finger => finger.bones[0].part)), outward = kit.centre(fingers.map(finger => finger.bones[2].part)).sub(knuckles).normalize();
-    const reach = part => Math.max(...[0, 1, 2, 3, 4, 5, 6, 7].map(corner => V(part[corner & 1 ? 'max' : 'min'][0], part[corner & 2 ? 'max' : 'min'][1], part[corner & 4 ? 'max' : 'min'][2]).sub(knuckles).dot(outward)));
+    const past = (part, from, along) => Math.max(...[0, 1, 2, 3, 4, 5, 6, 7].map(corner => V(part[corner & 1 ? 'max' : 'min'][0], part[corner & 2 ? 'max' : 'min'][1], part[corner & 4 ? 'max' : 'min'][2]).sub(from).dot(along)));
+    const reach = part => past(part, knuckles, outward), alongThumb = reachOfThumb.clone().normalize(), intoThumb = part => past(part, thumb.bones[1].knuckle, alongThumb) > 1 && kit.centre(part).distanceTo(kit.centre(thumb.bones[1].part)) < 4;
     return {
-      V, turn: kit.turn, fingers, thumb, beyond: kit.own.filter(part => !isBone(part) && reach(part) > 1.5),
-      /* of the faint context: the long tendons from the forearm, which would stay straight where the fingers were, give way too, and what is no part of the arm (the thigh bone the hand hangs beside) is not shown */
-      tendons: kit.context.filter(part => !isBone(part) && reach(part) > 1.5), apart: kit.context.filter(part => isBone(part) && !ARM.test(part.name)),
+      V, turn: kit.turn, fingers, thumb, beyond: kit.own.filter(part => !isBone(part) && (reach(part) > 1.5 || intoThumb(part))),
+      /* of the faint context: the long tendons from the forearm to the fingers and the thumb, which would stay straight where the fingers were, give way too, and what is no part of the arm (the thigh bone the hand hangs beside) is not shown */
+      tendons: kit.context.filter(part => !isBone(part) && (reach(part) > 1.5 || /pollicis/i.test(part.name))), apart: kit.context.filter(part => isBone(part) && !ARM.test(part.name)),
     };
   },
   step(rig, phase, act) {
@@ -126,10 +135,10 @@ export const hand = {
         carry = point => hinge.clone().add(point.clone().sub(knuckle).applyQuaternion(total));
       });
     };
-    rig.fingers.forEach((finger, k) => curl(finger, smooth(0.1 * k, 0.7 + 0.1 * k, fist), CURL));   // the little finger leads
-    curl(rig.thumb, smooth(0.45, 1, fist), [32, 38, 55]);
-    for (const part of rig.beyond) act.fade(part, 1 - smooth(0, 0.25, fist));   // they give way while the hand closes
-    for (const part of rig.tendons) act.dim(part, 1 - smooth(0, 0.25, fist));
+    rig.fingers.forEach((finger, k) => curl(finger, smooth(0.12 + 0.04 * k, 0.88 + 0.04 * k, fist), CURL));   // the little finger leads, by a little
+    curl(rig.thumb, smooth(0.4, 1, fist), [35, 35, 45]);
+    for (const part of rig.beyond) act.fade(part, 1 - smooth(0, 0.16, fist));   // they give way before the fingers start to close
+    for (const part of rig.tendons) act.dim(part, 1 - smooth(0, 0.16, fist));
     for (const part of rig.apart) act.fade(part, 0);
     return { caption: phase < 0.5 ? 'Making a fist: the fingers are curled by tendons from muscles up in the forearm' : 'The fingers contain tendons and bone, and no muscles' };
   },

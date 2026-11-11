@@ -281,9 +281,9 @@ export const STORIES = {
   hand: [
     { title: 'Twenty-seven bones', entry: 'handMetacarpals', labels: ['handMetacarpals', 'handFingerBones'], span: [0, 0.04], seconds: 4,
       say: 'The hand has twenty-seven bones. Most of the muscles that move the fingers are not in the hand at all.' },
-    { title: 'Making a fist', entry: 'handFingerBones', frame: ['handMetacarpals', 'handFingerBones'], from: [0.75, -0.1, 0.65], labels: ['handFingerBones'], keep: 'all', span: [0, 0.5], seconds: 5,
+    { title: 'Making a fist', entry: 'handFingerBones', frame: ['handMetacarpals', 'handFingerBones'], from: [-0.2, -0.35, 1], labels: ['handFingerBones'], keep: 'all', span: [0, 0.5], seconds: 5,
       say: 'To make a fist, tendons pull the fingers closed. The tendons come from muscles up in the forearm.' },
-    { title: 'No muscles in the fingers', entry: 'handFingerBones', frame: ['handFingerBones'], from: [-0.9, 0.2, 0.4], labels: ['handFingerBones'], keep: 'all', span: [0.5, 1], seconds: 5,
+    { title: 'No muscles in the fingers', entry: 'handFingerBones', frame: ['handMetacarpals', 'handFingerBones'], from: [0, -1, 0.75], labels: ['handFingerBones'], keep: 'all', span: [0.5, 1], seconds: 5,
       say: 'The fingers themselves contain bones and tendons, and no muscles.' },
     { title: 'Small muscles in the palm', entry: 'handThenar', frame: ['handThenar', 'handHypothenar', 'handMetacarpals'], labels: ['handThenar', 'handHypothenar', 'handInterossei'], keep: 'all', span: [0, 0.04], seconds: 4,
       say: 'Small muscles in the palm do the fine work. The pad at the base of the thumb moves the thumb across to meet the fingers.' },

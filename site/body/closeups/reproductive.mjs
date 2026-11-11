@@ -12,6 +12,7 @@ export const REGIONS = {
     context: [], direction: [0, -1, 0.45], body: 1,
   },
   clitoris: {
+    frame: ['clitorisGlans', 'clitorisBody', 'clitorisCrura', 'clitorisBulbs'], margin: 2,
     name: 'Clitoris', note: 'glans, body, crura, bulbs and their muscles', sex: 'female', uncovered: true,
     title: 'The clitoris', figure: 'Close-up · The whole clitoris, mostly internal',
     text: { female: 'The glans is only the tip. Behind it the body, two crura and two bulbs make an organ about 10 cm long, wrapped round the urethra and the vaginal opening and fixed to the arch of the pubic bone.' },
@@ -19,6 +20,7 @@ export const REGIONS = {
     context: [{ layer: 'skeleton' }], direction: [0.45, -0.35, 1], body: 0.12,
   },
   femalePelvis: {
+    frame: ['uterus', 'ovary', 'uterineTube', 'vagina', 'bladder'], margin: 1,
     name: 'Female pelvic organs', note: 'uterus, tubes, ovaries, bladder, rectum, pelvic floor', sex: 'female', uncovered: true,
     title: 'The female pelvic organs', figure: 'Close-up · The female pelvis, from the front and left',
     text: { female: 'Three organs sit in a row inside the ring of the pelvis: the bladder in front, the uterus and vagina in the middle, the rectum behind. Ligaments tether them and the pelvic floor holds them up.' },
@@ -33,6 +35,7 @@ export const REGIONS = {
     context: [{ layer: 'skeleton' }], direction: [0.7, 0.1, 1], body: 0.12,
   },
   malePelvis: {
+    frame: ['bladder', 'prostate', 'seminalVesicle', 'urethra'], margin: 2,
     name: 'Male pelvic organs', note: 'bladder, prostate, seminal vesicles, rectum, pelvic floor', sex: 'male', uncovered: true,
     title: 'The male pelvic organs', figure: 'Close-up · The male pelvis, from the front and left',
     text: { male: 'The bladder sits behind the pubic bone with the prostate under it, wrapped round the urethra. The seminal vesicles and the ends of the vas deferens lie between the bladder and the rectum, and the pelvic floor closes the pelvis below.' },

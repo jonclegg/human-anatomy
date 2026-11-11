@@ -175,6 +175,27 @@ test.describe('parts', () => {
     expect(Object.keys(ENTRIES).length).toBeGreaterThanOrEqual(150);
   });
 
+  test('the search goes straight to a part, and the trail leads back up', async ({ page }) => {
+    await open(page, { sex: 'female' });
+    await page.keyboard.press('/');
+    await page.keyboard.type('cornea');
+    await expect(page.locator('#found li').first()).toContainText('Cornea');
+    await page.keyboard.press('Enter');
+    await settle(page);
+    expect(await model(page, () => ({ region: window.bodyModel.state.region, entry: window.bodyModel.state.selection.entry }))).toEqual({ region: 'eye', entry: 'eyeCornea' });
+    await expect(page.locator('#crumbs')).toHaveText('Whole body›Eye›Cornea');
+    await page.locator('#crumbs [data-crumb="region"]').click();
+    expect(await model(page, () => ({ region: window.bodyModel.state.region, selection: window.bodyModel.state.selection }))).toEqual({ region: 'eye', selection: null });
+    /* a main part, by its everyday name, from inside a close-up: out onto the whole body, in its layer */
+    await page.locator('#find').fill('thigh bone');
+    await page.keyboard.press('Enter');
+    await settle(page);
+    expect(await model(page, () => ({ region: window.bodyModel.state.region, view: window.bodyModel.state.view, entry: window.bodyModel.state.selection.entry }))).toEqual({ region: null, view: 'skeleton', entry: 'femur' });
+    await page.locator('#crumbs [data-crumb="body"]').click();
+    await expect(page.locator('#crumbs')).toHaveText('');
+    await page.locator('#find').fill('zzzz');
+    await expect(page.locator('#found')).toContainText('Nothing by that name');
+  });
   test('every structure is named and can be found in the parts list', async ({ page }) => {
     await open(page);
     const names = await model(page, () => window.bodyModel.body().parts.map(part => part.name));
@@ -360,7 +381,7 @@ test.describe('close-ups', () => {
     await expect.poll(() => page.locator('#labels .tag:not([hidden])').allTextContents()).toEqual(expect.arrayContaining([expect.stringContaining('Right ventricle'), expect.stringContaining('Pulmonary valve')]));
     await page.locator('#tourBtn').click();
     await page.keyboard.press('Escape');
-    await page.locator('#inspector [data-leave]').click();
+    await page.locator('#crumbs [data-leave]').click();
     await settle(page);
     expect(await model(page, () => ({ region: window.bodyModel.state.region, femur: window.bodyModel.entries().includes('femur'), numbered: window.bodyModel.entries().length }))).toEqual({ region: null, femur: true, numbered: expect.any(Number) });
     await expect(page.locator('#views [data-view="body"]')).toHaveAttribute('aria-pressed', 'true');

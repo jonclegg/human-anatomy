@@ -8,7 +8,7 @@ const inChest = (part, height) => part.centre[1] > 0.69 * height;
 
 export const REGIONS = {
   heart: {
-    frame: ['heartVentricularWall'], margin: 5,
+    frame: ['heartVentricularWall'], margin: 2.5,
     name: 'Heart', note: 'chambers, valves, coronary arteries and great vessels',
     title: 'The heart', figure: 'Close-up · The heart, from the front and left',
     text: { any: 'The heart is two pumps side by side. The right atrium and ventricle send blood to the lungs, the left atrium and ventricle send it round the body, and four valves keep it moving one way. Its own muscle is fed by the coronary arteries on its surface.' },
@@ -49,6 +49,7 @@ export const REGIONS = {
     context: [{ layer: 'skeleton' }], direction: [0.45, 0.1, 1], body: 0.08,
   },
   breast: {
+    frame: ['breastFat', 'breastLobes'], margin: 2,
     name: 'Breast', note: 'lobes, ducts, fat, ligaments, nipple and areola', sex: 'female',
     title: 'The breast', figure: 'Close-up · The left breast, from the front and left',
     text: { female: 'The breast is a gland set in fat on the front of the chest muscle. Fifteen to twenty lobes drain by ducts to the nipple, fibrous bands hold it to the skin and the chest wall, and most of its lymph drains to the nodes of the armpit. The left side is shown.' },

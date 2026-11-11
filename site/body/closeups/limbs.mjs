@@ -14,7 +14,7 @@ export const REGIONS = {
     context: [{ layer: 'skeleton' }], direction: [-0.6, 0.15, 0.8], body: 0.08,
   },
   elbow: {
-    frame: ['elbowCapsule'], margin: 9,
+    frame: ['elbowCapsule'], margin: 7.5,
     name: 'Elbow and forearm', note: 'hinge and pivot, the forearm muscles, three nerves',
     title: 'The elbow and forearm', figure: 'The right arm from the front and the outer side, palm forward',
     text: { any: 'A hinge between the humerus and ulna, with a pivot beside it that lets the radius roll over the ulna to turn the palm. The muscles that move the wrist and fingers start here, and three nerves and one artery cross the joint.' },
@@ -42,7 +42,7 @@ export const REGIONS = {
     context: [{ layer: 'skeleton' }], direction: [-0.7, 0.1, 0.7], body: 0.08,
   },
   knee: {
-    frame: ['kneePatella'], margin: 9,
+    frame: ['kneePatella'], margin: 7,
     name: 'Knee', note: 'bones, cruciate ligament, bursae and the hollow behind',
     title: 'The knee', figure: 'The right knee, from the front and the outer side',
     text: { any: 'The largest joint in the body: two rounded condyles of the femur resting on the nearly flat top of the tibia, with the patella in front. Ligaments and muscles, not the shape of the bones, keep it stable. The vessels and nerves of the leg pass through the hollow behind it.' },

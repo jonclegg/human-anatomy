@@ -4,171 +4,171 @@
  "narration": {
   "view:body": {
    "file": "view-body.mp3",
-   "hash": "3a5b7fe059"
+   "hash": "bde0e1c5cf"
   },
   "view:muscles": {
    "file": "view-muscles.mp3",
-   "hash": "9c1244e696"
+   "hash": "f64fd6ec0b"
   },
   "view:organs": {
    "file": "view-organs.mp3",
-   "hash": "4dbea7b806"
+   "hash": "387aeef6d8"
   },
   "view:vessels": {
    "file": "view-vessels.mp3",
-   "hash": "c4043a261c"
+   "hash": "6a88a8d58d"
   },
   "view:nerves": {
    "file": "view-nerves.mp3",
-   "hash": "89763bd218"
+   "hash": "82c60e0d04"
   },
   "view:skeleton": {
    "file": "view-skeleton.mp3",
-   "hash": "e216e6b8e5"
+   "hash": "28f6f8f73b"
   },
   "region:heart": {
    "file": "region-heart.mp3",
-   "hash": "ed5141c12e"
+   "hash": "e187efb2cf"
   },
   "entry:heartRightAtrium": {
    "file": "entry-heartRightAtrium.mp3",
-   "hash": "63403d6a52"
+   "hash": "943477e9c2"
   },
   "entry:heartTricuspidValve": {
    "file": "entry-heartTricuspidValve.mp3",
-   "hash": "fc89852100"
+   "hash": "465973049b"
   },
   "entry:heartRightVentricle": {
    "file": "entry-heartRightVentricle.mp3",
-   "hash": "d9354d0151"
+   "hash": "d7611a5c3c"
   },
   "entry:heartPulmonaryValve": {
    "file": "entry-heartPulmonaryValve.mp3",
-   "hash": "2fabf3351a"
+   "hash": "f8c15b6d8d"
   },
   "entry:heartLeftAtrium": {
    "file": "entry-heartLeftAtrium.mp3",
-   "hash": "2113c3c1d1"
+   "hash": "e058dfc2e9"
   },
   "entry:heartMitralValve": {
    "file": "entry-heartMitralValve.mp3",
-   "hash": "c0f2e1a73a"
+   "hash": "53b250d7f9"
   },
   "entry:heartLeftVentricle": {
    "file": "entry-heartLeftVentricle.mp3",
-   "hash": "0a993c9dc8"
+   "hash": "ef6efde324"
   },
   "entry:heartAorticValve": {
    "file": "entry-heartAorticValve.mp3",
-   "hash": "48c6aa5a11"
+   "hash": "3d8fd8dd51"
   },
   "region:lungs": {
    "file": "region-lungs.mp3",
-   "hash": "00b377ffc2"
+   "hash": "25a8f73605"
   },
   "region:digestive": {
    "file": "region-digestive.mp3",
-   "hash": "65f4c5e0fa"
+   "hash": "cb5cb8da5d"
   },
   "region:liver": {
    "file": "region-liver.mp3",
-   "hash": "76d7c26f96"
+   "hash": "f637b8347d"
   },
   "region:kidney": {
    "file": "region-kidney.mp3",
-   "hash": "ebc37954d7"
+   "hash": "d17537e3fe"
   },
   "region:breast": {
    "file": "region-breast.mp3",
-   "hash": "b5d636cc88"
+   "hash": "8f42aed5bc"
   },
   "region:lymphatic": {
    "file": "region-lymphatic.mp3",
-   "hash": "3491c7fa59"
+   "hash": "849f30d3a5"
   },
   "region:brain": {
    "file": "region-brain.mp3",
-   "hash": "21ef83c528"
+   "hash": "17cbe7c7f8"
   },
   "region:brainDeep": {
    "file": "region-brainDeep.mp3",
-   "hash": "78ada3a815"
+   "hash": "f3309a096d"
   },
   "region:eye": {
    "file": "region-eye.mp3",
-   "hash": "f510c3e2bb"
+   "hash": "8619d884bf"
   },
   "region:skull": {
    "file": "region-skull.mp3",
-   "hash": "3a58368267"
+   "hash": "4a0773314b"
   },
   "region:teeth": {
    "file": "region-teeth.mp3",
-   "hash": "9b04176ffb"
+   "hash": "edf349b1fd"
   },
   "region:face": {
    "file": "region-face.mp3",
-   "hash": "fe5d324f8b"
+   "hash": "70a4e0ac6c"
   },
   "region:mouth": {
    "file": "region-mouth.mp3",
-   "hash": "efe571b4f1"
+   "hash": "59a6617ec2"
   },
   "region:larynx": {
    "file": "region-larynx.mp3",
-   "hash": "21236a95c7"
+   "hash": "fc249320f9"
   },
   "region:cranialNerves": {
    "file": "region-cranialNerves.mp3",
-   "hash": "0471c12478"
+   "hash": "21e19c43c6"
   },
   "region:shoulder": {
    "file": "region-shoulder.mp3",
-   "hash": "76054e0371"
+   "hash": "bd89a75e6f"
   },
   "region:elbow": {
    "file": "region-elbow.mp3",
-   "hash": "cfac609c05"
+   "hash": "e32ad52f7f"
   },
   "region:hand": {
    "file": "region-hand.mp3",
-   "hash": "716ed7d721"
+   "hash": "049a14b142"
   },
   "region:hip": {
    "file": "region-hip.mp3",
-   "hash": "06879af131"
+   "hash": "d7bf78496c"
   },
   "region:knee": {
    "file": "region-knee.mp3",
-   "hash": "7eb2118f2f"
+   "hash": "6e90e88790"
   },
   "region:foot": {
    "file": "region-foot.mp3",
-   "hash": "9d6cf7894c"
+   "hash": "26bd87e02a"
   },
   "region:spine": {
    "file": "region-spine.mp3",
-   "hash": "9a84fd682f"
+   "hash": "81c18dd1fc"
   },
   "region:femalePelvis": {
    "file": "region-femalePelvis.mp3",
-   "hash": "1ea60da236"
+   "hash": "1cbe5eab10"
   },
   "region:vulva": {
    "file": "region-vulva.mp3",
-   "hash": "e3320d637c"
+   "hash": "01ae13fdcb"
   },
   "region:clitoris": {
    "file": "region-clitoris.mp3",
-   "hash": "b46ec7b8b9"
+   "hash": "0d8d040c75"
   },
   "region:malePelvis": {
    "file": "region-malePelvis.mp3",
-   "hash": "bf04a833d2"
+   "hash": "257d82e25b"
   },
   "region:penis": {
    "file": "region-penis.mp3",
-   "hash": "1d1e194322"
+   "hash": "75c80d96f8"
   },
   "story:heart:0": {
    "file": "story-heart-0.mp3",

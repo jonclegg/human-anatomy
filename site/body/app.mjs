@@ -3,7 +3,7 @@ import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
 import { LAYER_INFO, GROUP_INFO, VIEW_INFO, TOUR, BUGS, DIFFERENCES, GAPS, colourOf, SHOWN_WHEN_CHOSEN } from './parts.mjs';
-import { REGIONS, ALL, indexParts, regionContext, sideOfPart } from './closeups.mjs';
+import { REGIONS, DETAILS, ALL, indexParts, regionContext, sideOfPart } from './closeups.mjs';
 import { MOTIONS } from './motions.mjs';
 import { STORIES } from './stories.mjs';
 performance.mark('body:module-start');
@@ -39,7 +39,7 @@ class TurntableControls extends THREE.EventDispatcher {
   constructor(camera, element) {
     super();
     this.camera = camera; this.element = element; this.target = new THREE.Vector3();
-    this.minDistance = 12; this.maxDistance = 900; this.rotateSpeed = 0.005;   // radians per pixel
+    this.minDistance = 5; this.maxDistance = 900; this.rotateSpeed = 0.005;   // radians per pixel
     this.pointers = new Map(); this.panning = false;
     this.last = { position: new THREE.Vector3(), target: new THREE.Vector3(), up: new THREE.Vector3() };
     element.addEventListener('pointerdown', event => this.pointerDown(event));
@@ -741,6 +741,8 @@ function motionKit() {
       }
       return path;
     },
+    /* straight lines from point to point: the way of a ray of light */
+    path(through) { const path = new THREE.CurvePath(); through.slice(1).forEach((point, k) => path.add(new THREE.LineCurve3(through[k], point))); return path; },
     /* a smooth curve through points, with how far along it (0 to 1) a place lies */
     curve(through) {
       const curve = new THREE.CatmullRomCurve3(through, false, 'centripetal'), spot = V(0, 0, 0);
@@ -1112,7 +1114,6 @@ function renderInspector() {
     const items = body ? intro.items.filter(([key]) => body.entries[key]) : [];
     const eyebrow = state.region ? `Close-up · ${body.order.length} parts` : `Layer ${String(Math.round(state.peel) + 1).padStart(2, '0')} / ${String(PEEL.length).padStart(2, '0')}`;
     el.innerHTML = `${handle}
-      ${state.region ? '<button type="button" class="quiet leave" data-leave>←  Whole body</button>' : ''}
       <div class="eyebrow">${eyebrow}</div>
       <div class="welcome"><h2>${escapeHtml(intro.title)}</h2></div>
       <p class="lead">${escapeHtml(intro.text[state.sex] || intro.text.any)}</p>
@@ -1223,6 +1224,7 @@ function syncUI() {
   speak();
   $('peel').value = Math.round(state.peel * 100);
   $('peel').parentElement.hidden = !!state.region;   // the peel is of the whole body
+  renderCrumbs();
   renderSide();
   $('closeups').hidden = !state.closeups;
   $('closeupsBtn').setAttribute('aria-expanded', String(state.closeups));
@@ -1419,7 +1421,7 @@ function viewFrame() {
   if (state.region) {
     /* framed on the parts it names (a joint, where the bones meeting at it are far longer), else on all of its parts */
     const region = closeUp(), framed = region.frame ? region.frame.flatMap(key => body.entries[key] || []) : [...body.around.own];
-    return fitFrame(boxPoints(framed, region.margin ?? 1), view.direction || FRONT, V(0, 1, 0), 0.9);
+    return fitFrame(boxPoints(framed, region.margin ?? 0.5), view.direction || FRONT, V(0, 1, 0), 1);
   }
   const parts = body.parts.filter(part => part.layer === 'skin' || part.layer === 'skeleton').map(part => part.index);
   return fitFrame(boxPoints(parts), view.direction || FRONT, V(0, 1, 0), 1);
@@ -1434,7 +1436,8 @@ function focusSelection(fromView = null) {
   if (!parts.length) return;
   const direction = fromView ? (fromView.direction || FRONT).clone() : camera.position.clone().sub(controls.target).normalize();
   const size = parts.reduce((s, index) => Math.max(s, ...body.parts[index].max.map((v, axis) => v - body.parts[index].min[axis])), 0);
-  const frame = fitFrame(boxPoints(parts, Math.max(4, size * 0.25)), direction, V(0, 1, 0), 0.7);
+  /* close enough that the part is what the picture is of: in a close-up, where everything is small, closer still */
+  const frame = fitFrame(boxPoints(parts, Math.max(state.region ? 0.8 : 2.5, size * 0.2)), direction, V(0, 1, 0), 0.85);
   flyTo(frame.position, frame.target, V(0, 1, 0));
 }
 for (const button of $('views').children) button.addEventListener('click', () => { stopTour(); glideTo(button.dataset.view); });
@@ -1458,6 +1461,96 @@ document.addEventListener('keydown', event => {   // arrow keys step from part t
   if (event.key === ' ' && state.tour && !event.target.closest('button, a, [role="button"]')) { event.preventDefault(); playTour(!state.tour.playing); }   // the space bar pauses a tour, as it does a film
 });
 for (const button of $('sexSwitch').children) button.addEventListener('click', () => switchSex(button.dataset.sex));
+
+/* ---------- Where you are, and finding a part ---------- */
+/* The trail from the whole body down to what is on show: each step back up is a button. */
+function renderCrumbs() {
+  const region = closeUp(), selection = state.selection, step = telling();
+  const trail = [['body', 'Whole body']];
+  if (region) trail.push(['region', region.name]);
+  else if (state.view !== 'body' && !state.blend) { const button = $('views').querySelector(`[data-view="${state.view}"]`); trail.push(['view', (button.querySelector('.long') || button).textContent]); }
+  if (step) trail.push(['step', step.title]);
+  else if (selection) trail.push(['part', selectionName()]);
+  $('crumbs').classList.toggle('below-layers', !region);
+  $('crumbs').innerHTML = trail.length === 1 ? '' : trail.map(([kind, name], k) => (k === trail.length - 1 ? `<b aria-current="page">${escapeHtml(name)}</b>`
+    : `<button type="button" data-crumb="${kind}"${kind === 'body' && region ? ' data-leave' : ''}>${escapeHtml(name)}</button><i aria-hidden="true">›</i>`)).join('');
+}
+$('crumbs').addEventListener('click', event => {
+  const kind = event.target.closest('[data-crumb]')?.dataset.crumb;
+  if (!kind) return;
+  stopTour();
+  if (kind === 'body') { if (!state.region) { select(null); setView('body'); } return; }   // out of a close-up: the document's handler leaves it (data-leave)
+  select(null); const frame = viewFrame(); flyTo(frame.position, frame.target, V(0, 1, 0));
+});
+/* Everything that can be found, for this body: the close-ups, the main parts, the parts a close-up adds, and every named
+   structure. Each says where it is and how to get there. */
+let findable = null;
+function findables() {
+  if (findable?.body === body) return findable.list;
+  const main = body.indexes[''] ||= indexParts(body.parts, body.sex, body.height), list = [];
+  const regions = Object.values(REGIONS).filter(region => !region.sex || region.sex === body.sex);
+  for (const region of regions) list.push({ name: region.name, words: `${region.name} ${region.title} ${region.note}`, note: region.note, kind: 'Close-up', rank: 0, go: () => setRegion(region.id) });
+  for (const key of main.order) { const entry = ALL[key]; list.push({ name: entry.name, words: `${entry.name} ${entry.short || ''} ${entry.aka || ''}`, note: entry.aka || '', kind: LAYER_INFO[body.parts[main.entries[key][0]].layer].name, rank: 1, go: () => goEntry(key, null) }); }
+  for (const region of regions) for (const key of region.parts) {
+    const entry = DETAILS[key];
+    if (!entry || (entry.sex && entry.sex !== body.sex)) continue;
+    list.push({ name: entry.name, words: `${entry.name} ${entry.short || ''} ${entry.aka || ''}`, note: entry.aka || '', kind: `In ${region.name}`, rank: 2, go: () => goEntry(key, region.id) });
+  }
+  const named = new Set(list.map(item => item.name.toLowerCase()));
+  for (const part of body.parts) if (part.layer !== 'skin' && !named.has(part.name.toLowerCase())) list.push({ name: part.name, words: part.name, note: '', kind: LAYER_INFO[part.layer].name, rank: 3, go: () => goPart(part.index) });
+  for (const item of list) item.words = item.words.toLowerCase();
+  findable = { body, list };
+  return list;
+}
+/* straight to a part: into its close-up if it belongs to one, else onto the whole body in the layer it is part of */
+function goEntry(key, region) {
+  if (region) { if (state.region !== region) applyRegion(region); }
+  else if (!(state.region && body.order.includes(key))) applyView(viewForLayer(body.parts[(body.indexes[''].entries[key])[0]].layer));
+  if (!body.entries[key]) { const frame = viewFrame(); flyTo(frame.position, frame.target, V(0, 1, 0)); return; }   // this body's close-up lacks it: the close-up itself
+  selectEntry(key); focusSelection(viewInfo());
+}
+function goPart(index) {
+  applyView(viewForLayer(body.parts[index].layer));
+  selectPart(index); focusSelection(viewInfo());
+}
+/* best first: a name that starts with what was typed, then a word in it that does, then anything that holds it; close-ups and main parts before lesser ones */
+function find(query) {
+  const words = query.toLowerCase().split(/\s+/).filter(Boolean);
+  if (!words.length) return [];
+  const score = item => { const name = item.name.toLowerCase(); return (name.startsWith(words[0]) ? 0 : new RegExp(`\\b${words[0].replace(/[^a-z0-9]/g, '.')}`).test(name) ? 1 : name.includes(words[0]) ? 2 : 3) * 10 + item.rank; };
+  return findables().filter(item => words.every(word => item.words.includes(word))).map(item => [score(item), item]).sort((a, b) => a[0] - b[0] || a[1].name.length - b[1].name.length).slice(0, 9).map(([, item]) => item);
+}
+const finder = { found: [], at: 0 };
+function showFound() {
+  const box = $('find'), list = $('found'), query = box.value.trim();
+  finder.found = find(query); finder.at = 0;
+  list.hidden = !query; box.setAttribute('aria-expanded', String(!!query));
+  list.innerHTML = finder.found.length ? finder.found.map((item, k) => `<li role="option" data-found="${k}" aria-selected="${k === 0}"><b>${escapeHtml(item.name)}</b><em>${escapeHtml(item.kind)}</em>${item.note ? `<span>${escapeHtml(item.note)}</span>` : ''}</li>`).join('')
+    : '<li class="none">Nothing by that name in this body.</li>';
+}
+function takeFound(k) {
+  const item = finder.found[k];
+  if (!item) return;
+  stopTour(); state.drawer = false; state.closeups = false;
+  $('find').value = ''; $('found').hidden = true; $('find').setAttribute('aria-expanded', 'false'); $('find').blur();
+  item.go();
+}
+$('find').addEventListener('input', showFound);
+$('find').addEventListener('focus', () => { if ($('find').value.trim()) showFound(); });
+$('find').addEventListener('keydown', event => {
+  if (event.key === 'Enter') { event.preventDefault(); takeFound(finder.at); }
+  else if (event.key === 'Escape') { $('find').value = ''; $('found').hidden = true; $('find').blur(); }
+  else if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+    event.preventDefault(); if (!finder.found.length) return;
+    finder.at = (finder.at + (event.key === 'ArrowDown' ? 1 : -1) + finder.found.length) % finder.found.length;
+    [...$('found').children].forEach((row, k) => row.setAttribute('aria-selected', String(k === finder.at)));
+    $('found').children[finder.at].scrollIntoView({ block: 'nearest' });
+  }
+});
+$('found').addEventListener('pointerdown', event => { const row = event.target.closest('[data-found]'); if (row) { event.preventDefault(); takeFound(+row.dataset.found); } });
+document.addEventListener('pointerdown', event => { if (!event.target.closest('#finder')) $('found').hidden = true; });
+/* "/" starts a search from anywhere */
+document.addEventListener('keydown', event => { if (event.key === '/' && !event.target.closest('input, textarea, select')) { event.preventDefault(); $('find').focus(); } });
 
 /* switching body keeps the view and, where the other body has it, the selected part (or its equivalent) */
 async function switchSex(sex) {
@@ -1545,7 +1638,7 @@ function placeSpots(width, height) {
 }
 function measureTags() { for (const [key, tag] of Object.entries(tagEls)) { tag.hidden = false; tagWidths[key] = tag.offsetWidth; tag.hidden = true; } invalidate(); }
 const projected = new THREE.Vector3();
-const OVERLAYS = ['#inspector', '#side', '.peel', '#dock', '#drawer', '#closeups', '.masthead h1', '.top-right', '.rail', '.views', '.hint', '.figure', '#isolateChip', '#fetching'];
+const OVERLAYS = ['#inspector', '#side', '#crumbs', '#finder', '.peel', '#dock', '#drawer', '#closeups', '.masthead h1', '.top-right', '.rail', '.views', '.hint', '.figure', '#isolateChip', '#fetching'];
 const leaders = document.createElementNS('http://www.w3.org/2000/svg', 'svg'); leaders.id = 'leaders'; labelsEl.prepend(leaders);
 const overlaps = (a, b) => a[0] < b[2] && a[2] > b[0] && a[1] < b[3] && a[3] > b[1];
 /* a label's anchor: of an entry's parts, the one whose dot shows on screen and sits nearest the camera */

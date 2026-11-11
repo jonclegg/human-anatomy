@@ -24,7 +24,7 @@ export const lungs = {
     return {
       sides, diaphragm, floor: V((dome.min.x + dome.max.x) / 2, dome.min.y, (dome.min.z + dome.max.z) / 2), cage, spine: V(0, (ribs.min.y + ribs.max.y) / 2, ribs.min.z + 3), V,
       /* the air is drawn in and breathed out again: the same drops, down and back */
-      streams: sides.map(({ way }) => ({ curve: way.curve, colour: AIR, count: 150, size: 0.9, spread: 0.45, speed: (where, phase) => (phase < 0.42 ? 0.5 * Math.sin(Math.PI * phase / 0.42) : phase < 0.95 ? -0.4 * Math.sin(Math.PI * (phase - 0.42) / 0.53) : 0) })),
+      streams: sides.map(({ way }) => ({ curve: way.curve, colour: AIR, count: 360, size: 0.54, spread: 0.45, speed: (where, phase) => (phase < 0.42 ? 0.5 * Math.sin(Math.PI * phase / 0.42) : phase < 0.95 ? -0.4 * Math.sin(Math.PI * (phase - 0.42) / 0.53) : 0) })),
     };
   },
   step(rig, phase, act) {
@@ -88,11 +88,11 @@ export const liver = {
     return {
       V, gallbladder, store, liver: kit.find(/^Hepatovenous segment/), ducts: kit.entry('liverHepaticDucts'),
       streams: [
-        { curve: curve([...portal, kit.centre(named(/^Right portal vein$/)), right]), colour: '#8a63d2', count: 150, size: 0.9, spread: 0.3, speed: () => 0.16 },   // from the gut: rich in food, poor in oxygen
-        { curve: curve([kit.centre(named(/^Celiac trunk$/)), kit.centre(named(/^Common hepatic artery$/)), kit.centre(named(/^Hepatic artery proper$/)), left.clone().lerp(right, 0.4)]), colour: FRESH, count: 70, size: 0.7, spread: 0.15, speed: (where, phase, time) => 0.2 + 0.25 * Math.max(0, Math.sin(time * 5)) },   // from the heart, in pulses
-        { curve: curve([right, drain, out, out.clone().add(V(0, 3.5, 0))]), colour: SPENT, count: 130, size: 0.9, spread: 0.3, speed: () => 0.18 },
-        { curve: curve([right.clone().lerp(left, 0.3), ...duct, cystic, store]), colour: BILE, count: 60, size: 0.7, spread: 0.12, speed: () => 0.14, shown: phase => 1 - during(phase, 0.58, 1) },
-        { curve: curve([store, cystic, duct.at(-1).clone().lerp(gut, 0.5), gut]), colour: BILE, count: 90, size: 0.8, spread: 0.15, speed: () => 0.45, shown: phase => during(phase, 0.62, 0.98) },
+        { curve: curve([...portal, kit.centre(named(/^Right portal vein$/)), right]), colour: '#8a63d2', count: 360, size: 0.54, spread: 0.3, speed: () => 0.16 },   // from the gut: rich in food, poor in oxygen
+        { curve: curve([kit.centre(named(/^Celiac trunk$/)), kit.centre(named(/^Common hepatic artery$/)), kit.centre(named(/^Hepatic artery proper$/)), left.clone().lerp(right, 0.4)]), colour: FRESH, count: 168, size: 0.42, spread: 0.15, speed: (where, phase, time) => 0.2 + 0.25 * Math.max(0, Math.sin(time * 5)) },   // from the heart, in pulses
+        { curve: curve([right, drain, out, out.clone().add(V(0, 3.5, 0))]), colour: SPENT, count: 312, size: 0.54, spread: 0.3, speed: () => 0.18 },
+        { curve: curve([right.clone().lerp(left, 0.3), ...duct, cystic, store]), colour: BILE, count: 144, size: 0.42, spread: 0.12, speed: () => 0.14, shown: phase => 1 - during(phase, 0.58, 1) },
+        { curve: curve([store, cystic, duct.at(-1).clone().lerp(gut, 0.5), gut]), colour: BILE, count: 216, size: 0.48, spread: 0.15, speed: () => 0.45, shown: phase => during(phase, 0.62, 0.98) },
       ],
     };
   },
@@ -118,12 +118,12 @@ export const kidney = {
     const urethra = kit.find(/^Urethra$/, kit.shown);
     const curve = points => kit.curve(points).curve;
     const streams = [
-      { curve: curve([level(aorta, middle.y + 7), level(aorta, middle.y + 1), kit.centre(artery), hilum, middle]), colour: FRESH, count: 110, size: 0.8, spread: 0.22, speed: (where, phase, time) => 0.22 + 0.3 * Math.max(0, Math.sin(time * 5)) },
-      { curve: curve([middle, hilum, kit.centre(vein), level(cava, middle.y + 1), level(cava, middle.y + 8)]), colour: SPENT, count: 110, size: 0.8, spread: 0.22, speed: () => 0.24 },
+      { curve: curve([level(aorta, middle.y + 7), level(aorta, middle.y + 1), kit.centre(artery), hilum, middle]), colour: FRESH, count: 264, size: 0.48, spread: 0.22, speed: (where, phase, time) => 0.22 + 0.3 * Math.max(0, Math.sin(time * 5)) },
+      { curve: curve([middle, hilum, kit.centre(vein), level(cava, middle.y + 1), level(cava, middle.y + 8)]), colour: SPENT, count: 264, size: 0.48, spread: 0.22, speed: () => 0.24 },
       /* urine is not poured down the ureter but squeezed down it, a spurt at a time (a few a minute in life; quicker here, to be seen) */
-      { curve: curve([middle, hilum, ...ureter, pool]), colour: URINE, count: 110, size: 0.75, spread: 0.12, speed: (where, phase, time) => 0.06 * (0.15 + 1.9 * Math.sin(Math.PI * (where * 5 - time * 0.45)) ** 2), shown: phase => 1 - during(phase, 0.8, 1) },
+      { curve: curve([middle, hilum, ...ureter, pool]), colour: URINE, count: 264, size: 0.45, spread: 0.12, speed: (where, phase, time) => 0.06 * (0.15 + 1.9 * Math.sin(Math.PI * (where * 5 - time * 0.45)) ** 2), shown: phase => 1 - during(phase, 0.8, 1) },
     ];
-    if (urethra.length) { const way = kit.line(urethra, { from: pool }); streams.push({ curve: curve([pool, ...way, way.at(-1).clone().add(down.multiplyScalar(2))]), colour: URINE, count: 90, size: 0.8, spread: 0.1, speed: () => 0.7, shown: phase => during(phase, 0.82, 0.99) }); }
+    if (urethra.length) { const way = kit.line(urethra, { from: pool }); streams.push({ curve: curve([pool, ...way, way.at(-1).clone().add(down.multiplyScalar(2))]), colour: URINE, count: 216, size: 0.48, spread: 0.1, speed: () => 0.7, shown: phase => during(phase, 0.82, 0.99) }); }
     return { bladder, pool, organ, streams };
   },
   step(rig, phase, act) {
@@ -172,10 +172,10 @@ export const breast = {
     /* some fifteen to twenty lobes, set round the nipple like the segments of an orange, each with its own duct */
     const milk = Array.from({ length: 9 }, (_, k) => {
       const turn = 2 * Math.PI * k / 9, far = gland.clone().add(across.clone().multiplyScalar(Math.cos(turn) * size.x * 0.36)).add(upward.clone().multiplyScalar(Math.sin(turn) * size.y * 0.36));
-      return { curve: curve([far, far.clone().lerp(sinuses, 0.6), sinuses, nipple, nipple.clone().add(outward.clone().multiplyScalar(0.8))]), colour: '#fff6e0', count: 26, size: 0.55, spread: 0.1, speed: () => 0.22, shown: phase => during(phase, 0, 0.55) };
+      return { curve: curve([far, far.clone().lerp(sinuses, 0.6), sinuses, nipple, nipple.clone().add(outward.clone().multiplyScalar(0.8))]), colour: '#fff6e0', count: 62, size: 0.33, spread: 0.1, speed: () => 0.22, shown: phase => during(phase, 0, 0.55) };
     });
     return { lobes, ducts: [...kit.entry('breastLactiferousDucts'), ...kit.entry('breastLactiferousSinuses')], nodes,
-      streams: [...milk, { curve: curve([gland, gland.clone().lerp(kit.centre(nodes), 0.5).add(V(0, 0.8, 0)), kit.centre(nodes)]), colour: LYMPH, count: 60, size: 0.9, spread: 0.35, speed: () => 0.12, shown: phase => during(phase, 0.5, 1) }] };
+      streams: [...milk, { curve: curve([gland, gland.clone().lerp(kit.centre(nodes), 0.5).add(V(0, 0.8, 0)), kit.centre(nodes)]), colour: LYMPH, count: 144, size: 0.54, spread: 0.35, speed: () => 0.12, shown: phase => during(phase, 0.5, 1) }] };
   },
   step(rig, phase, act) {
     light(act, rig.lobes, 0.3 * during(phase, 0, 0.3)); light(act, rig.ducts, 0.4 * during(phase, 0.15, 0.55)); light(act, rig.nodes, 0.6 * during(phase, 0.6, 1));

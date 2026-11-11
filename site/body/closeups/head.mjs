@@ -19,12 +19,13 @@ export const REGIONS = {
     context: [{ layer: 'nerves', pattern: /^cerebellum$|^pons$|^medulla oblongata$|^midbrain$/i }], direction: [1, 0.3, 0.5], body: 0.06,
   },
   eye: {
+    frame: ['eyeSclera'], margin: 1.1,
     name: 'Eye', note: 'eyeball, eye muscles and tear system',
     title: 'The eye', figure: 'Close-up · The right eye in its orbit',
     text: { any: 'The right eye: the three coats of the eyeball and the clear parts that focus light, the six muscles that aim it, the nerve that leaves it, and the glands and ducts that keep it wet.' },
     parts: ['eyeCornea', 'eyeSclera', 'eyeAnteriorChamber', 'eyeIris', 'eyeLens', 'eyeChoroid', 'eyeRetina', 'eyeVitreousBody', 'eyeOpticNerve',
       'eyeSuperiorRectus', 'eyeInferiorRectus', 'eyeMedialRectus', 'eyeLateralRectus', 'eyeObliques', 'eyeLacrimalApparatus', 'eyeEyelids'],
-    context: [{ layer: 'skeleton' }], direction: [-0.6, 0.2, 1], body: 0.06,
+    context: [{ layer: 'skeleton' }], direction: [-0.9, 0.2, 0.75], body: 0.06,
   },
   skull: {
     name: 'Skull and jaw', note: 'the bones of the skull one by one, the teeth and the hyoid',
@@ -35,6 +36,7 @@ export const REGIONS = {
     context: [], direction: [0.7, 0.1, 1], body: 0.06,
   },
   teeth: {
+    frame: ['teethCentralIncisors', 'teethSecondMolars'], margin: 1.5,
     name: 'Teeth', note: 'incisors, canines, premolars and molars, gums and jaws',
     title: 'The teeth', figure: 'Close-up · The permanent teeth in the jaws',
     text: { any: 'The permanent teeth by type, from the cutting incisors at the front to the grinding molars at the back, with the gums and the two jaws that hold them.' },
@@ -59,6 +61,7 @@ export const REGIONS = {
     context: [{ layer: 'skeleton' }], direction: [1, 0.1, 0.5], body: 0.06,
   },
   larynx: {
+    frame: ['hyoid', 'larynxThyroidCartilage', 'larynxCricoidCartilage', 'larynxThyroidGland'], margin: 1,
     name: 'Larynx and thyroid', note: 'cartilages, vocal folds, laryngeal muscles, trachea and thyroid',
     title: 'The larynx and thyroid', figure: 'Close-up · The larynx, trachea and thyroid gland',
     text: { any: 'The voice box from the hyoid bone down to the trachea: its cartilages and membranes, the vocal folds inside, the small muscles that move them, and the thyroid and parathyroid glands wrapped around its lower end.' },

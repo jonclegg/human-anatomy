@@ -41,8 +41,8 @@ export const malePelvis = {
     return {
       bladder: kit.one(/^Urinary bladder$/), pool, adders: [...kit.entry('seminalVesicle'), ...kit.entry('prostate')],
       streams: [
-        { curve: curve([pool, ...pipe]), colour: URINE, count: 130, size: 0.8, spread: 0.12, speed: () => 0.5, shown: phase => during(phase, 0.04, 0.46) },
-        ...ducts.map(duct => ({ curve: curve([...duct, gland, ...after]), colour: SEED, count: 80, size: 0.7, spread: 0.08, speed: () => 0.3, shown: phase => during(phase, 0.54, 0.98) })),
+        { curve: curve([pool, ...pipe]), colour: URINE, count: 312, size: 0.48, spread: 0.12, speed: () => 0.5, shown: phase => during(phase, 0.04, 0.46) },
+        ...ducts.map(duct => ({ curve: curve([...duct, gland, ...after]), colour: SEED, count: 192, size: 0.42, spread: 0.08, speed: () => 0.3, shown: phase => during(phase, 0.54, 0.98) })),
       ],
     };
   },
@@ -62,7 +62,7 @@ export const penis = {
       const stored = kit.line(coil, { from: kit.end(coil, kit.V(0, 1, 0), 0.6), radius: 0.6 }), away = kit.line(duct, { from: stored.at(-1), radius: 0.6 });
       return { maker, coil, way: kit.curve([kit.centre(maker), ...stored, ...away]) };
     });
-    return { makers: sides.map(side => side.maker), coils: sides.map(side => side.coil), streams: sides.map(({ way }) => ({ curve: way.curve, colour: SEED, count: 140, size: 0.6, spread: 0.08, speed: () => 0.07 })) };
+    return { makers: sides.map(side => side.maker), coils: sides.map(side => side.coil), streams: sides.map(({ way }) => ({ curve: way.curve, colour: SEED, count: 336, size: 0.36, spread: 0.08, speed: () => 0.07 })) };
   },
   step(rig, phase, act) {
     light(act, rig.makers, 0.5 * during(phase, 0, 0.5, 0.1)); light(act, rig.coils, 0.6 * during(phase, 0.5, 1, 0.1));

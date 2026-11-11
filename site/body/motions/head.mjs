@@ -44,7 +44,7 @@ export const brainDeep = {
     const third = middle(/^Third ventricle$/), duct = middle(/^Cerebral aqueduct$/), fourth = middle(/^Fourth ventricle$/), door = middle(/^Interventricular foramen$/);
     const streams = [/^Left lateral ventricle$/, /^Right lateral ventricle$/].map(pattern => {
       const chamber = kit.one(pattern), horn = kit.end(chamber, V(0, 0, -1), 1.5);
-      return { curve: kit.curve([horn, kit.centre(chamber), kit.end(chamber, V(0, 0, 1), 2).lerp(door, 0.5), door, third, duct, fourth, fourth.clone().add(V(0, -1.5, -1))]).curve, colour: '#9be7ff', count: 110, size: 0.6, spread: 0.18, speed: () => 0.09 };
+      return { curve: kit.curve([horn, kit.centre(chamber), kit.end(chamber, V(0, 0, 1), 2).lerp(door, 0.5), door, third, duct, fourth, fourth.clone().add(V(0, -1.5, -1))]).curve, colour: '#9be7ff', count: 264, size: 0.36, spread: 0.18, speed: () => 0.09 };
     });
     return { plexus: kit.entry('brainDeepChoroidPlexus'), streams };
   },
@@ -59,16 +59,23 @@ const GLOBE = /cornea$|sclera$|^Anterior chamber|iris$|lens$|choroid$|corona cil
 const AIMING = /rectus$|(inferior|superior) oblique$|optic nerve$/i;
 export const eye = {
   cycle: 11000, stop: 'Stop the eye', start: 'Set the eye working',
-  look: name => (/sclera$|choroid$|retina$|vitreous body$|corona ciliaris$/i.test(name) ? { opacity: 0.3 } : null),
+  /* the coats of the eyeball are glass, so the light can be followed through it, and what lies over the eye (the lids, the tear gland) is all but gone */
+  look: name => (/sclera$|choroid$|retina$|vitreous body$|corona ciliaris$/i.test(name) ? { opacity: 0.3 } : /tarsal plate|levator palpebrae|lacrimal|canalicul|conjunctiv/i.test(name) ? { opacity: 0.08 } : null),
   build(kit) {
     const { V } = kit, ball = kit.centre(kit.one(/vitreous body$/i)), front = kit.centre(kit.one(/cornea$/i)), lens = kit.centre(kit.one(/^(Left|Right) lens$/i));
     const forward = front.clone().sub(ball).normalize(), back = ball.clone().add(forward.clone().multiplyScalar(-1.05)), up = V(0, 1, 0);
     const nerve = kit.line(kit.find(/optic nerve$/i), { from: back, radius: 0.5 });
-    const ray = lift => { const off = up.clone().multiplyScalar(lift); return { curve: kit.curve([front.clone().add(forward.clone().multiplyScalar(6)).add(off), front.clone().add(forward.clone().multiplyScalar(0.3)).add(off.clone().multiplyScalar(0.9)), lens.clone().add(off.clone().multiplyScalar(0.5)), back]).curve, colour: '#fff3b0', count: 60, size: 0.28, spread: 0.02, speed: () => 0.55, shown: phase => during(phase, 0, 0.5) }; };
+    /* light from one far point: rays that arrive side by side, are bent most at the cornea and again at the lens, and meet at one point on the retina.
+       Each is a thin straight beam, a line of fine drops: `height` is how far from the eye's axis it arrives, `round` where about the axis */
+    const across = forward.clone().cross(up).normalize(), at = (place, ahead, off) => place.clone().addScaledVector(forward, ahead).add(off);
+    const ray = (height, round) => {
+      const off = up.clone().multiplyScalar(Math.cos(round) * height).addScaledVector(across, Math.sin(round) * height);
+      return { curve: kit.path([at(front, 4.2, off), at(front, 0.12 - height * height * 0.6, off), at(lens, 0, off.clone().multiplyScalar(0.55)), back]), colour: '#fff1b8', glow: true, count: 480, size: 0.05, spread: 0.003, strength: 0.3, speed: () => 0.3, shown: phase => during(phase, 0, 0.5) };
+    };
     return {
       ball, up, turn: kit.turn, globe: kit.find(GLOBE), aiming: kit.find(AIMING), inward: kit.find(/medial rectus$/i), outward: kit.find(/lateral rectus$/i), retina: kit.find(/retina$/i),
       side: Math.sign(ball.x),   // which eye: its medial rectus turns it toward the nose
-      streams: [ray(0.42), ray(0), ray(-0.42), { curve: kit.curve([back, ...nerve]).curve, colour: SIGNAL, count: 50, size: 0.55, spread: 0.06, speed: () => 0.5, shown: phase => during(phase, 0.05, 0.52) }],
+      streams: [ray(0, 0), ...[0, 1, 2, 3, 4, 5].map(k => ray(0.34, k * Math.PI / 3)), { curve: kit.curve([back, ...nerve]).curve, colour: SIGNAL, glow: true, count: 90, size: 0.13, spread: 0.04, strength: 0.6, speed: () => 0.5, shown: phase => during(phase, 0.05, 0.52) }],
     };
   },
   step(rig, phase, act) {
@@ -77,7 +84,7 @@ export const eye = {
     for (const part of rig.aiming) act.held(part, { pivot: rig.ball, turn, near: 1.25, far: 3 });
     /* turning toward +x is toward the nose for the right eye, away from it for the left */
     light(act, rig.inward, Math.max(0, -sweep * rig.side)); light(act, rig.outward, Math.max(0, sweep * rig.side));
-    light(act, rig.retina, 0.5 * during(phase, 0.08, 0.5));
+    light(act, rig.retina, 0.25 * during(phase, 0.08, 0.5));
     return { caption: phase < 0.53 ? 'Light is bent by the cornea and focused by the lens onto the retina; the optic nerve carries the picture to the brain' : 'Six muscles aim the eye. Here two of them turn it: the medial rectus toward the nose, the lateral rectus away' };
   },
 };
@@ -189,7 +196,7 @@ export const larynx = {
     const pitch = kit.sex === 'male' ? 115 : 205;
     return {
       V, turn: kit.turn, front, sides, pitch, up: V(0, 1, 0),
-      streams: [{ curve: way.curve, colour: AIR, count: 110, size: 0.6, spread: 0.22, speed: (where, phase) => (phase < 0.22 ? -0.6 * Math.sin(Math.PI * phase / 0.22) : phase < 0.5 ? 0.5 * Math.sin(Math.PI * (phase - 0.22) / 0.28) : 0.22 * during(phase, 0.54, 0.96)) }],
+      streams: [{ curve: way.curve, colour: AIR, count: 264, size: 0.36, spread: 0.22, speed: (where, phase) => (phase < 0.22 ? -0.6 * Math.sin(Math.PI * phase / 0.22) : phase < 0.5 ? 0.5 * Math.sin(Math.PI * (phase - 0.22) / 0.28) : 0.22 * during(phase, 0.54, 0.96)) }],
       sounds: [[0.02, play => play.breath(1.4, 0.04, 950)], [0.24, play => play.breath(1.7, 0.03, 520)], [0.56, play => play.voice(2.6, pitch, 0.07)]],
     };
   },
@@ -230,7 +237,7 @@ export const cranialNerves = {
     });
     return {
       slots, all: kit.own,
-      streams: slots.flatMap(({ lines, from, to }, k) => lines.map(line => ({ curve: kit.curve(line).curve, colour: SIGNAL, count: 30, size: 0.8, spread: 0.05, speed: () => (NERVES[k][2] ? -0.6 : 0.6), shown: phase => during(phase, from, to, 0.012) }))),
+      streams: slots.flatMap(({ lines, from, to }, k) => lines.map(line => ({ curve: kit.curve(line).curve, colour: SIGNAL, count: 72, size: 0.48, spread: 0.05, speed: () => (NERVES[k][2] ? -0.6 : 0.6), shown: phase => during(phase, from, to, 0.012) }))),
       sounds: slots.map(({ from }, k) => [from + 0.004, play => play.chime(SCALE[k], 0.035)]),
     };
   },

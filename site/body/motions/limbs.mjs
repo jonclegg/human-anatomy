@@ -19,7 +19,7 @@ export const shoulder = {
     flex(act, rig.joint, rig.axis, 62 * swell(phase));
     const { going, returning } = working(phase);
     light(act, rig.lifters, 0.7 * going); light(act, rig.cuff, 0.6 * returning);
-    return { caption: phase < 0.5 ? 'Lifting the arm: supraspinatus and deltoid work together, supraspinatus helping most at the start' : 'All the while the cuff muscles hold the ball of the humerus in its shallow socket. It is the most mobile joint, and the easiest to dislocate' };
+    return { caption: phase < 0.5 ? 'Lifting the arm: supraspinatus and deltoid work together, supraspinatus helping most at the start' : 'The cuff muscles hold the ball of the humerus in its shallow socket. The shoulder moves more than any other joint and dislocates more easily' };
   },
 };
 
@@ -52,7 +52,7 @@ export const hip = {
     flex(act, rig.joint, rig.axis, 48 * swell(phase) - 8);
     const { going, returning } = working(phase);
     light(act, rig.lifter, 0.75 * going); light(act, rig.driver, 0.75 * returning);
-    return { caption: phase < 0.5 ? 'Lifting the thigh: iliopsoas, which runs from the spine and the hip bone to the femur' : 'Driving it back: gluteus maximus, the muscle that climbs stairs and stands you up from a chair' };
+    return { caption: phase < 0.5 ? 'Lifting the thigh: iliopsoas, which runs from the spine and the hip bone to the femur' : 'Moving the thigh back: gluteus maximus. You use it to climb stairs and to stand up from a chair' };
   },
 };
 
@@ -124,7 +124,7 @@ export const hand = {
     rig.fingers.forEach((finger, k) => curl(finger, smooth(0.1 * k, 0.7 + 0.1 * k, fist), CURL));   // the little finger leads
     curl(rig.thumb, smooth(0.5, 1, fist), [34, 50]);
     for (const part of rig.beyond) act.fade(part, 1 - smooth(0, 0.25, fist));   // they give way while the hand closes
-    return { caption: phase < 0.5 ? 'Making a fist: the fingers are curled by tendons from muscles up in the forearm' : 'The fingers have no muscles of their own, only tendons and bone, which is why they are so slim' };
+    return { caption: phase < 0.5 ? 'Making a fist: the fingers are curled by tendons from muscles up in the forearm' : 'The fingers contain tendons and bone, and no muscles' };
   },
 };
 
@@ -146,6 +146,6 @@ export const spine = {
       if (share === undefined) act.bend(part, { pivot: rig.base, turn: whole, along: rig.up, from: 0, to: rig.length });
       else act.rigid(part, { pivot: rig.base, turn: rig.partly.slerpQuaternions(rig.none, whole, share) });   // a vertebra takes its share of the whole bow
     }
-    return { caption: phase < 0.5 ? 'Bending forward: each disc gives only a few degrees, but there are 23 of them, and it adds up' : 'Bending sideways: small joints at the back of each vertebra guide the movement and stop it going too far' };
+    return { caption: phase < 0.5 ? 'Bending forward: each disc allows a few degrees, and there are 23 discs' : 'Bending sideways: small joints at the back of each vertebra guide the movement and stop it going too far' };
   },
 };

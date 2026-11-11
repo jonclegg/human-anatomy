@@ -631,7 +631,7 @@ function stepPart(delta) {
 }
 const viewForLayer = layer => ({ skeleton: 'skeleton', muscles: 'muscles', organs: 'organs', vessels: 'vessels', nerves: 'nerves', skin: 'body' })[layer];
 /* a tour is told aloud: starting one turns the sound on */
-function startTour(index = 0) { setSound(true); state.tour = { index, playing: true }; goTour(index); }
+function startTour(index = 0) { setSound(true); if (state.region && !reducedMotion()) state.motion = true; state.tour = { index, playing: true }; goTour(index); }
 /* A tour held where it is: its voice, its music, its motion and its clock all wait, and all go on from where they were.
    A tour that has played to its end is not held: it plays again from the top. */
 const paused = () => !!state.tour && !state.tour.playing && !state.tour.done;
@@ -660,7 +660,11 @@ $('tourBtn').addEventListener('click', () => state.tour ? stopTour() : startTour
    motions.mjs says, for each close-up, what moves, when, and what flows. Here its parts are moved in the shaders (the
    moves texture), its streams are drawn as drops running along curves, its parts fade and glow from moment to moment,
    and it has a caption for each moment and sounds at some of them. */
-const moving = () => !!MOTIONS[state.region] && state.motion && !state.cut;
+/* A close-up moves only while the movement is what is being shown: as it opens, and through a story. It is still while a part is picked out or the parts are toured one by one,
+   and it comes to rest after it has gone round a few times (REST_AFTER, and for no less than REST_SECONDS: a heartbeat is short) or its tour is ended; its switch sets it going again. */
+const REST_AFTER = 3, REST_SECONDS = 20;
+const moving = () => !!MOTIONS[state.region] && state.motion && !state.cut && !state.selection && (!state.tour || !!telling());
+function restMotion() { if (!state.motion) return; state.motion = false; applyVisibility(); renderInspector(); syncUI(); }
 function toggleMotion() {
   state.motion = !state.motion;
   if (state.motion && state.selection) state.selection.isolate = false;   // a moving close-up stays whole
@@ -821,7 +825,7 @@ function makeStream(spec) {
    moments side by side and lights the one it is in: the words stay put. */
 function captionMotion() {
   if (telling()) return;   // a story says what is happening in its own words: the line is its pause button (syncUI)
-  const figure = $('figure'), moments = motion.for === motionKey() && motion.definition.moments;
+  const figure = $('figure'), moments = motion.definition && motion.for === motionKey() && motion.definition.moments;
   if (!moments) { figure.textContent = motion.caption || MOTIONS[state.region].stop; return; }
   if (figure.children.length !== moments.length) figure.replaceChildren(...moments.map(text => Object.assign(document.createElement('span'), { textContent: text })));
   [...figure.children].forEach((span, k) => span.classList.toggle('now', k === motion.moment));
@@ -920,6 +924,7 @@ function stepMotion(now) {
   }
   const open = stepOpening(seconds);
   if (motion.held === null) motion.clock += seconds;
+  if (!state.tour && motion.held === null && motion.clock > Math.max(REST_AFTER * cycle, REST_SECONDS)) { restMotion(); return; }
   let time = motion.held === null ? motion.clock : motion.held * cycle, join = 1, rejoined = false;
   if (span) {
     const round = span.seconds + 0.6, into = motion.clock % round;
@@ -1137,7 +1142,7 @@ function renderInspector() {
   el.innerHTML = `${handle}${tour}
     <div class="inspector-head"><span class="sys" style="--dot:${LAYER_INFO[part.layer].dot}">${key && entryNumber(key) ? `<em class="no">${entryNumber(key)}</em>` : ''}${escapeHtml(GROUP_INFO[part.group]?.name || LAYER_INFO[part.layer].name)}</span>${stepper}${isolating() ? '<button type="button" class="btn show-all" data-show-all>Show all</button>' : ''}<button type="button" class="close" data-close aria-label="Close panel">×</button></div>
     <div><h2 id="inspectorTitle">${escapeHtml(title)}</h2><div class="aka">${escapeHtml(aka || '')}</div></div>
-    ${entry ? `<p>${escapeHtml(entry.what)}</p><p>${escapeHtml(entry.does)}</p><div class="bug"><b>Common misconception</b>${escapeHtml(entry.bug)}</div>` : `<p>One of the ${body.parts.length} structures in this model, in the ${escapeHtml((GROUP_INFO[part.group]?.name || part.group).toLowerCase())}. The main parts have full notes; step through them with ‹ ›.</p>`}
+    ${entry ? `<p>${escapeHtml(entry.what)}</p><p>${escapeHtml(entry.does)}</p><div class="bug"><b>Worth knowing</b>${escapeHtml(entry.bug)}</div>` : `<p>One of the ${body.parts.length} structures in this model, in the ${escapeHtml((GROUP_INFO[part.group]?.name || part.group).toLowerCase())}. The main parts have full notes; step through them with ‹ ›.</p>`}
     <dl class="stats">${facts.map(([k, v]) => `<dt>${escapeHtml(k)}</dt><dd>${escapeHtml(v)}</dd>`).join('')}</dl>
     ${equivalent ? `<div class="homolog">${state.sex === 'male' ? 'Female' : 'Male'} equivalent: <b>${escapeHtml(equivalent)}</b></div>` : ''}
     ${storyNav(key)}
@@ -1190,7 +1195,7 @@ document.addEventListener('click', event => {
   if (target.dataset.step) stepPart(Number(target.dataset.step));
   if (target.hasAttribute('data-show-all')) { select(null); resetView(); }
   const action = target.dataset.tour;
-  if (action === 'stop') stopTour();
+  if (action === 'stop') { stopTour(); restMotion(); }
   if (action === 'next' && state.tour) goTour(Math.min(tourStops().length - 1, state.tour.index + 1));
   if (action === 'prev' && state.tour) goTour(Math.max(0, state.tour.index - 1));
   if (action === 'play' && state.tour) playTour(!state.tour.playing);
@@ -1234,7 +1239,7 @@ function syncUI() {
   if (isolating()) $('isolateChip').innerHTML = `<span>Showing <b>${escapeHtml(name)}</b> on its own</span><span class="all">Show all</span>`;
   const figure = state.selection?.entry ? `Fig. ${entryNumber(state.selection.entry)} · ${name}` : state.selection ? name : viewInfo().figure;
   /* in a close-up that moves, the line under the model says what is happening, and is itself the switch: a touch stops and starts it */
-  const moves = !!MOTIONS[state.region] && !state.cut;
+  const moves = !!MOTIONS[state.region] && !state.cut && !state.selection && (!state.tour || !!telling());   // while a part is picked out it is still, and the line is the figure's caption
   const told = moves && !!telling();
   $('figure').classList.toggle('live', moves); $('figure').dataset.motion = (told ? state.tour.playing : moving()) ? 'on' : 'off';
   if (moves) { $('figure').setAttribute('role', 'button'); $('figure').tabIndex = 0; } else { $('figure').removeAttribute('role'); $('figure').removeAttribute('tabindex'); }
@@ -1252,7 +1257,6 @@ function syncUI() {
   $('xrayNote').textContent = coverName ? `X-ray fades the ${coverName} to outlines, so what lies behind shows through.` : '';
   $('body').value = Math.round(state.body * 100);
   $('bodyOut').textContent = state.layers.skin === 'off' || state.body < 0.01 ? 'Hidden' : `${Math.round(state.body * 100)}%`;
-  if (body) $('partCount').textContent = `${body.parts.length.toLocaleString('en')} parts`;
   for (const range of document.querySelectorAll('input[type="range"]')) range.style.setProperty('--fill', `${(range.value - range.min) / (range.max - range.min) * 100}%`);
 }
 /* a picked structure is named for itself, unless it is a piece of a whole organ; a chosen entry by the entry's name */
@@ -1352,6 +1356,7 @@ function applyRegion(id) {
   const region = REGIONS[id];
   if (region.sex && region.sex !== body.sex) throw new Error(`the ${body.sex} body has no ${id} close-up`);
   state.selection = null; state.region = id; state.blend = null; glide = null;
+  state.motion = !reducedMotion();   // each close-up opens moving, whatever the last one was left doing
   useIndex(body, region);
   buildPartsList(); buildTags(); measureTags();
   for (const layer of LAYERS) state.layers[layer] = 'off';
@@ -1517,7 +1522,8 @@ function goPart(index) {
 function find(query) {
   const words = query.toLowerCase().split(/\s+/).filter(Boolean);
   if (!words.length) return [];
-  const score = item => { const name = item.name.toLowerCase(); return (name.startsWith(words[0]) ? 0 : new RegExp(`\\b${words[0].replace(/[^a-z0-9]/g, '.')}`).test(name) ? 1 : name.includes(words[0]) ? 2 : 3) * 10 + item.rank; };
+  const here = state.region && `In ${closeUp().name}`;
+  const score = item => { const name = item.name.toLowerCase(); return (name.startsWith(words[0]) ? 0 : new RegExp(`\\b${words[0].replace(/[^a-z0-9]/g, '.')}`).test(name) ? 1 : name.includes(words[0]) ? 2 : 3) * 10 + (here && item.kind === here ? -1 : item.rank); };   // a part of the close-up that is open comes first
   return findables().filter(item => words.every(word => item.words.includes(word))).map(item => [score(item), item]).sort((a, b) => a[0] - b[0] || a[1].name.length - b[1].name.length).slice(0, 9).map(([, item]) => item);
 }
 const finder = { found: [], at: 0 };

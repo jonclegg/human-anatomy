@@ -129,7 +129,7 @@ button:focus-visible, input:focus-visible, a:focus-visible { outline: 2px solid 
 .views button:hover { color: var(--ink); }
 .views button[aria-pressed="true"] { color: var(--ink); font-weight: 600; }
 
-/* Glowing points on the body: the close-ups you can dive into */
+/* Glowing points on the body: the close-ups */
 @keyframes ring { 0% { transform: scale(1); opacity: 0.8; } 75%, 100% { transform: scale(2.8); opacity: 0; } }
 .spot { position: absolute; left: 0; top: 0; height: 44px; margin: -22px 0 0 -11px; padding: 0 6px; border: 0; background: transparent; cursor: pointer; pointer-events: auto; display: flex; align-items: center; gap: 10px; color: var(--muted); font-size: 13px; font-weight: 500; white-space: nowrap; }
 .spot.left { flex-direction: row-reverse; margin-left: 0; translate: calc(-100% + 11px) 0; }   /* a point left of the body: its name runs away from the body */
@@ -210,7 +210,7 @@ details.more summary { font-size: 12.5px; font-weight: 600; color: var(--muted);
 .tones button[aria-pressed="true"] { box-shadow: 0 0 0 2px var(--ink); }
 
 /* The story, left: what is on show, in words */
-.inspector { position: absolute; left: var(--column); top: 104px; width: 380px; max-height: calc(100% - 104px - 32px); overflow: auto; padding: 4px; z-index: 3; display: grid; gap: 18px; align-content: start; background: transparent; border: 0; }
+.inspector { position: absolute; left: var(--column); top: 104px; width: 380px; max-height: calc(100% - 104px - 32px); overflow: auto; scrollbar-gutter: stable; padding: 4px 16px 36px 4px; -webkit-mask-image: linear-gradient(#000 calc(100% - 30px), transparent); mask-image: linear-gradient(#000 calc(100% - 30px), transparent); z-index: 3; display: grid; gap: 18px; align-content: start; background: transparent; border: 0; }
 .sheet-handle { display: none; }
 .inspector-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
 .show-all { display: none !important; }
@@ -407,7 +407,7 @@ footer a { color: inherit; }
   </div>
 
   <header class="masthead">
-    <div class="brand"><span><a href="https://wooten-labs.com">Wooten Labs</a></span><span class="wide-only">Interactive 3D model</span><span class="wide-only" id="partCount"></span><span><a href="https://github.com/jonclegg/vagina-anatomy">Source on GitHub</a></span></div>
+    <div class="brand"><span><a href="https://wooten-labs.com">Wooten Labs</a></span><span><a href="https://github.com/jonclegg/vagina-anatomy">Source on GitHub</a></span></div>
     <h1>Human Anatomy</h1>
     <p id="subtitle">The whole body: bones, muscles, organs, vessels and nerves.</p>
   </header>
@@ -523,7 +523,7 @@ footer a { color: inherit; }
       <h2>Where the shapes come from</h2>
       <p>The male body is one scanned adult man from BodyParts3D, with lungs and spinal cord from the NIH Visible Human Male, and the face, jaw, back and abdominal muscles, ligaments, nerves, lymph nodes and thyroid that BodyParts3D lacks from Z-Anatomy.</p>
       <p>No free model of a whole female body exists: scans of women give organs, but no skeleton or muscles that belong with them. So the female body here is the male body reshaped. Her skin is a slim young woman's from MakeHuman, and everything inside the man was carried across to it in one smooth change of shape, skin point to matching skin point, so each part keeps its place among the others. Parts that came this way say <b>Fitted</b> in their details.</p>
-      <p>What is hers alone is scanned from a woman: her uterus, vagina, ovaries, tubes and their ligaments, and her breasts, from the NIH Visible Human Female, fitted into this body's pelvis and under its skin. The man's own reproductive organs are left out.</p>
+      <p>The parts that only the female body has are scanned from a woman: her uterus, vagina, ovaries, tubes and their ligaments, and her breasts, from the NIH Visible Human Female, fitted into this body's pelvis and under its skin. The man's own reproductive organs are left out.</p>
       <ul class="fitted-list" id="gapList"></ul>
     </section>
   </main>

@@ -32,7 +32,7 @@ export const lungs = {
     for (const { within, root } of rig.sides) for (const part of within) act.rigid(part, { pivot: root, scale: V(1 + 0.05 * breath, 1 + 0.085 * breath, 1 + 0.06 * breath) });
     act.rigid(rig.diaphragm, { pivot: rig.floor, scale: V(1, 1 - 0.11 * breath, 1) });
     for (const part of rig.cage) act.rigid(part, { pivot: rig.spine, scale: V(1 + 0.03 * breath, 1, 1 + 0.045 * breath) });
-    return { caption: phase < 0.42 ? 'Breathing in: the diaphragm flattens, the ribs lift, and air is drawn down the windpipe' : phase < 0.95 ? 'Breathing out: the diaphragm relaxes and the lungs spring back' : 'A pause, and then the next breath: about 20,000 a day' };
+    return { caption: phase < 0.42 ? 'Breathing in: the diaphragm flattens, the ribs lift, and air is drawn down the windpipe' : phase < 0.95 ? 'Breathing out: the diaphragm relaxes and the lungs spring back' : 'A short pause before the next breath. You take about 20,000 a day' };
   },
   sounds: [[0.02, play => play.breath(2.1, 0.05, 950)], [0.44, play => play.breath(2.5, 0.035, 520)]],
 };

@@ -21,7 +21,7 @@ export const femalePelvis = {
   step(rig, phase, act, time) {
     const { ovary, tube } = rig.sides[rig.turnOf(time)];
     light(act, [ovary], during(phase, 0, 0.22, 0.08)); light(act, [tube[0], tube[1]], 0.7 * during(phase, 0.14, 0.4)); light(act, [tube[2], tube[3]], 0.6 * during(phase, 0.35, 0.85)); light(act, rig.womb, 0.45 * during(phase, 0.8, 1));
-    return { caption: phase < 0.16 ? 'About once a month, an ovary releases an egg' : phase < 0.38 ? 'The fringed end of the uterine tube sweeps over the ovary and catches it' : phase < 0.82 ? 'Fine hairs and gentle squeezing carry it along the tube over several days. If it is to be fertilised, it happens here' : 'It arrives in the uterus, whose lining has been thickening to receive it' };
+    return { caption: phase < 0.16 ? 'About once a month, an ovary releases an egg' : phase < 0.38 ? 'The fringed end of the uterine tube sweeps over the ovary and catches it' : phase < 0.82 ? 'Fine hairs and gentle squeezing carry it along the tube over several days. Fertilisation, if it happens, happens here' : 'It reaches the uterus, where the lining has thickened' };
   },
 };
 
@@ -49,7 +49,7 @@ export const malePelvis = {
   step(rig, phase, act) {
     act.rigid(rig.bladder, { pivot: rig.pool, scale: 1 - 0.14 * smooth(0.04, 0.46, phase) * (1 - smooth(0.6, 1, phase)) });
     light(act, rig.adders, 0.6 * during(phase, 0.56, 0.98, 0.08));
-    return { caption: phase < 0.5 ? 'Urine leaves the bladder through the middle of the prostate and along the urethra' : 'Sperm arrive by the two deferent ducts. The seminal vesicles and the prostate add most of the fluid, and it leaves by the same urethra, never at the same time as urine' };
+    return { caption: phase < 0.5 ? 'Urine leaves the bladder through the middle of the prostate and along the urethra' : 'Sperm arrive by the two deferent ducts. The seminal vesicles and the prostate add most of the fluid, and it leaves by the same urethra, but not at the same time as urine' };
   },
 };
 

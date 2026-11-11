@@ -20,7 +20,7 @@
 |---|---|
 | **See it in a body** | Opens on a see-through body with the pelvis inside, so you know where everything sits. Fade the body in or out. |
 | **Switch views** | Body, Outside (the vulva), Clitoris (the whole organ, mostly internal), Side cut (a midline section) and All organs. |
-| **Explore 33 parts** | Click any numbered callout, or step through them with ‹ › or the arrow keys. Each part has a description, a common misconception, published measurements and its male equivalent. |
+| **Explore 33 parts** | Click any numbered callout, or step through them with ‹ › or the arrow keys. Each part has a description, a fact worth knowing, published measurements and its male equivalent. |
 | **Slice across** | Cut across the vagina at any depth to see its H-shaped, front-to-back flattened cross-section. |
 | **Arousal** | Drag the slider to watch the clitoris and bulbs swell, the inner vagina lengthen and balloon, and the uterus lift, following Masters & Johnson. |
 | **Guided tour** | An automatic walk through every part, outside in, with Back, Pause and Next. |

@@ -31,7 +31,7 @@ export const brain = {
     rig.stages.forEach((parts, k) => light(act, parts, smooth(rig.reached[k] - 0.05, rig.reached[k], head) * (1 - smooth(rig.reached[k] + 0.08, rig.reached[k] + 0.2, head))));
     light(act, rig.stem, smooth(rig.reached[3] + 0.1, rig.reached[3] + 0.2, head));
     const at = rig.reached.findLastIndex(where => head >= where - 0.05);
-    return { caption: at < 0 ? 'You notice something. What happens next takes about a quarter of a second' : THOUGHT[at][1] };
+    return { caption: at < 0 ? 'You see something. The response takes about a quarter of a second' : THOUGHT[at][1] };
   },
 };
 
@@ -121,7 +121,7 @@ export const skull = {
   step(rig, phase, act) {
     const apart = during(phase, 0.1, 0.9, 0.22);
     for (const { part, away } of rig.movers) act.rigid(part, { pivot: rig.nowhere, shift: rig.shift.copy(away).multiplyScalar(apart) });
-    return { caption: apart < 0.5 ? 'The skull looks like one bone. It is 22, most of them locked together along wavy seams called sutures' : 'Drawn apart: 8 bones make the case round the brain and 14 the face. Only one of them, the jaw, moves' };
+    return { caption: apart < 0.5 ? 'The skull is 22 bones. Most are joined along wavy seams called sutures' : 'Pulled apart: 8 bones surround the brain and 14 form the face. Only the jaw moves' };
   },
 };
 
@@ -189,7 +189,7 @@ export const mouth = {
     for (const part of rig.palate) act.rigid(part, { pivot: rig.V(0, 0, 0), shift: rig.V(0, 0.35 * seal, -0.15 * seal) });
     act.rigid(rig.lid, { pivot: rig.hingeOfLid, turn: rig.turn(rig.V(1, 0, 0), -55 * seal) });
     rig.squeezers.forEach(({ parts, middle }, k) => { const squeeze = during(phase, 0.3 + 0.14 * k, 0.55 + 0.14 * k, 0.08); for (const part of parts) { act.rigid(part, { pivot: middle, scale: rig.V(1 - 0.12 * squeeze, 1, 1 - 0.12 * squeeze) }); act.glow(part, 0.6 * squeeze); } });
-    return { caption: phase < 0.2 ? 'A swallow starts on purpose: the tongue pushes the mouthful back' : phase < 0.5 ? 'From here it runs itself. The soft palate lifts to seal off the nose, and the epiglottis folds down over the airway' : 'The muscles of the throat squeeze in turn, top to bottom, and the mouthful drops into the oesophagus' };
+    return { caption: phase < 0.2 ? 'You start a swallow yourself. The tongue pushes the mouthful back' : phase < 0.5 ? 'The rest is automatic. The soft palate lifts to close off the nose, and the epiglottis folds down over the airway' : 'The muscles of the throat squeeze in turn, top to bottom, and the mouthful drops into the oesophagus' };
   },
   sounds: [[0.42, play => play.thump(105, 0.17, 0.22)]],
 };
@@ -240,7 +240,7 @@ const NERVES = [
 ];
 const SCALE = [392, 440, 494, 523, 587, 659, 698, 784, 880];
 export const cranialNerves = {
-  cycle: 27000, stop: 'Stop the round of the nerves', start: 'Go round the nerves', context: 0.45,
+  cycle: 27000, stop: 'Stop the nerves', start: 'Go round the nerves', context: 0.45,
   build(kit) {
     const { V } = kit, box = kit.box(kit.own), stem = V(0, box.getCenter(V(0, 0, 0)).y + 1, box.min.z + 0.35 * (box.max.z - box.min.z));   // about where the brainstem is, which they all leave from
     const slots = NERVES.map(([keys], k) => {

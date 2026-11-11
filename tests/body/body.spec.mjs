@@ -594,10 +594,8 @@ test.describe('motion', () => {
     expect(await model(page, () => window.bodyModel.sound())).toMatchObject({ key: 'story:heart:3', voicePaused: false, musicPlaying: true });
     await page.locator('#inspector [data-tour="stop"]').click();
     await page.waitForTimeout(1500);
-    const free = await page.evaluate(async () => { const seen = []; for (let k = 0; k < 14; k++) { seen.push(window.bodyModel.motion().phase); await new Promise(done => setTimeout(done, 100)); } return seen; });
-    expect(Math.max(...free) - Math.min(...free)).toBeGreaterThan(0.7);   // the tour over, the heart beats on at its own pace,
-    expect(await model(page, () => window.bodyModel.motion().open)).toBe(0);   // closed up again,
-    await expect(page.locator('#figure span')).toHaveCount(3);                  // and the line says what the beat is doing
+    expect(await model(page, () => ({ moving: window.bodyModel.motion().moving, open: window.bodyModel.motion().open, models: window.bodyModel.models().length }))).toEqual({ moving: false, open: 0, models: 0 });   // the tour over, the heart is closed up and at rest
+    await expect(page.locator('#figure')).toHaveText('Set the heart beating');   // and the line under it sets it going again
   });
   test('with reduced motion nothing moves until it is asked to', async ({ browser }, testInfo) => {
     desktopOnly(testInfo);

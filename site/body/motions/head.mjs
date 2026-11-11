@@ -133,19 +133,19 @@ function jawOf(kit) {
 
 /* ---------- The teeth: chewing ---------- */
 export const teeth = {
-  cycle: 2600, watch: 'how the teeth cut and grind',
+  cycle: 7800, watch: 'how the teeth cut and grind',   // three chews, one for each kind of tooth
   build(kit) {
     const kind = pattern => kit.find(pattern);
     return { ...jawOf(kit), kinds: [kind(/incisor tooth$/i), kind(/canine tooth$/i), kind(/(premolar|molar) tooth$/i)] };
   },
-  step(rig, phase, act, time) {
-    const open = during(phase, 0.02, 0.7, 0.3), grind = 0.14 * Math.sin(2 * Math.PI * phase) * (1 - open);
+  step(rig, phase, act) {
+    const round = Math.min(2, Math.floor(phase * 3)), chew = phase * 3 - round;
+    const open = during(chew, 0.02, 0.7, 0.3), grind = 0.14 * Math.sin(2 * Math.PI * chew) * (1 - open);
     for (const part of rig.lower) act.rigid(part, { pivot: rig.hinge, turn: rig.turn(rig.across, 12 * open), shift: rig.V(grind, 0, 0) });
-    const round = Math.floor(time / 2.6) % 3;   // a round of chewing for each kind of tooth
     light(act, rig.kinds[round], 0.55 * (1 - open));
     return { caption: ['The incisors, at the front, cut', 'The canines, the pointed ones, grip and tear', 'The premolars and molars, at the back, grind'][round] };
   },
-  sounds: [[0.72, play => play.thump(150, 0.035, 0.12)]],
+  sounds: [0, 1, 2].map(round => [(round + 0.72) / 3, play => play.thump(150, 0.035, 0.12)]),
 };
 
 /* ---------- The face: six things it can do ---------- */

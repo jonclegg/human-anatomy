@@ -519,7 +519,7 @@ test.describe('peel and glowing points', () => {
     await expect(page.locator('#layerStrip')).toBeHidden();                                                                          // and so do the layers
     await expect(page.locator('#sheet [data-watch="knee"]')).toHaveText(/^Watch: how the knee bends, \d+ min$/);
     await page.locator('#sheet [data-watch="knee"]').click();
-    expect(await place(page)).toMatchObject({ region: 'knee', story: 'motion' });
+    expect(await place(page)).toMatchObject({ region: 'knee', story: 'steps' });
   });
 });
 
@@ -538,10 +538,10 @@ test.describe('motion', () => {
     await expect.poll(() => model(page, () => window.bodyModel.motion().moving)).toBe(true);
     expect(errors).toEqual([]);
   });
-  test('a one-step story plays the region\'s motion with its words under the model, pauses, and exits to the region at rest', async ({ page }) => {
+  test('a region\'s motion on a loop, as a screen left alone plays it, has its words under the model, pauses, and exits to the region at rest', async ({ page }) => {
     const errors = await openRegion(page, 'knee');
     await expect(page.locator('#sheet [data-watch="knee"]')).toHaveText(/^Watch: how the knee bends, \d+ min$/);
-    await page.locator('#sheet [data-watch="knee"]').click();
+    await model(page, () => window.bodyModel.startStory('knee', { loop: true }));
     if (isPhone(page)) await expect(page.locator('#sheet')).toBeHidden();
     else {   // a region in motion keeps its numbered parts in the sheet; picking one closes in on it, and the story plays on
       await expect(page.locator('#sheet .parts button')).toHaveCount(REGIONS.knee.parts.length);
@@ -714,8 +714,7 @@ test.describe('motion', () => {
     await page.addInitScript(() => { const play = HTMLMediaElement.prototype.play; HTMLMediaElement.prototype.play = function () { this.muted = true; return play.call(this); }; });
     await openRegion(page, 'knee');
     await page.locator('#sheet [data-watch="knee"]').click();
-    await expect(page.locator('#say')).toHaveText(NARRATION['region:knee']);   // no moments to caption: the words are the ones the voice says
-    await expect(page.locator('#transport button:visible')).toHaveText(['Pause', 'Exit']);
+    await expect(page.locator('#say')).toHaveText(STORIES.knee[0].say);
     await page.waitForTimeout(600);
     expect(await model(page, () => window.bodyModel.motion())).toMatchObject({ moving: false, drops: 0 });
     await openRegion(page, 'heart');
@@ -802,9 +801,9 @@ test.describe('navigation', () => {
     expect(watch[0]).toMatch(/^Tour of the body/);
     await page.locator('#contents [data-watch="lungs"]').click();
     await expect(page.locator('#contents')).toBeHidden();
-    expect(await place(page)).toMatchObject({ region: 'lungs', story: 'motion', contents: false });
+    expect(await place(page)).toMatchObject({ region: 'lungs', story: 'steps', contents: false });
     await expect(page.locator('#crumbs')).toHaveText('›Lungs and airways›How you breathe');
-    await expect(page.locator('#say')).toHaveText(NARRATION['region:lungs']);   // nothing moves here (reduced motion), so the words are the voice's
+    await expect(page.locator('#say')).toHaveText(STORIES.lungs[0].say);
     await page.locator('#transport [data-story="exit"]').click();
     await settle(page);
     expect(await place(page)).toEqual({ region: null, view: 'body', entry: null, story: null, contents: false });   // home, where it was started

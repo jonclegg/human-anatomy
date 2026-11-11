@@ -886,6 +886,8 @@ const act = {
     if (motion.chosen.has(part.index)) return;
     stateTexture.colour.image.data[part.index * 4 + 3] = Math.round(THREE.MathUtils.clamp(opacity, 0, 1) * 255); motion.touched.add(part.index);
   },
+  /* as solid as a share of what it is at rest */
+  dim(part, share) { act.fade(part, motion.base[part.index * 4 + 3] / 255 * share); },
   /* lit, from 0 to 1: its colour drawn toward a light, and a see-through part made more solid */
   glow(part, amount, colour = GLOW) {
     const colours = stateTexture.colour.image.data, k = part.index * 4, share = THREE.MathUtils.clamp(amount, 0, 1) * 0.8;
@@ -931,7 +933,7 @@ function stepMotion(now) {
   if (motion.told !== step) {
     motion.told = step; motion.clock = 0;
     /* what a step is about: the parts it frames, names and labels. The rest stands back while it is told. */
-    motion.kept = step?.frame ? new Set([...step.frame, ...(step.labels || []), step.entry].flatMap(key => body.entries[key] || [])) : null;
+    motion.kept = step?.frame && step.keep !== 'all' ? new Set([...step.frame, ...(step.labels || []), step.entry].flatMap(key => body.entries[key] || [])) : null;
     motion.opening = step?.open ? openingOf(step, rig) : null;
   }
   const open = stepOpening(seconds);
@@ -1077,6 +1079,7 @@ function speak() {
   if (!paused()) sound.voice.play().catch(refused);
 }
 $('soundBtn').addEventListener('click', () => setSound(!sound.on));
+$('labelsBtn').addEventListener('click', () => { state.labels = !state.labels; syncUI(); });   // every label on the model, on or off, from anywhere
 /* only ever called from a touch or a click, which is what a browser waits for before it will play */
 function setSound(on) {
   if (sound.on === on) return;
@@ -1243,6 +1246,7 @@ function syncUI() {
   for (const button of document.querySelectorAll('[data-toggle]')) { button.setAttribute('aria-pressed', String(state[button.dataset.toggle])); button.querySelector('span').textContent = state[button.dataset.toggle] ? 'On' : 'Off'; }
   for (const button of $('sexSwitch').children) button.setAttribute('aria-pressed', String(button.dataset.sex === state.sex));
   $('soundBtn').setAttribute('aria-pressed', String(sound.on));
+  $('labelsBtn').setAttribute('aria-pressed', String(state.labels));
   speak();
   renderTrail();
   /* Contents lies over the stage and the sheet, which are out of reach until it is closed */
@@ -1692,7 +1696,7 @@ function updateLabels(width, height) {
   for (const key of order) {
     const important = key === selectedKey || key === hoveredKey || !!told?.includes(key);
     const anchor = anchorOf(key);
-    if (!anchor || (!important && (!state.labels || !anchor.seen))) { tagEls[key].hidden = true; continue; }
+    if (!anchor || !state.labels || (!important && !anchor.seen)) { tagEls[key].hidden = true; continue; }   // with the labels off there are none, not even the chosen part's
     projected.copy(anchor.point).project(camera);
     const ax = (projected.x + 1) / 2 * width, ay = (1 - projected.y) / 2 * height;
     if (projected.z > 1 || ax < 0 || ax > width || ay < 0 || ay > height || panels.some(b => overlaps([ax - 4, ay - 4, ax + 4, ay + 4], b))) { tagEls[key].hidden = true; continue; }

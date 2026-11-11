@@ -18,10 +18,13 @@ import * as chest from './motions/chest.mjs';
 import * as head from './motions/head.mjs';
 import * as limbs from './motions/limbs.mjs';
 import * as pelvis from './motions/pelvis.mjs';
-import { REGIONS } from './closeups.mjs';
+import { REGIONS, ALL } from './closeups.mjs';
+import { STORIES } from './stories.mjs';
 
 export const MOTIONS = { heart, ...chest, ...head, ...limbs, ...pelvis };
 for (const key of Object.keys(MOTIONS)) {
   if (!REGIONS[key]) throw new Error(`a motion is called ${key}, which is no close-up`);
   if (!MOTIONS[key].watch) throw new Error(`the ${key} motion does not say what it shows`);
+  if (!STORIES[key]) throw new Error(`the ${key} motion has no story`);
+  for (const step of STORIES[key]) for (const part of [step.entry, ...(step.frame || []), ...(step.labels || [])]) if (!ALL[part]) throw new Error(`the ${key} story names ${part}, which is no part`);
 }

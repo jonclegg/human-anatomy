@@ -257,6 +257,581 @@
    "hash": "32a86939fb",
    "seconds": 9.6
   },
+  "story:lungs:0": {
+   "file": "story-lungs-0.mp3",
+   "hash": "2453c27634",
+   "seconds": 10.1
+  },
+  "story:lungs:1": {
+   "file": "story-lungs-1.mp3",
+   "hash": "1e3f813425",
+   "seconds": 10.9
+  },
+  "story:lungs:2": {
+   "file": "story-lungs-2.mp3",
+   "hash": "82cd88358d",
+   "seconds": 17.3
+  },
+  "story:lungs:3": {
+   "file": "story-lungs-3.mp3",
+   "hash": "59a9af5d23",
+   "seconds": 10.1
+  },
+  "story:lungs:4": {
+   "file": "story-lungs-4.mp3",
+   "hash": "88ba3392d8",
+   "seconds": 10.8
+  },
+  "story:digestive:0": {
+   "file": "story-digestive-0.mp3",
+   "hash": "7f751e7a95",
+   "seconds": 6
+  },
+  "story:digestive:1": {
+   "file": "story-digestive-1.mp3",
+   "hash": "ebd66a1fa7",
+   "seconds": 7.9
+  },
+  "story:digestive:2": {
+   "file": "story-digestive-2.mp3",
+   "hash": "1c34c3dccb",
+   "seconds": 7.4
+  },
+  "story:digestive:3": {
+   "file": "story-digestive-3.mp3",
+   "hash": "90ac16e1fe",
+   "seconds": 8.4
+  },
+  "story:digestive:4": {
+   "file": "story-digestive-4.mp3",
+   "hash": "e9738fc045",
+   "seconds": 7.1
+  },
+  "story:liver:0": {
+   "file": "story-liver-0.mp3",
+   "hash": "c1606dca5a",
+   "seconds": 8.9
+  },
+  "story:liver:1": {
+   "file": "story-liver-1.mp3",
+   "hash": "b9718637d4",
+   "seconds": 14.4
+  },
+  "story:liver:2": {
+   "file": "story-liver-2.mp3",
+   "hash": "07387bbf9e",
+   "seconds": 7
+  },
+  "story:liver:3": {
+   "file": "story-liver-3.mp3",
+   "hash": "2c62857d25",
+   "seconds": 9.5
+  },
+  "story:liver:4": {
+   "file": "story-liver-4.mp3",
+   "hash": "9633b51dd6",
+   "seconds": 8.9
+  },
+  "story:kidney:0": {
+   "file": "story-kidney-0.mp3",
+   "hash": "3f1906e845",
+   "seconds": 7.5
+  },
+  "story:kidney:1": {
+   "file": "story-kidney-1.mp3",
+   "hash": "c8098fea76",
+   "seconds": 10.7
+  },
+  "story:kidney:2": {
+   "file": "story-kidney-2.mp3",
+   "hash": "d5712b5045",
+   "seconds": 12.8
+  },
+  "story:kidney:3": {
+   "file": "story-kidney-3.mp3",
+   "hash": "02c92c2b9a",
+   "seconds": 6.7
+  },
+  "story:lymphatic:0": {
+   "file": "story-lymphatic-0.mp3",
+   "hash": "91605d497b",
+   "seconds": 9
+  },
+  "story:lymphatic:1": {
+   "file": "story-lymphatic-1.mp3",
+   "hash": "85e5c7d078",
+   "seconds": 10.8
+  },
+  "story:lymphatic:2": {
+   "file": "story-lymphatic-2.mp3",
+   "hash": "7bcc827dfb",
+   "seconds": 10
+  },
+  "story:lymphatic:3": {
+   "file": "story-lymphatic-3.mp3",
+   "hash": "cd797185a1",
+   "seconds": 17.1
+  },
+  "story:breast:0": {
+   "file": "story-breast-0.mp3",
+   "hash": "5ca6712680",
+   "seconds": 9.6
+  },
+  "story:breast:1": {
+   "file": "story-breast-1.mp3",
+   "hash": "68660300de",
+   "seconds": 7.6
+  },
+  "story:breast:2": {
+   "file": "story-breast-2.mp3",
+   "hash": "c7cd1dce3f",
+   "seconds": 7
+  },
+  "story:breast:3": {
+   "file": "story-breast-3.mp3",
+   "hash": "fe46c41092",
+   "seconds": 8.9
+  },
+  "story:brain:0": {
+   "file": "story-brain-0.mp3",
+   "hash": "b60b815d61",
+   "seconds": 10.6
+  },
+  "story:brain:1": {
+   "file": "story-brain-1.mp3",
+   "hash": "9ad3be4c36",
+   "seconds": 10.4
+  },
+  "story:brain:2": {
+   "file": "story-brain-2.mp3",
+   "hash": "6b855479d2",
+   "seconds": 4.3
+  },
+  "story:brain:3": {
+   "file": "story-brain-3.mp3",
+   "hash": "8e15eaa959",
+   "seconds": 3.9
+  },
+  "story:brain:4": {
+   "file": "story-brain-4.mp3",
+   "hash": "3ae713c8fd",
+   "seconds": 7.9
+  },
+  "story:brainDeep:0": {
+   "file": "story-brainDeep-0.mp3",
+   "hash": "5e39533786",
+   "seconds": 7.8
+  },
+  "story:brainDeep:1": {
+   "file": "story-brainDeep-1.mp3",
+   "hash": "c97516a830",
+   "seconds": 9.9
+  },
+  "story:brainDeep:2": {
+   "file": "story-brainDeep-2.mp3",
+   "hash": "75cd61c73f",
+   "seconds": 11.7
+  },
+  "story:brainDeep:3": {
+   "file": "story-brainDeep-3.mp3",
+   "hash": "71965a1c5c",
+   "seconds": 9
+  },
+  "story:eye:0": {
+   "file": "story-eye-0.mp3",
+   "hash": "7fd9457811",
+   "seconds": 8.8
+  },
+  "story:eye:1": {
+   "file": "story-eye-1.mp3",
+   "hash": "f48f1cc3f4",
+   "seconds": 9.9
+  },
+  "story:eye:2": {
+   "file": "story-eye-2.mp3",
+   "hash": "eba5e6ef17",
+   "seconds": 10.8
+  },
+  "story:eye:3": {
+   "file": "story-eye-3.mp3",
+   "hash": "905ac93117",
+   "seconds": 7
+  },
+  "story:eye:4": {
+   "file": "story-eye-4.mp3",
+   "hash": "42e4f73fd2",
+   "seconds": 12.2
+  },
+  "story:skull:0": {
+   "file": "story-skull-0.mp3",
+   "hash": "8c2b1dc75c",
+   "seconds": 10.8
+  },
+  "story:skull:1": {
+   "file": "story-skull-1.mp3",
+   "hash": "cde7622b10",
+   "seconds": 14.6
+  },
+  "story:skull:2": {
+   "file": "story-skull-2.mp3",
+   "hash": "a5a3133eab",
+   "seconds": 8.2
+  },
+  "story:skull:3": {
+   "file": "story-skull-3.mp3",
+   "hash": "4087fc949a",
+   "seconds": 9.9
+  },
+  "story:teeth:0": {
+   "file": "story-teeth-0.mp3",
+   "hash": "688ae559b4",
+   "seconds": 8
+  },
+  "story:teeth:1": {
+   "file": "story-teeth-1.mp3",
+   "hash": "0e3d3e26db",
+   "seconds": 6.8
+  },
+  "story:teeth:2": {
+   "file": "story-teeth-2.mp3",
+   "hash": "7b678b940d",
+   "seconds": 6.3
+  },
+  "story:teeth:3": {
+   "file": "story-teeth-3.mp3",
+   "hash": "dd774cae9a",
+   "seconds": 9.2
+  },
+  "story:face:0": {
+   "file": "story-face-0.mp3",
+   "hash": "0df61a3e61",
+   "seconds": 11.5
+  },
+  "story:face:1": {
+   "file": "story-face-1.mp3",
+   "hash": "98e7460ab8",
+   "seconds": 6.9
+  },
+  "story:face:2": {
+   "file": "story-face-2.mp3",
+   "hash": "0d1c1abfae",
+   "seconds": 8.8
+  },
+  "story:face:3": {
+   "file": "story-face-3.mp3",
+   "hash": "2d3b80f321",
+   "seconds": 6
+  },
+  "story:face:4": {
+   "file": "story-face-4.mp3",
+   "hash": "8cdd95b46a",
+   "seconds": 8
+  },
+  "story:face:5": {
+   "file": "story-face-5.mp3",
+   "hash": "0aeec02481",
+   "seconds": 7.8
+  },
+  "story:face:6": {
+   "file": "story-face-6.mp3",
+   "hash": "598a328a29",
+   "seconds": 9.2
+  },
+  "story:mouth:0": {
+   "file": "story-mouth-0.mp3",
+   "hash": "afcc8954e1",
+   "seconds": 6.7
+  },
+  "story:mouth:1": {
+   "file": "story-mouth-1.mp3",
+   "hash": "d73b53d42a",
+   "seconds": 6.9
+  },
+  "story:mouth:2": {
+   "file": "story-mouth-2.mp3",
+   "hash": "4c0acf2d26",
+   "seconds": 12.5
+  },
+  "story:mouth:3": {
+   "file": "story-mouth-3.mp3",
+   "hash": "308227d2b2",
+   "seconds": 9.4
+  },
+  "story:larynx:0": {
+   "file": "story-larynx-0.mp3",
+   "hash": "b72292b912",
+   "seconds": 10.4
+  },
+  "story:larynx:1": {
+   "file": "story-larynx-1.mp3",
+   "hash": "164162b570",
+   "seconds": 7.1
+  },
+  "story:larynx:2": {
+   "file": "story-larynx-2.mp3",
+   "hash": "a3973236ce",
+   "seconds": 13.1
+  },
+  "story:larynx:3": {
+   "file": "story-larynx-3.mp3",
+   "hash": "380160b43e",
+   "seconds": 11.3
+  },
+  "story:cranialNerves:0": {
+   "file": "story-cranialNerves-0.mp3",
+   "hash": "22fe46ff34",
+   "seconds": 9.8
+  },
+  "story:cranialNerves:1": {
+   "file": "story-cranialNerves-1.mp3",
+   "hash": "88956c99b3",
+   "seconds": 5.6
+  },
+  "story:cranialNerves:2": {
+   "file": "story-cranialNerves-2.mp3",
+   "hash": "ab5fb85f61",
+   "seconds": 10.9
+  },
+  "story:cranialNerves:3": {
+   "file": "story-cranialNerves-3.mp3",
+   "hash": "febe39240e",
+   "seconds": 8
+  },
+  "story:cranialNerves:4": {
+   "file": "story-cranialNerves-4.mp3",
+   "hash": "cb7198fe5a",
+   "seconds": 11.5
+  },
+  "story:cranialNerves:5": {
+   "file": "story-cranialNerves-5.mp3",
+   "hash": "51a52c02da",
+   "seconds": 9.1
+  },
+  "story:cranialNerves:6": {
+   "file": "story-cranialNerves-6.mp3",
+   "hash": "6ca0325f31",
+   "seconds": 8.8
+  },
+  "story:cranialNerves:7": {
+   "file": "story-cranialNerves-7.mp3",
+   "hash": "5ec0f18ced",
+   "seconds": 7.9
+  },
+  "story:cranialNerves:8": {
+   "file": "story-cranialNerves-8.mp3",
+   "hash": "432e704f5c",
+   "seconds": 6.7
+  },
+  "story:cranialNerves:9": {
+   "file": "story-cranialNerves-9.mp3",
+   "hash": "6f93a35d16",
+   "seconds": 6
+  },
+  "story:shoulder:0": {
+   "file": "story-shoulder-0.mp3",
+   "hash": "c26108ab61",
+   "seconds": 6.9
+  },
+  "story:shoulder:1": {
+   "file": "story-shoulder-1.mp3",
+   "hash": "864bda83cb",
+   "seconds": 11.7
+  },
+  "story:shoulder:2": {
+   "file": "story-shoulder-2.mp3",
+   "hash": "6791083316",
+   "seconds": 9.3
+  },
+  "story:shoulder:3": {
+   "file": "story-shoulder-3.mp3",
+   "hash": "7be49d01d0",
+   "seconds": 6.5
+  },
+  "story:elbow:0": {
+   "file": "story-elbow-0.mp3",
+   "hash": "4064cc4d67",
+   "seconds": 7.5
+  },
+  "story:elbow:1": {
+   "file": "story-elbow-1.mp3",
+   "hash": "806225058f",
+   "seconds": 7
+  },
+  "story:elbow:2": {
+   "file": "story-elbow-2.mp3",
+   "hash": "90b80502f9",
+   "seconds": 6.5
+  },
+  "story:elbow:3": {
+   "file": "story-elbow-3.mp3",
+   "hash": "a295dee25c",
+   "seconds": 8.3
+  },
+  "story:hip:0": {
+   "file": "story-hip-0.mp3",
+   "hash": "0dc155232d",
+   "seconds": 9.5
+  },
+  "story:hip:1": {
+   "file": "story-hip-1.mp3",
+   "hash": "52cb8d301c",
+   "seconds": 8.7
+  },
+  "story:hip:2": {
+   "file": "story-hip-2.mp3",
+   "hash": "71aaff0a6e",
+   "seconds": 9.4
+  },
+  "story:hip:3": {
+   "file": "story-hip-3.mp3",
+   "hash": "4cf42fb191",
+   "seconds": 5.4
+  },
+  "story:knee:0": {
+   "file": "story-knee-0.mp3",
+   "hash": "8d35f5e464",
+   "seconds": 7.7
+  },
+  "story:knee:1": {
+   "file": "story-knee-1.mp3",
+   "hash": "9e0bf449e6",
+   "seconds": 6.4
+  },
+  "story:knee:2": {
+   "file": "story-knee-2.mp3",
+   "hash": "69615830e2",
+   "seconds": 11.1
+  },
+  "story:knee:3": {
+   "file": "story-knee-3.mp3",
+   "hash": "78c93d39b3",
+   "seconds": 13.4
+  },
+  "story:foot:0": {
+   "file": "story-foot-0.mp3",
+   "hash": "1d14327b3f",
+   "seconds": 9.5
+  },
+  "story:foot:1": {
+   "file": "story-foot-1.mp3",
+   "hash": "e25db5412e",
+   "seconds": 8.8
+  },
+  "story:foot:2": {
+   "file": "story-foot-2.mp3",
+   "hash": "1a0e65a4a9",
+   "seconds": 8.5
+  },
+  "story:foot:3": {
+   "file": "story-foot-3.mp3",
+   "hash": "321209fadc",
+   "seconds": 10.6
+  },
+  "story:hand:0": {
+   "file": "story-hand-0.mp3",
+   "hash": "d70758d4d9",
+   "seconds": 8.1
+  },
+  "story:hand:1": {
+   "file": "story-hand-1.mp3",
+   "hash": "83e9372174",
+   "seconds": 8.4
+  },
+  "story:hand:2": {
+   "file": "story-hand-2.mp3",
+   "hash": "556b5c01b4",
+   "seconds": 6.3
+  },
+  "story:hand:3": {
+   "file": "story-hand-3.mp3",
+   "hash": "a3f341fe62",
+   "seconds": 9.8
+  },
+  "story:spine:0": {
+   "file": "story-spine-0.mp3",
+   "hash": "30d5e8ff28",
+   "seconds": 10.9
+  },
+  "story:spine:1": {
+   "file": "story-spine-1.mp3",
+   "hash": "77af92d913",
+   "seconds": 12.2
+  },
+  "story:spine:2": {
+   "file": "story-spine-2.mp3",
+   "hash": "42b57040b8",
+   "seconds": 7.2
+  },
+  "story:spine:3": {
+   "file": "story-spine-3.mp3",
+   "hash": "1f461b4d5b",
+   "seconds": 9.5
+  },
+  "story:femalePelvis:0": {
+   "file": "story-femalePelvis-0.mp3",
+   "hash": "1fb90ec51e",
+   "seconds": 7.7
+  },
+  "story:femalePelvis:1": {
+   "file": "story-femalePelvis-1.mp3",
+   "hash": "5f953b5b3e",
+   "seconds": 6.5
+  },
+  "story:femalePelvis:2": {
+   "file": "story-femalePelvis-2.mp3",
+   "hash": "dbb87df684",
+   "seconds": 7.8
+  },
+  "story:femalePelvis:3": {
+   "file": "story-femalePelvis-3.mp3",
+   "hash": "365034023b",
+   "seconds": 12.1
+  },
+  "story:femalePelvis:4": {
+   "file": "story-femalePelvis-4.mp3",
+   "hash": "4c6fde38c8",
+   "seconds": 13.3
+  },
+  "story:malePelvis:0": {
+   "file": "story-malePelvis-0.mp3",
+   "hash": "7c1e469ec8",
+   "seconds": 7.9
+  },
+  "story:malePelvis:1": {
+   "file": "story-malePelvis-1.mp3",
+   "hash": "82ded93648",
+   "seconds": 8.2
+  },
+  "story:malePelvis:2": {
+   "file": "story-malePelvis-2.mp3",
+   "hash": "cac55cf5b0",
+   "seconds": 8.7
+  },
+  "story:malePelvis:3": {
+   "file": "story-malePelvis-3.mp3",
+   "hash": "02a537d239",
+   "seconds": 9.3
+  },
+  "story:penis:0": {
+   "file": "story-penis-0.mp3",
+   "hash": "436913cb02",
+   "seconds": 7.8
+  },
+  "story:penis:1": {
+   "file": "story-penis-1.mp3",
+   "hash": "0b40c7e142",
+   "seconds": 6.4
+  },
+  "story:penis:2": {
+   "file": "story-penis-2.mp3",
+   "hash": "78c25d2909",
+   "seconds": 9
+  },
+  "story:penis:3": {
+   "file": "story-penis-3.mp3",
+   "hash": "85b64d5e88",
+   "seconds": 5.2
+  },
   "entry:frontalLobe": {
    "file": "entry-frontalLobe.mp3",
    "hash": "d63bf1bb62",

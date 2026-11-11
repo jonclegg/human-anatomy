@@ -663,6 +663,7 @@ function renderProgress(now) {
 function stepStory(now) {
   const story = state.story;
   renderProgress(now);
+  if (story && (story.kind !== 'motion' || !moving())) renderWords();   // its caption moves on with the voice
   if (!story?.playing || story.kind === 'motion') return;   // a motion goes round until it is left
   /* with the sound on, a step that is spoken lasts as long as the voice, and a breath more */
   const unspoken = Math.max(STEP_MS, stepWords(story.kind, story.region, story.steps[story.index]).length * READ_MS);
@@ -829,14 +830,33 @@ function makeStream(spec) {
    only moves, the motion's caption for the moment. A motion that turns over faster than a line can be read (a
    heartbeat) names its moments side by side and lights the one it is in: the words stay put. Where nothing moves
    (reduced motion) there are no moments, and the words are the ones the voice says. */
+/* Captions: a step's words a sentence at a time (a very short one goes with the next), each for its share of the step by
+   its length. With the sound on the step is as far along as its voice is; read, as far as its clock. */
+const SHORT_CAPTION = 28;
+function captionsOf(text) {
+  const captions = [];
+  for (const sentence of text.split(/(?<=[.!?])\s+/)) {
+    if (captions.length && captions.at(-1).length < SHORT_CAPTION) captions[captions.length - 1] += ` ${sentence}`; else captions.push(sentence);
+  }
+  return captions;
+}
+function captionNow(text) {
+  const story = state.story, captions = captionsOf(text), clip = stepClip(story, story.index), seconds = sound.on && sound.key === clip && sound.manifest.narration[clip]?.seconds;
+  const share = seconds ? (sound.speaking ? sound.voice.currentTime / seconds : 1) : (story.playing ? performance.now() - story.stepStart : story.spent) / stepLength(story, story.index);
+  let through = THREE.MathUtils.clamp(share, 0, 0.999) * text.length;
+  return captions.find(caption => (through -= caption.length + 1) < 0) || captions.at(-1);
+}
 let wordsShown = null;
 function renderWords() {
   const say = $('say'), story = state.story;
   say.hidden = !story;
   if (!story) return;
   const step = story.steps[story.index], moments = story.kind === 'motion' && moving() && motion.for === motionKey() && motion.definition.moments;
-  const words = story.kind === 'tour' ? `<b>${escapeHtml(ALL[step.entry].name)}.</b> ${escapeHtml(`${ALL[step.entry].what} ${ALL[step.entry].does}`)}`
-    : story.kind === 'steps' || !moving() ? escapeHtml(stepWords(story.kind, story.region, step))
+  /* a step that is told (of a region's story, or of the tour) shows its words as captions: the sentence being said, not the whole of it at once */
+  const told = story.kind !== 'motion' || !moving() ? stepWords(story.kind, story.region, step) : null;
+  if (told !== null) say.dataset.words = told; else delete say.dataset.words;
+  const caption = told === null ? null : captionNow(told), name = story.kind === 'tour' ? `${ALL[step.entry].name}.` : null;
+  const words = caption !== null ? (name && caption.startsWith(name) ? `<b>${escapeHtml(name)}</b>${escapeHtml(caption.slice(name.length))}` : escapeHtml(caption))
     : moments ? moments.map(text => `<span>${escapeHtml(text)}</span>`).join('') : escapeHtml(motion.caption);
   if (words !== wordsShown) { wordsShown = words; say.innerHTML = words; }
   if (moments) [...say.children].forEach((span, k) => span.classList.toggle('now', k === motion.moment));

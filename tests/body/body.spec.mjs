@@ -396,7 +396,7 @@ test.describe('close-ups', () => {
     expect(await place(page)).toMatchObject({ region: 'heart', entry: null });
     await page.locator('#sheet [data-watch="heart"]').click();
     await expect(page.locator('#storyCount')).toHaveText(`1 / ${STORIES.heart.length}`);   // the heart's story has steps
-    await expect(page.locator('#say')).toHaveText(STORIES.heart[0].say);
+    await expect(page.locator('#say')).toHaveAttribute('data-words', STORIES.heart[0].say);
     if (isPhone(page)) await expect(page.locator('#sheet')).toBeHidden();   // phones have no room for it
     else {   // the sheet lists the story's steps, the one being told marked, and any can be clicked
       await expect(page.locator('#sheet [data-go]')).toHaveText(STORIES.heart.map((step, k) => `${k + 1}${step.title}`));
@@ -410,7 +410,7 @@ test.describe('close-ups', () => {
     await expect(page.locator('#soundBtn')).toHaveAttribute('aria-pressed', 'true');   // a story is told aloud
     for (let k = 0; k < 3; k++) await page.locator('#transport [data-story="next"]').click();   // a later step: one side of the heart, its own labels
     await expect(page.locator('#storyCount')).toHaveText(`4 / ${STORIES.heart.length}`);
-    await expect(page.locator('#say')).toHaveText(STORIES.heart[3].say);
+    await expect(page.locator('#say')).toHaveAttribute('data-words', STORIES.heart[3].say);
     await expect.poll(() => model(page, () => window.bodyModel.sound().key)).toBe('story:heart:3');
     await expect.poll(() => page.locator('#labels .tag:not([hidden])').allTextContents()).toEqual(expect.arrayContaining([expect.stringContaining('Right ventricle'), expect.stringContaining('Pulmonary valve')]));
     await page.locator('#scene').click({ position: { x: 5, y: 5 } });
@@ -677,7 +677,7 @@ test.describe('motion', () => {
     expect(await model(page, () => window.bodyModel.motion().moving)).toBe(false);
     await page.locator('#sheet [data-watch="heart"]').click();
     for (let k = 0; k < 3; k++) await page.locator('#transport [data-story="next"]').click();
-    await expect(page.locator('#say')).toHaveText(STORIES.heart[3].say);
+    await expect(page.locator('#say')).toHaveAttribute('data-words', STORIES.heart[3].say);
     await page.waitForTimeout(500);
     const phases = await page.evaluate(async () => { const seen = []; for (let k = 0; k < 30; k++) { seen.push(window.bodyModel.motion().phase); await new Promise(done => setTimeout(done, 100)); } return seen; });
     const [from, to] = STORIES.heart[3].span;
@@ -714,13 +714,13 @@ test.describe('motion', () => {
     await page.addInitScript(() => { const play = HTMLMediaElement.prototype.play; HTMLMediaElement.prototype.play = function () { this.muted = true; return play.call(this); }; });
     await openRegion(page, 'knee');
     await page.locator('#sheet [data-watch="knee"]').click();
-    await expect(page.locator('#say')).toHaveText(STORIES.knee[0].say);
+    await expect(page.locator('#say')).toHaveAttribute('data-words', STORIES.knee[0].say);
     await page.waitForTimeout(600);
     expect(await model(page, () => window.bodyModel.motion())).toMatchObject({ moving: false, drops: 0 });
     await openRegion(page, 'heart');
     await page.locator('#sheet [data-watch="heart"]').click();
     for (let k = 0; k < 3; k++) await page.locator('#transport [data-story="next"]').click();
-    await expect(page.locator('#say')).toHaveText(STORIES.heart[3].say);
+    await expect(page.locator('#say')).toHaveAttribute('data-words', STORIES.heart[3].say);
     await page.waitForTimeout(600);
     expect(await model(page, () => window.bodyModel.motion())).toMatchObject({ moving: false, open: 0 });   // the heart is not cut open, and does not beat
     await context.close();
@@ -803,7 +803,7 @@ test.describe('navigation', () => {
     await expect(page.locator('#contents')).toBeHidden();
     expect(await place(page)).toMatchObject({ region: 'lungs', story: 'steps', contents: false });
     await expect(page.locator('#crumbs')).toHaveText('›Lungs and airways›How you breathe');
-    await expect(page.locator('#say')).toHaveText(STORIES.lungs[0].say);
+    await expect(page.locator('#say')).toHaveAttribute('data-words', STORIES.lungs[0].say);
     await page.locator('#transport [data-story="exit"]').click();
     await settle(page);
     expect(await place(page)).toEqual({ region: null, view: 'body', entry: null, story: null, contents: false });   // home, where it was started
@@ -828,7 +828,7 @@ test.describe('navigation', () => {
     expect(stops.length).toBeGreaterThan(25);
     expect(await place(page)).toMatchObject({ story: 'tour', entry: stops[0], view: 'skeleton' });
     await expect(page.locator('#storyCount')).toHaveText(`1 / ${stops.length}`);
-    await expect(page.locator('#say')).toHaveText(`${ENTRIES[stops[0]].name}. ${ENTRIES[stops[0]].what} ${ENTRIES[stops[0]].does}`);
+    await expect(page.locator('#say')).toHaveAttribute('data-words', `${ENTRIES[stops[0]].name}. ${ENTRIES[stops[0]].what} ${ENTRIES[stops[0]].does}`);
     await expect.poll(() => model(page, () => window.bodyModel.sound().key)).toBe(`entry:${stops[0]}`);
     await expect(page.locator('#transport [data-story="prev"]')).toBeDisabled();
     await page.locator('#transport [data-story="next"]').click();

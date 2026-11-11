@@ -1145,7 +1145,7 @@ function sheetContent() {
   if (!selection) return `
     <div class="eyebrow">Region</div>
     ${heading}
-    ${MOTIONS[state.region] ? `<button type="button" class="go" data-watch="${state.region}">Watch: ${escapeHtml(MOTIONS[state.region].watch)}, ${storyMinutes(state.region)} min</button>` : ''}
+    ${MOTIONS[state.region] ? `<button type="button" class="go" data-watch="${state.region}">Watch guide</button>` : ''}
     <h3 class="sub">Parts</h3>
     <div class="list parts">${body.order.map(key => `<button type="button" data-entry="${key}"><i>${entryNumber(key)}</i>${escapeHtml(ALL[key].short || ALL[key].name)}</button>`).join('')}</div>`;
   const key = selection.entry, entry = key ? ALL[key] : null, part = body.parts[selection.part ?? selection.parts[0]];

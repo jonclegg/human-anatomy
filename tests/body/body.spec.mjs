@@ -517,7 +517,7 @@ test.describe('peel and glowing points', () => {
     await expect(page.locator('#sheetTitle')).toHaveText(REGIONS.knee.title);
     expect(await model(page, () => { window.bodyModel.frame(performance.now()); return window.bodyModel.spots(); })).toEqual([]);   // the points belong to the whole body
     await expect(page.locator('#layerStrip')).toBeHidden();                                                                          // and so do the layers
-    await expect(page.locator('#sheet [data-watch="knee"]')).toHaveText(/^Watch: how the knee bends, \d+ min$/);
+    await expect(page.locator('#sheet [data-watch="knee"]')).toHaveText('Watch guide');
     await page.locator('#sheet [data-watch="knee"]').click();
     expect(await place(page)).toMatchObject({ region: 'knee', story: 'steps' });
   });
@@ -540,7 +540,7 @@ test.describe('motion', () => {
   });
   test('a region\'s motion on a loop, as a screen left alone plays it, has its words under the model, pauses, and exits to the region at rest', async ({ page }) => {
     const errors = await openRegion(page, 'knee');
-    await expect(page.locator('#sheet [data-watch="knee"]')).toHaveText(/^Watch: how the knee bends, \d+ min$/);
+    await expect(page.locator('#sheet [data-watch="knee"]')).toHaveText('Watch guide');
     await model(page, () => window.bodyModel.startStory('knee', { loop: true }));
     if (isPhone(page)) await expect(page.locator('#sheet')).toBeHidden();
     else {   // a region in motion keeps its numbered parts in the sheet; picking one closes in on it, and the story plays on
@@ -657,7 +657,7 @@ test.describe('motion', () => {
           return { button, still, moments };
         }, id);
         expect(seen.still, `${id} opens still`).toBe(false);
-        expect(seen.button, id).toMatch(new RegExp(`^Watch: ${MOTIONS[id].watch}, \\d+ min$`));
+        expect(seen.button, id).toBe('Watch guide');
         expect(NARRATION[`region:${id}`], `${id} has words for the voice`).toBeTruthy();
         for (const moment of seen.moments) {
           expect(moment, id).toMatchObject({ moving: true, finite: true });
@@ -706,7 +706,7 @@ test.describe('motion', () => {
     await page.locator('#transport [data-story="exit"]').click();
     await page.waitForTimeout(1500);
     expect(await model(page, () => ({ moving: window.bodyModel.motion().moving, open: window.bodyModel.motion().open, models: window.bodyModel.models().length }))).toEqual({ moving: false, open: 0, models: 0 });   // the story over, the heart is closed up and at rest
-    await expect(page.locator('#sheet [data-watch="heart"]')).toHaveText(/^Watch: how the heart beats, \d+ min$/);   // and its button starts it again
+    await expect(page.locator('#sheet [data-watch="heart"]')).toHaveText('Watch guide');   // and its button starts it again
   });
   test('with reduced motion a story shows its steps and its words, and nothing moves', async ({ browser }, testInfo) => {
     desktopOnly(testInfo);

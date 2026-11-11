@@ -3,8 +3,7 @@
 //
 // A motion:
 //   cycle           how long one round takes, in ms
-//   watch           what it shows, in plain words: "how the heart beats". The story's name in the trail and the lists,
-//                   and the words on the button that starts it ("Watch: how the heart beats, 2 min")
+//   watch           what it shows, in plain words: "how the heart beats". The story's name in the trail and the lists
 //   look(name)      how a part of the close-up looks while it runs: { colour, opacity }, either may be left out
 //   context, skin   how solid the faint context and the skin are while it runs, as a share of what they usually are
 //   build(kit)      measures the body once and returns the rig: whatever step needs, plus streams (the specs of what

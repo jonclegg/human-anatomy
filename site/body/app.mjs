@@ -561,7 +561,7 @@ function startStory(id, { aloud = true, loop = false } = {}) {
   const kind = loop ? 'motion' : storyKind(id), from = state.story ? state.story.from : { region: state.region, view: state.view };
   setContents(false);
   state.cut = false;
-  state.story = { kind, region: id, name: storyName(id), steps: storySteps(id, kind), index: 0, at: null, playing: true, done: false, stepStart: 0, spent: 0, from };
+  state.story = { kind, region: id, name: storyName(id), steps: storySteps(id, kind), index: 0, at: null, playing: true, stepStart: 0, spent: 0, from };
   sound.key = null;   // its words are spoken from the start, though the region's opening may just have said them
   if (id && state.region !== id) applyRegion(id);
   goStep(0);
@@ -569,7 +569,7 @@ function startStory(id, { aloud = true, loop = false } = {}) {
 }
 function goStep(index) {
   const story = state.story, step = story.steps[index], held = paused();
-  Object.assign(story, { index, playing: true, done: false, stepStart: performance.now() });   // moving on, by hand or not, plays
+  Object.assign(story, { index, playing: true, stepStart: performance.now() });   // moving on, by hand or not, plays
   if (held && sound.on && sound.manifest.music) sound.music.play().catch(refused);
   /* a stop of the tour picks its part out, in the view of its layer. A region's step picks nothing out: the part it
      is about stays as it is drawn in motion (glass, with its blood showing), labelled and gently lit */
@@ -611,13 +611,11 @@ function stepPart(delta) {
   focusSelection(viewInfo());
 }
 const viewForLayer = layer => ({ skeleton: 'skeleton', muscles: 'muscles', organs: 'organs', vessels: 'vessels', nerves: 'nerves', skin: 'body' })[layer];
-/* A story held where it is: its voice, its music, its motion and its clock all wait, and all go on from where they were.
-   A story that has played to its end is not held: it plays again from the top. */
-const paused = () => !!state.story && !state.story.playing && !state.story.done;
+/* A story held where it is: its voice, its music, its motion and its clock all wait, and all go on from where they were. */
+const paused = () => !!state.story && !state.story.playing;
 function playStory(playing) {
   const story = state.story;
   if (!story || story.playing === playing) return;
-  if (story.done) { goStep(0); return; }
   const now = performance.now();
   story.playing = playing;
   if (playing) story.stepStart = now - story.spent; else story.spent = now - story.stepStart;
@@ -632,11 +630,13 @@ function endStory() {
   state.story = null;
   if (held && sound.on && sound.manifest.music) sound.music.play().catch(refused);
 }
-/* Exit: back to where the story was started, home or a region, with the model at rest */
+/* Exit, or the end of the story: back to where it was started, home or a region, with the model at rest */
 function exitStory() {
   const { from } = state.story;
   endStory();
   if (from.region) setRegion(from.region); else { state.selection = null; setView(from.view); }
+  /* the place it goes back to has an opening of its own, which is not spoken again: after a story it would sound like the story starting over */
+  sound.voice.pause(); sound.speaking = false; sound.music.volume = MUSIC_LEVEL;
 }
 /* How long a step runs: with the sound on, as long as its clip and a breath more; read, as long as its words take */
 const stepClip = (story, index) => (story.kind === 'steps' ? `story:${story.region}:${index}` : story.kind === 'motion' ? `region:${story.region}` : `entry:${story.steps[index].entry}`);
@@ -653,7 +653,7 @@ function renderProgress(now) {
   if (!story) return;
   const lengths = story.steps.map((step, index) => stepLength(story, index)), total = lengths.reduce((sum, ms) => sum + ms, 0);
   const before = lengths.slice(0, story.index).reduce((sum, ms) => sum + ms, 0);
-  const played = story.done ? total : before + Math.min(lengths[story.index], story.playing ? now - story.stepStart : story.spent);
+  const played = before + Math.min(lengths[story.index], story.playing ? now - story.stepStart : story.spent);
   const time = `${clock(played)} / ${clock(total)}`;
   if (time === timeShown) return;
   timeShown = time;
@@ -669,7 +669,7 @@ function stepStory(now) {
   const unspoken = Math.max(STEP_MS, stepWords(story.kind, story.region, story.steps[story.index]).length * READ_MS);
   if (sound.on && sound.clip ? sound.speaking || now - sound.endedAt < AFTER_VOICE_MS : now - story.stepStart < unspoken) return;
   if (story.index + 1 < story.steps.length) goStep(story.index + 1);
-  else { story.playing = false; story.done = true; syncUI(); }
+  else exitStory();   // told to its end, it goes back to where it was started
 }
 
 /* ---------- Motion: what a region does in its story ----------
@@ -1264,7 +1264,7 @@ function syncUI() {
     button('prev').hidden = button('next').hidden = $('storyCount').hidden = !stepped;
     button('prev').disabled = story.index === 0; button('next').disabled = story.index === story.steps.length - 1;
     $('storyCount').textContent = `${story.index + 1} / ${story.steps.length}`;
-    button('play').textContent = story.playing ? 'Pause' : story.done ? 'Play again' : 'Play';
+    button('play').textContent = story.playing ? 'Pause' : 'Play';
   }
   renderWords();
   $('hint').hidden = state.touched || !atHome();

@@ -543,7 +543,22 @@ test.describe('motion', () => {
     await expect(page.locator('#sheet [data-watch="knee"]')).toHaveText(/^Watch: how the knee bends, \d+ min$/);
     await page.locator('#sheet [data-watch="knee"]').click();
     if (isPhone(page)) await expect(page.locator('#sheet')).toBeHidden();
-    else await expect(page.locator('#sheet .parts button')).toHaveCount(REGIONS.knee.parts.length);   // a region in motion keeps its numbered parts in the sheet
+    else {   // a region in motion keeps its numbered parts in the sheet; picking one closes in on it, and the story plays on
+      await expect(page.locator('#sheet .parts button')).toHaveCount(REGIONS.knee.parts.length);
+      const eye = () => model(page, () => window.bodyModel.camera.position.toArray());
+      await settle(page);
+      const whole = await eye();
+      const part = page.locator('#sheet .parts button').nth(3);   // the patella
+      await part.click();
+      await expect(part).toHaveAttribute('aria-current', 'true');
+      await settle(page);
+      const near = await eye();
+      expect(Math.hypot(...near.map((value, axis) => value - whole[axis]))).toBeGreaterThan(5);
+      await expect(page.locator('#transport [data-story="play"]')).toHaveText('Pause');
+      expect(await model(page, () => window.bodyModel.motion().moving)).toBe(true);
+      await part.click();   // picked again: back to the whole knee
+      await expect(page.locator('#sheet [aria-current="true"]')).toHaveCount(0);
+    }
     await expect(page.locator('#crumbs')).toHaveText('›Knee›How the knee bends');
     await expect.poll(() => model(page, () => window.bodyModel.motion().moving)).toBe(true);
     /* its strip has just Pause and Exit */

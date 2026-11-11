@@ -561,7 +561,7 @@ function startStory(id, { aloud = true, loop = false } = {}) {
   const kind = loop ? 'motion' : storyKind(id), from = state.story ? state.story.from : { region: state.region, view: state.view };
   setContents(false);
   state.cut = false;
-  state.story = { kind, region: id, name: storyName(id), steps: storySteps(id, kind), index: 0, playing: true, done: false, stepStart: 0, spent: 0, from };
+  state.story = { kind, region: id, name: storyName(id), steps: storySteps(id, kind), index: 0, at: null, playing: true, done: false, stepStart: 0, spent: 0, from };
   sound.key = null;   // its words are spoken from the start, though the region's opening may just have said them
   if (id && state.region !== id) applyRegion(id);
   goStep(0);
@@ -582,6 +582,23 @@ function focusStep(step) {
   const parts = step.frame.flatMap(key => body.entries[key] || []);
   const frame = fitFrame(boxPoints(parts, 1), step.from ? V(...step.from).normalize() : viewInfo().direction || FRONT, V(0, 1, 0), step.fill || 0.82);
   flyTo(frame.position, frame.target, V(0, 1, 0), 1400);
+}
+/* A part picked from the sheet while its region moves: the story plays on, the view closes in on the part from its own
+   side of the region, and its label is lit. Picked again, the view goes back to the whole region. */
+function watchPart(key) {
+  const story = state.story;
+  story.at = story.at === key ? null : key;
+  if (!story.at) focusStep({});
+  else {
+    const parts = body.entries[key], points = boxPoints(parts, 0.8), whole = viewFrame();
+    const aside = new THREE.Box3().setFromPoints(points).getCenter(new THREE.Vector3()).sub(whole.target);
+    const direction = (viewInfo().direction || FRONT).clone().normalize().addScaledVector(aside.lengthSq() ? aside.normalize() : aside, 0.9).normalize();
+    const near = fitFrame(points, direction, V(0, 1, 0), 0.6);
+    /* a part that reaches far out of the region (a thigh bone at the knee) is shown where it is in the region */
+    const frame = near.position.distanceTo(near.target) < whole.position.distanceTo(whole.target) ? near : whole;
+    flyTo(frame.position, frame.target, V(0, 1, 0), 1400);
+  }
+  renderSheet(); syncUI();
 }
 /* step through the main parts by hand, in number order; each is shown in the view of its layer */
 function stepPart(delta) {
@@ -1084,7 +1101,7 @@ function storySections() {
   const story = state.story, head = `<div class="eyebrow">Watching</div><h2 id="sheetTitle" tabindex="-1">${escapeHtml(story.name)}</h2>`;
   if (story.kind === 'motion') return `${head}
     <h3 class="sub">Parts</h3>
-    <div class="list parts">${body.order.map(key => `<button type="button" data-entry="${key}"><i>${entryNumber(key)}</i>${escapeHtml(ALL[key].short || ALL[key].name)}</button>`).join('')}</div>`;
+    <div class="list parts">${body.order.map(key => `<button type="button" data-entry="${key}" aria-current="${key === story.at}"><i>${entryNumber(key)}</i>${escapeHtml(ALL[key].short || ALL[key].name)}</button>`).join('')}</div>`;
   const title = step => (story.kind === 'tour' ? ALL[step.entry].short || ALL[step.entry].name : step.title);
   return `${head}
     <h3 class="sub">${story.kind === 'tour' ? 'Stops' : 'Steps'}</h3>
@@ -1165,7 +1182,8 @@ document.addEventListener('click', event => {
     if (action === 'play') playStory(!story.playing);
     if (action === 'next') goStep(Math.min(story.steps.length - 1, story.index + 1));
     if (action === 'prev') goStep(Math.max(0, story.index - 1));
-  } else if (body.entries[target.dataset.entry]) {
+  } else if (state.story?.kind === 'motion' && target.closest('#sheet') && body.entries[target.dataset.entry]) watchPart(target.dataset.entry);
+  else if (body.entries[target.dataset.entry]) {
     endStory(); setContents(false);
     const key = target.dataset.entry, view = target.dataset.view || viewForLayer(entryLayer(key));
     if (target.dataset.view ? state.region || view !== state.view : !state.region && view !== state.view) applyView(view);   // a region's own parts stay in it
@@ -1641,7 +1659,7 @@ function updateLabels(width, height) {
   const placed = [...document.querySelectorAll(OVERLAYS.join(','))].filter(el => !el.hidden && el.offsetParent).map(el => el.getBoundingClientRect())
     .map(r => [r.left - origin.left, r.top - origin.top, r.right - origin.left, r.bottom - origin.top]);
   const panels = placed.slice();
-  const selectedKey = telling()?.span ? telling().entry : state.selection?.entry, hoveredKey = state.hovered >= 0 && body.entryOf[state.hovered] >= 0 ? body.keys[body.entryOf[state.hovered]] : null;
+  const selectedKey = telling()?.span ? telling().entry : state.story?.at || state.selection?.entry, hoveredKey = state.hovered >= 0 && body.entryOf[state.hovered] >= 0 ? body.keys[body.entryOf[state.hovered]] : null;
   const told = telling() ? telling().labels || [telling().entry] : null;
   const priority = told ? told : atHome() && spotEls.length && !state.blend && state.peel === 0 ? [] : viewInfo().labels[state.sex] || viewInfo().labels.any;   // on the opening view the glowing points invite; callouts come with the layers
   const order = (isolating() ? [selectedKey, hoveredKey] : [selectedKey, hoveredKey, ...priority]).filter((key, k, list) => key && body.entries[key] && list.indexOf(key) === k);

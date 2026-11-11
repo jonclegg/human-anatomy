@@ -198,6 +198,8 @@ button:focus-visible, input:focus-visible, a:focus-visible, .contents:focus-visi
 .contents .watch { grid-row: span 3; }   /* the long list keeps one column, and the short ones stack beside it */
 .contents h2 { font-size: 21px; font-weight: 600; letter-spacing: -0.02em; }
 .contents [aria-pressed="true"] span, .contents [aria-checked="true"] span { color: var(--mark); }
+.sheet .slide { display: grid; gap: 6px; }
+.sheet .slide label { font-size: 13px; color: var(--muted); }
 .contents .slide { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 2px 12px; padding: 10px 2px; border-top: 1px solid var(--line); }
 .contents .slide input { grid-column: 1 / -1; }
 .contents .slide output { font: 12px var(--mono); color: var(--faint); }

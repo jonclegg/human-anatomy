@@ -438,8 +438,9 @@ function measureAnchors(body, geometry) {
 }
 
 /* ---------- State ---------- */
+const REST = 0.02, MOST_REST = 0.25;   // how solid the rest of the body is beside a part picked out of it: faint, since hundreds of parts lie over one another; the sheet has a slider for it
 const state = {
-  sex: 'male', view: 'body', peel: 0, blend: null, region: null, layers: {}, xray: 0, body: 0.25, labels: true, clothed: true, cut: false, tone: 0,
+  sex: 'male', view: 'body', peel: 0, blend: null, region: null, layers: {}, xray: 0, body: 0.25, rest: REST, labels: true, clothed: true, cut: false, tone: 0,
   selection: null, hovered: -1, sheet: 'peek', story: null, contents: false, touched: false,
 };
 try { const saved = JSON.parse(localStorage.getItem('wl-body') || '{}'); if (saved.tonePicked && Number.isInteger(saved.tone)) state.tone = saved.tone; if (saved.sex === 'female' || saved.sex === 'male') state.sex = saved.sex; } catch (error) { /* storage unavailable */ }
@@ -490,7 +491,7 @@ function applyVisibility() {
     else if (around) opacity = around.own.has(index) ? 1 : around.context.has(index) ? GHOST * (live?.context ?? 1) : 0;   // a close-up: its parts, and its context faint
     if (mode === 'solid' && !state.blend && view.xray.includes(part.layer)) opacity = 1 - (1 - GHOST) * state.xray;
     if (SHOWN_WHEN_CHOSEN.test(part.name) && !chosen.has(index)) opacity = 0;
-    if (isolate) opacity = chosen.has(index) ? 1 : Math.min(opacity, part.layer === 'skin' ? 0.05 : 0.12);
+    if (isolate) opacity = chosen.has(index) ? 1 : Math.min(opacity, part.layer === 'skin' ? Math.min(0.05, state.rest) : state.rest);
     if (chosen.has(index) && !isolate) opacity = Math.max(opacity, 1);
     const look = live?.look && around.own.has(index) ? live.look(part.name) : null;   // how a part looks while its close-up moves: the heart's walls as glass, its cavities the colour of their blood
     if (look?.opacity !== undefined && !chosen.has(index)) opacity = Math.min(opacity, look.opacity);
@@ -1161,6 +1162,7 @@ function sheetContent() {
     <div class="sheet-head"><span class="sys" style="--dot:${LAYER_INFO[part.layer].dot}">${at >= 0 ? `<em class="no">${at + 1}</em>` : ''}${escapeHtml(GROUP_INFO[part.group]?.name || LAYER_INFO[part.layer].name)}</span>${at >= 0 ? `<span class="count">${at + 1} of ${body.order.length}</span>` : ''}</div>
     <div><h2 id="sheetTitle" tabindex="-1">${escapeHtml(title)}</h2><div class="aka">${escapeHtml(aka || '')}</div></div>
     ${entry ? `<p>${escapeHtml(entry.what)}</p><p>${escapeHtml(entry.does)}</p><div class="bug"><b>Worth knowing</b>${escapeHtml(entry.bug)}</div>` : `<p>One of the ${body.parts.length} structures in this model, in the ${escapeHtml((GROUP_INFO[part.group]?.name || part.group).toLowerCase())}. The main parts have full notes.</p>`}
+    ${selection.isolate ? `<div class="slide"><label for="rest">Rest of the body</label><input type="range" id="rest" min="0" max="${MOST_REST * 100}" value="${Math.round(state.rest * 100)}" style="--fill:${state.rest / MOST_REST * 100}%"></div>` : ''}
     <dl class="stats">${facts.map(([k, v]) => `<dt>${escapeHtml(k)}</dt><dd>${escapeHtml(v)}</dd>`).join('')}</dl>
     ${equivalent ? `<div class="homolog">${state.sex === 'male' ? 'Female' : 'Male'} equivalent: <b>${escapeHtml(equivalent)}</b></div>` : ''}
     ${partNav(at)}
@@ -1458,6 +1460,12 @@ for (const button of document.querySelectorAll('[data-toggle]')) button.addEvent
   const key = button.dataset.toggle; state[key] = !state[key]; applyVisibility(); syncUI();
   /* the cut is looked at from the body's left, square on, from where the view already is */
   if (key === 'cut' && state.cut) { const distance = camera.position.distanceTo(controls.target); flyTo(controls.target.clone().addScaledVector(V(1, 0.06, 0.1).normalize(), distance), controls.target, V(0, 1, 0)); }
+});
+/* the sheet is drawn again as parts are picked, so its slider is listened for from above it */
+$('sheet').addEventListener('input', event => {
+  if (event.target.id !== 'rest') return;
+  state.rest = event.target.value / 100; event.target.style.setProperty('--fill', `${state.rest / MOST_REST * 100}%`);
+  applyVisibility(); invalidate();
 });
 $('xraySwitch').addEventListener('click', () => { state.xray = state.xray < 0.02 ? 0.85 : 0; applyVisibility(); syncUI(); });
 $('xray').addEventListener('input', event => { state.xray = event.target.value / 100; applyVisibility(); syncUI(); });

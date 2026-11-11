@@ -286,16 +286,40 @@ function capCount(side, count) {
   const uniforms = { uColour: { value: stateTexture.colour }, uFlags: { value: stateTexture.flags }, uMoves: { value: stateTexture.moves }, uCut: cutUniform, uOpen: opened.plane, uOpenBall: opened.ball };
   shaderUniforms.push(uniforms);
   return new THREE.ShaderMaterial({
-    uniforms, side, colorWrite: false, depthWrite: false, depthTest: false, stencilWrite: true, stencilFunc: THREE.AlwaysStencilFunc, stencilFail: count, stencilZFail: count, stencilZPass: count,
+    uniforms, side, colorWrite: false, depthWrite: false, depthTest: false, stencilWrite: true, stencilWriteMask: 0x7f, stencilFunc: THREE.AlwaysStencilFunc, stencilFail: count, stencilZFail: count, stencilZPass: count,
     vertexShader: `${VERTEX_STATE} void main() { ${FETCH_STATE} vec3 moved = position, movedNormal = normal; ${MOVE('moved', 'movedNormal')} vPlace = moved; gl_Position = projectionMatrix * modelViewMatrix * vec4(moved, 1.0); }`,
     fragmentShader: `${CUT_FRAGMENT} void main() { if (${CUT_AWAY}) discard; gl_FragColor = vec4(0.0); }`,
   });
 }
 const CAP_COUNTS = [capCount(THREE.BackSide, THREE.IncrementWrapStencilOp), capCount(THREE.FrontSide, THREE.DecrementWrapStencilOp)];
-const capSheet = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshBasicMaterial({ color: '#cf7a78', side: THREE.DoubleSide,
+const CUT_FACE = '#cf7a78';   // the face of a cut, unless the motion gives its own (`cut`)
+/* the grain of cut flesh: fine pale and dark flecks, laid over the face's colour, so a wide cut is not a flat patch */
+const GRAIN = (() => {
+  const canvas = document.createElement('canvas'); canvas.width = canvas.height = 256;
+  const g = canvas.getContext('2d'); g.fillStyle = '#ececec'; g.fillRect(0, 0, 256, 256);
+  for (let k = 0; k < 2600; k++) { const x = Math.random() * 256, y = Math.random() * 256, long = 3 + Math.random() * 9, shade = Math.random() < 0.5 ? 255 : 150; g.strokeStyle = `rgba(${shade},${shade},${shade},${0.05 + Math.random() * 0.1})`; g.lineWidth = 0.6 + Math.random() * 1.4; g.beginPath(); g.moveTo(x, y); g.lineTo(x + long, y + (Math.random() - 0.5) * 3); g.stroke(); }
+  const texture = new THREE.CanvasTexture(canvas); texture.wrapS = texture.wrapT = THREE.RepeatWrapping; texture.repeat.set(5, 5); texture.colorSpace = THREE.SRGBColorSpace;
+  return texture;
+})();
+const capSheet = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshBasicMaterial({ color: CUT_FACE, map: GRAIN, side: THREE.DoubleSide,
   stencilWrite: true, stencilRef: 0, stencilFunc: THREE.NotEqualStencilFunc, stencilFail: THREE.ReplaceStencilOp, stencilZFail: THREE.ReplaceStencilOp, stencilZPass: THREE.ReplaceStencilOp }));
 capSheet.renderOrder = -1; capSheet.visible = false; capSheet.raycast = () => {}; capSheet.onAfterRender = () => renderer.clearStencil();
 root.add(capSheet);
+/* A way through a solid part that the source left filled in (the mouth of a valve in the heart's wall) is kept clear of
+   the cut's face. Each is a tube; where the plane lies inside one, the top bit of the stencil is set (every face of
+   the tube beyond the plane flips it), and a first pass over the sheet wipes the mark there before the face is drawn. */
+const HOLLOW = new THREE.MeshBasicMaterial({ side: THREE.DoubleSide, colorWrite: false, depthWrite: false, depthTest: false, clippingPlanes: [openPlane],
+  stencilWrite: true, stencilWriteMask: 0x80, stencilFunc: THREE.AlwaysStencilFunc, stencilFail: THREE.InvertStencilOp, stencilZFail: THREE.InvertStencilOp, stencilZPass: THREE.InvertStencilOp });
+const capClear = new THREE.Mesh(capSheet.geometry, new THREE.MeshBasicMaterial({ side: THREE.DoubleSide, colorWrite: false, depthWrite: false, depthTest: false,
+  stencilWrite: true, stencilRef: 0x80, stencilFunc: THREE.LessEqualStencilFunc, stencilFail: THREE.KeepStencilOp, stencilZFail: THREE.ZeroStencilOp, stencilZPass: THREE.ZeroStencilOp }));
+capClear.renderOrder = -1.5; capClear.raycast = () => {}; capSheet.add(capClear);   // it lies where the sheet lies, and shows when it shows
+function makeHollow({ middle, axis, radius, from, to }) {
+  const mesh = new THREE.Mesh(new THREE.CylinderGeometry(radius, radius, to - from, 28, 1, false), HOLLOW);
+  mesh.position.copy(middle).addScaledVector(axis, (from + to) / 2); mesh.quaternion.setFromUnitVectors(V(0, 1, 0), axis);
+  mesh.renderOrder = -2; mesh.frustumCulled = false; mesh.visible = false; mesh.raycast = () => {};
+  root.add(mesh);
+  return mesh;
+}
 /* the faces of some parts, for the count: the same vertices as their layers, and only their triangles */
 function capMeshes(indices) {
   const meshes = [];
@@ -682,6 +706,8 @@ function motionKit() {
   });
   const kit = {
     models: [], model(spec) { const model = makeModel(spec); kit.models.push(model); return model; },
+    /* a way through that a cut's face must leave clear: a tube round an axis through a point, from one depth along it to another (cm) */
+    hollows: [], hollow(spec) { kit.hollows.push(makeHollow(spec)); },
     V, own, context, shown, skin: body.parts.filter(part => part.layer === 'skin'), sex: body.sex, height: body.height,
     find: (pattern, among = own) => among.filter(part => pattern.test(part.name)),
     one: (pattern, among = shown) => among.find(part => pattern.test(part.name)) || fail(`nothing named ${pattern}`),
@@ -739,18 +765,21 @@ function motionKit() {
 /* A model of the motion's own: a shape the source has only at rest (a valve, drawn shut), built in code so that it can
    move as the real thing does. While the motion runs it stands in for some of the close-up's parts: it takes their
    colour and how solid they are, moment by moment, is picked as them, and they are not drawn. { name, parts: the
-   parts it stands in for, count: its vertices, index: its triangles, of: the part each vertex is picked as }; the
+   parts it stands in for, count: its vertices, index: its triangles, of: the part each vertex is picked as, wet }; the
    motion's step writes its `positions`, and may keep what it likes in its `state`. */
 const MODEL_PICK = new THREE.ShaderMaterial({ side: THREE.DoubleSide, uniforms: { uOpen: opened.plane, uOpenBall: opened.ball },
   vertexShader: 'attribute float _part; varying float vPart; varying vec3 vPlace; void main() { vPart = _part + 1.0; vPlace = position; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
   fragmentShader: `uniform vec4 uOpen; uniform vec4 uOpenBall; varying float vPart; varying vec3 vPlace; void main() { if (${CUT_AWAY}) discard; float id = vPart; gl_FragColor = vec4(mod(id, 256.0) / 255.0, mod(floor(id / 256.0), 256.0) / 255.0, 0.0, 1.0); }` });
-function makeModel({ name, parts, count, index, of }) {
+function makeModel({ name, parts, count, index, of, wet = false }) {
   const geometry = new THREE.BufferGeometry(), positions = new Float32Array(count * 3);
   geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3).setUsage(THREE.DynamicDrawUsage));
   geometry.setAttribute('normal', new THREE.BufferAttribute(new Float32Array(count * 3), 3).setUsage(THREE.DynamicDrawUsage));
   geometry.setAttribute('_part', new THREE.BufferAttribute(Float32Array.from(of, part => part.index), 1));
   geometry.setIndex(index);
-  const material = new THREE.MeshStandardMaterial({ side: THREE.DoubleSide, roughness: 0.78, metalness: 0, clippingPlanes: [openPlane] }); material.envMapIntensity = 0.4;
+  /* wet: glistening, as living tissue is */
+  const material = wet ? new THREE.MeshPhysicalMaterial({ side: THREE.DoubleSide, roughness: 0.42, metalness: 0, clearcoat: 0.7, clearcoatRoughness: 0.25, clippingPlanes: [openPlane] })
+    : new THREE.MeshStandardMaterial({ side: THREE.DoubleSide, roughness: 0.78, metalness: 0, clippingPlanes: [openPlane] });
+  material.envMapIntensity = wet ? 0.8 : 0.4;
   const mesh = new THREE.Mesh(geometry, material), pick = new THREE.Mesh(geometry, MODEL_PICK);
   for (const object of [mesh, pick]) { object.frustumCulled = false; object.visible = false; object.raycast = () => {}; }
   root.add(mesh); pickScene.add(pick);
@@ -810,10 +839,11 @@ function setMotion() {
       rig.streams = (rig.streams || []).map(makeStream); rig.models = kit.models;
       /* how each of its parts is when the close-up is cut open (a step of its story): { opacity, cap: the cut leaves a flat face on it } */
       rig.opened = new Map(kit.own.map(part => [part.index, motion.definition.opened?.(part.name)]).filter(([, look]) => look));
-      rig.caps = capMeshes([...rig.opened].filter(([, look]) => look.cap).map(([index]) => index));
+      rig.caps = [...capMeshes([...rig.opened].filter(([, look]) => look.cap).map(([index]) => index)), ...kit.hollows];
       motion.rigs[key] = rig;
     }
     motion.rig = motion.rigs[key]; motion.for = key; motion.clock = 0; motion.phase = 0;   // each motion starts from its beginning
+    capSheet.material.color.set(motion.definition.cut || CUT_FACE);
   }
   if (key) motion.base = stateTexture.colour.image.data.slice();   // how each part looks before the moment's fades and glows
 }

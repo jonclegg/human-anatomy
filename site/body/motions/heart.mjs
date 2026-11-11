@@ -39,7 +39,9 @@ const VALVES = [
   { name: 'aortic', leaflets: /cusp of aortic valve$/i, from: 'Cavity of left ventricle' },
 ];
 const ACROSS = 20, ALONG = 12, THICK = 0.11;                                              // and how thick a leaflet is at the ring, in cm: it thins toward its edge                             // a leaflet's mesh: steps across it, and from the ring to its free edge
-const CORDS = [0.1, 0.24, 0.38, 0.62, 0.76, 0.9], CORD_STEPS = 5, CORD_WIDTH = 0.045;   // where along a leaflet's edge its cords are tied; a cord's mesh, and its half-width in cm
+/* where a leaflet's cords are tied, as [across it, from the ring to its edge]: a row along its free edge, and a second on its underside a little way back */
+const CORDS = [...[0.07, 0.17, 0.27, 0.37, 0.46, 0.54, 0.63, 0.73, 0.83, 0.93].map(u => [u, 1]), ...[0.16, 0.32, 0.5, 0.68, 0.84].map(u => [u, 0.72])];
+const CORD_STEPS = 5, CORD_WIDTH = 0.028;   // a cord's mesh, and its half-width in cm
 function modelValve(kit, { name, leaflets, from, to, muscles }) {
   const parts = kit.find(leaflets), inflow = !!to, points = kit.points(parts), start = kit.centre(kit.one(exact(from)));
   const onward = (to ? kit.centre(kit.one(exact(to))).sub(start) : kit.centre(parts).sub(start)).normalize();   // roughly the way through
@@ -80,9 +82,9 @@ function modelValve(kit, { name, leaflets, from, to, muscles }) {
   }
   /* the cords, each from a place on a leaflet's edge to the tip of the muscle nearest that place when the valve is open; taut when it is shut */
   const tips = muscles ? kit.find(muscles).map(part => kit.end(part, ring.clone().sub(kit.centre(part)).normalize(), 0.5)) : [];
-  const cords = tips.length ? sectors.flatMap(sector => CORDS.map(u => {
-    const hangs = point(sector, u, 1, 1), tip = tips.reduce((best, each) => (each.distanceTo(hangs) < best.distanceTo(hangs) ? each : best));
-    return { sector, u, tip, taut: point(sector, u, 1, 0).distanceTo(tip) };
+  const cords = tips.length ? sectors.flatMap(sector => CORDS.map(([u, v]) => {
+    const hangs = point(sector, u, v, 1), tip = tips.reduce((best, each) => (each.distanceTo(hangs) < best.distanceTo(hangs) ? each : best));
+    return { sector, u, v, tip, taut: point(sector, u, v, 0).distanceTo(tip) };
   })) : [];
   /* the mesh: each leaflet a thin slab (the sheet's two faces, joined round its rim), then a three-sided tube for each cord */
   const index = [], of = [], row = ALONG + 1, sheet = (ACROSS + 1) * row;
@@ -97,7 +99,14 @@ function modelValve(kit, { name, leaflets, from, to, muscles }) {
     for (let j = 0; j < ALONG; j++) for (const [i, flip] of [[0, true], [ACROSS, false]]) { const a = i * row + j, b = a + 1; index.push(...(flip ? [top + a, top + b, under + a, top + b, under + b, under + a] : [top + a, under + a, top + b, top + b, under + a, under + b])); }
   });
   const corded = sectors.length * sheet * 2;
-  const model = kit.model({ name, parts, count: of.length, index, of });
+  cords.forEach(({ sector }, c) => {
+    const start = corded + c * (CORD_STEPS + 1) * 3;
+    for (let k = 0; k < (CORD_STEPS + 1) * 3; k++) of.push(sector.part);
+    for (let i = 0; i < CORD_STEPS; i++) for (let j = 0; j < 3; j++) { const a = start + i * 3 + j, b = start + i * 3 + (j + 1) % 3; index.push(a, b, a + 3, b, b + 3, a + 3); }
+  });
+  const model = kit.model({ name, parts, count: of.length, index, of, wet: true });
+  /* the source's walls are filled in where a valve's mouth should be: the way through each is kept clear of a cut's face */
+  kit.hollow({ middle: ring, axis, radius: radius * 0.92, from: inflow ? -0.9 : -1.4, to: inflow ? 0.6 : height + 1.6 });
   const sideways = kit.V(0, 0, 0), up = kit.V(0, 0, 0), bow = kit.V(0, 0, 0), at = kit.V(0, 0, 0), grid = Array.from({ length: sheet }, () => kit.V(0, 0, 0)), facing = kit.V(0, 0, 0);
   /* drawn `open` (0 to 1), its cords tied to muscles that the ventricle's squeeze has drawn toward a point by a share */
   return { name, inflow, pose(open, toward, share) {
@@ -115,8 +124,8 @@ function modelValve(kit, { name, leaflets, from, to, muscles }) {
       }
       k += sheet * 6;
     }
-    for (const { sector, u, tip, taut } of cords) {
-      const tied = point(sector, u, 1, open), end = tip.clone().lerp(toward, share), along = end.clone().sub(tied), far = along.length();
+    for (const { sector, u, v, tip, taut } of cords) {
+      const tied = point(sector, u, v, open), end = tip.clone().lerp(toward, share), along = end.clone().sub(tied), far = along.length();
       /* slack, it bows toward the middle of the way through, by as much as its length allows */
       bow.copy(ring).addScaledVector(axis, tied.clone().sub(ring).dot(axis)).sub(tied).addScaledVector(along, -bow.dot(along) / (far * far)).setLength(0.5 * Math.sqrt(Math.max(0, taut * taut - far * far)));
       sideways.copy(along).cross(axis).setLength(CORD_WIDTH); up.copy(along).cross(sideways).setLength(CORD_WIDTH);
@@ -128,6 +137,8 @@ function modelValve(kit, { name, leaflets, from, to, muscles }) {
     model.state.open = open;
   } };
 }
+/* as an opened heart is drawn in an atlas: salmon muscle, pale glistening valves, and the papillary muscles paler toward the cords they hold; the face of a cut is the cream of the fat under the heart's skin */
+const MUSCLE = '#b9645f', VALVE = '#f6e4dd', TENDINOUS = '#e2aaa0', CUT_FACE = '#e0a48f';
 const SPENT_CELLS = '#8fb0ff', FRESH_CELLS = '#ff9a8c';   // the blood in motion: paler than the chamber it runs through, so it shows
 /* The two streams, as the structures each passes through, in order */
 const STREAMS = [
@@ -161,10 +172,12 @@ const WIDTH = { vessel: 0.6, atrium: 1.45, inflow: 0.95, ventricle: 1.35, outflo
 const exact = name => new RegExp(`^${name}$`);
 
 export const heart = {
-  cycle: CYCLE * 1000, moments: MOMENTS, stop: 'Stop the heart beating', start: 'Set the heart beating', context: 0.4,
+  cycle: CYCLE * 1000, moments: MOMENTS, cut: CUT_FACE, stop: 'Stop the heart beating', start: 'Set the heart beating', context: 0.4,
   /* the walls as glass, so the blood shows; the cavities in the colour of their blood */
   look(name) {
-    if (/^Wall of /.test(name)) return { opacity: 0.22 };
+    if (/^Wall of /.test(name)) return { colour: MUSCLE, opacity: 0.22 };
+    if (/valve$/i.test(name)) return { colour: VALVE };
+    if (/papillary muscle/i.test(name)) return { colour: TENDINOUS };
     if (/^Cavity of right/.test(name)) return { colour: SPENT, opacity: 0.62 };
     if (/^Cavity of left/.test(name)) return { colour: FRESH, opacity: 0.62 };
     return null;

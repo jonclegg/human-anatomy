@@ -12,7 +12,7 @@
 /* Layout: four fixed places and nothing else. The model fills the stage. A thin bar on top says where you are (a trail
    that starts at the title, which always leads home) and holds the search, the body switch, the sound and Contents. One
    sheet at the side (at the bottom on phones) shows one thing: the home page, a region or a part. One strip at the
-   bottom of the model holds the layers at home and the transport during a story; a story hides the sheet and shows its
+   bottom of the model holds the layers at home and the transport during a story; a story lists its sections in the sheet and shows its
    words under the model. Contents is a page laid over the stage. A short manual follows. */
 :root {
   --bg: #0b0d0f; --stage-hi: #252b30; --stage-mid: #14181b; --panel: #161a1d; --field: #0f1214;
@@ -162,6 +162,7 @@ button:focus-visible, input:focus-visible, a:focus-visible, .contents:focus-visi
 .list span { flex: none; color: var(--faint); font: 12px var(--mono); white-space: nowrap; }
 .list button:hover, .list a:hover { color: var(--mark); }
 .list.parts button { justify-content: flex-start; }
+.list button[aria-current="true"] { color: var(--mark); font-weight: 600; }
 .list.parts i { flex: none; min-width: 22px; font: 12px var(--mono); font-style: normal; color: var(--mark); }
 .sheet-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
 .sheet-head .count { font: 12px var(--mono); color: var(--muted); white-space: nowrap; }
@@ -256,6 +257,7 @@ footer a { color: inherit; }
   .work { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) auto; }
   .sheet { width: auto; max-height: 30svh; padding: 0 16px 18px; gap: 12px; grid-auto-rows: max-content; border-left: 0; border-top: 1px solid var(--line-strong); }   /* max-content: a short sheet scrolls, and does not squeeze its clipped lines to nothing */
   .sheet.full { max-height: 60svh; }
+  .sheet.telling { display: none; }   /* a story's words and strip need the room */
   .sheet:not(.full) .lead { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }   /* short, so what to do next shows without scrolling; the handle shows it all */
   .sheet-handle { display: block; position: sticky; top: 0; z-index: 1; width: 100%; height: 22px; margin-bottom: -6px; border: 0; background: var(--panel); cursor: pointer; }
   .sheet-handle::before { content: ""; position: absolute; left: 50%; top: 9px; width: 40px; height: 4px; margin-left: -20px; border-radius: 4px; background: var(--line-strong); }

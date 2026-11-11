@@ -528,7 +528,7 @@ $('differenceRows').innerHTML = DIFFERENCES.map(([female, male]) => `<tr><td>${e
 $('gapList').innerHTML = GAPS.map(([title, text]) => `<li><b>${escapeHtml(title)}.</b> ${escapeHtml(text)}</li>`).join('');
 
 /* ---------- Stories ----------
-   A story takes the whole stage: the sheet is hidden, the model moves, the words being spoken are shown under it, and
+   A story has the stage: the sheet lists its sections, the model moves, the words being spoken are shown under it, and
    the strip is its transport. There are three kinds, and they share this one mode.
    'steps'   how a region works, a step at a time (stories.mjs: the heart has one)
    'motion'  a region that moves and has no steps: its motion plays over and over, and the region's opening is spoken once
@@ -1065,20 +1065,33 @@ const SOURCE_TEXT = {
   'Z-Anatomy': 'Z-Anatomy, an open atlas built on BodyParts3D (CC BY-SA 4.0). Aligned to the BodyParts3D body.',
 };
 /* The sheet shows exactly one thing: the home page (the layer on show, the tour, a few stories), a region (what it is,
-   its story, its numbered parts), or a part's card. A story hides it. */
+   its story, its numbered parts), a part's card, or during a story its sections: the steps of a story that has them,
+   the stops of the tour, or the numbered parts of a region in motion, with the one being told marked. Phones have no
+   room for it during a story. */
 const lowerFirst = text => text.charAt(0).toLowerCase() + text.slice(1);
 function renderSheet() {
   const el = $('sheet');
-  el.hidden = !!state.story;
   el.classList.toggle('full', state.sheet === 'full');
-  if (el.hidden) return;
+  el.classList.toggle('telling', !!state.story);
   /* the keyboard keeps its place when the sheet is drawn again: on the same button if it is still there, else on the heading */
   const held = el.contains(document.activeElement) ? document.activeElement : null;
   const again = held && (held.dataset.step ? `[data-step="${held.dataset.step}"]` : held.hasAttribute('data-sheet') ? '[data-sheet]' : null);
   el.innerHTML = `<button type="button" class="sheet-handle" data-sheet aria-label="${state.sheet === 'peek' ? 'Show more' : 'Show less'}"></button>${sheetContent()}`;
   if (held) (again && el.querySelector(again) || $('sheetTitle')).focus();
+  el.querySelector('[aria-current="true"]')?.scrollIntoView({ block: 'nearest' });
+}
+function storySections() {
+  const story = state.story, head = `<div class="eyebrow">Watching</div><h2 id="sheetTitle" tabindex="-1">${escapeHtml(story.name)}</h2>`;
+  if (story.kind === 'motion') return `${head}
+    <h3 class="sub">Parts</h3>
+    <div class="list parts">${body.order.map(key => `<button type="button" data-entry="${key}"><i>${entryNumber(key)}</i>${escapeHtml(ALL[key].short || ALL[key].name)}</button>`).join('')}</div>`;
+  const title = step => (story.kind === 'tour' ? ALL[step.entry].short || ALL[step.entry].name : step.title);
+  return `${head}
+    <h3 class="sub">${story.kind === 'tour' ? 'Stops' : 'Steps'}</h3>
+    <div class="list parts">${story.steps.map((step, k) => `<button type="button" data-go="${k}" aria-current="${k === story.index}"><i>${k + 1}</i>${escapeHtml(title(step))}</button>`).join('')}</div>`;
 }
 function sheetContent() {
+  if (state.story) return storySections();
   const selection = state.selection, intro = viewInfo();
   const heading = `<h2 id="sheetTitle" tabindex="-1">${escapeHtml(intro.title)}</h2>
     <p class="lead">${escapeHtml(intro.text[state.sex] || intro.text.any)}</p>`;
@@ -1135,7 +1148,7 @@ function goUp() {
   else if (state.region) setView(state.view);
 }
 document.addEventListener('click', event => {
-  const target = event.target.closest('[data-entry],[data-step],[data-up],[data-sheet],[data-region],[data-watch],[data-contents],[data-layer],[data-story],[data-manual]');
+  const target = event.target.closest('[data-entry],[data-step],[data-go],[data-up],[data-sheet],[data-region],[data-watch],[data-contents],[data-layer],[data-story],[data-manual]');
   if (!target) return;
   if (target.hasAttribute('data-sheet')) { state.sheet = state.sheet === 'peek' ? 'full' : 'peek'; renderSheet(); }
   else if (target.hasAttribute('data-contents')) { setContents(true); $('contents').focus(); }
@@ -1144,6 +1157,7 @@ document.addEventListener('click', event => {
   else if (target.dataset.region) { endStory(); setContents(false); setRegion(target.dataset.region); }
   else if (target.dataset.layer) goHome(target.dataset.layer);
   else if (target.dataset.step) stepPart(Number(target.dataset.step));
+  else if (target.dataset.go) goStep(Number(target.dataset.go));
   else if (target.dataset.manual) { setContents(false); $(target.dataset.manual).scrollIntoView({ behavior: reducedMotion() ? 'auto' : 'smooth', block: 'start' }); }
   else if (target.dataset.story) {
     const story = state.story, action = target.dataset.story;
@@ -1194,7 +1208,6 @@ function syncUI() {
   $('contentsBtn').textContent = state.contents ? 'Close' : 'Contents';
   $('contentsBtn').setAttribute('aria-expanded', String(state.contents));
   stage.inert = $('sheet').inert = state.contents;
-  $('sheet').hidden = !!story;
   /* the strip: the layers at home, a story's transport, and nothing in a region or on a part */
   $('layerStrip').hidden = !atHome();
   $('peel').value = Math.round(state.peel * 100);

@@ -397,7 +397,15 @@ test.describe('close-ups', () => {
     await page.locator('#sheet [data-watch="heart"]').click();
     await expect(page.locator('#storyCount')).toHaveText(`1 / ${STORIES.heart.length}`);   // the heart's story has steps
     await expect(page.locator('#say')).toHaveText(STORIES.heart[0].say);
-    await expect(page.locator('#sheet')).toBeHidden();                                   // a story takes the whole stage
+    if (isPhone(page)) await expect(page.locator('#sheet')).toBeHidden();   // phones have no room for it
+    else {   // the sheet lists the story's steps, the one being told marked, and any can be clicked
+      await expect(page.locator('#sheet [data-go]')).toHaveText(STORIES.heart.map((step, k) => `${k + 1}${step.title}`));
+      await expect(page.locator('#sheet [aria-current="true"]')).toHaveText(`1${STORIES.heart[0].title}`);
+      await page.locator('#sheet [data-go="2"]').click();
+      await expect(page.locator('#storyCount')).toHaveText(`3 / ${STORIES.heart.length}`);
+      await expect(page.locator('#sheet [aria-current="true"]')).toHaveText(`3${STORIES.heart[2].title}`);
+      await page.locator('#sheet [data-go="0"]').click();
+    }
     await expect(page.locator('#crumbs')).toHaveText('›Heart›How the heart beats');
     await expect(page.locator('#soundBtn')).toHaveAttribute('aria-pressed', 'true');   // a story is told aloud
     for (let k = 0; k < 3; k++) await page.locator('#transport [data-story="next"]').click();   // a later step: one side of the heart, its own labels
@@ -534,7 +542,8 @@ test.describe('motion', () => {
     const errors = await openRegion(page, 'knee');
     await expect(page.locator('#sheet [data-watch="knee"]')).toHaveText(/^Watch: how the knee bends, \d+ min$/);
     await page.locator('#sheet [data-watch="knee"]').click();
-    await expect(page.locator('#sheet')).toBeHidden();
+    if (isPhone(page)) await expect(page.locator('#sheet')).toBeHidden();
+    else await expect(page.locator('#sheet .parts button')).toHaveCount(REGIONS.knee.parts.length);   // a region in motion keeps its numbered parts in the sheet
     await expect(page.locator('#crumbs')).toHaveText('›Knee›How the knee bends');
     await expect.poll(() => model(page, () => window.bodyModel.motion().moving)).toBe(true);
     /* its strip has just Pause and Exit */
@@ -569,7 +578,7 @@ test.describe('motion', () => {
     const errors = await openRegion(page, 'heart');
     await model(page, () => window.bodyModel.startStory('heart', { aloud: false, loop: true }));   // the beat on its own, as a screen left alone shows it
     await expect.poll(() => model(page, () => window.bodyModel.motion().moving)).toBe(true);
-    await settle(page);   // the view widens as the sheet goes
+    await settle(page);
     const at = phase => model(page, phase => {
       const m = window.bodyModel, parts = m.body().parts, find = pattern => parts.findIndex(part => pattern.test(part.name)), opacity = pattern => m.opacityOf(find(pattern));
       m.holdMotion(phase); m.frame(performance.now());
@@ -863,7 +872,7 @@ test.describe('layout', () => {
     await page.locator('#sheet [data-up]').click();
     await page.locator('#sheet [data-watch="heart"]').click();
     await settle(page);
-    await expect(page.locator('#sheet')).toBeHidden();   // a story has the whole stage
+    if (isPhone(page)) await expect(page.locator('#sheet')).toBeHidden();   // on a phone a story has the whole stage
     await check('#transport');
     const [say, transport] = [await box('#say'), await box('#transport')];
     expect(say.y + say.height).toBeLessThanOrEqual(transport.y);   // its words sit just above the strip

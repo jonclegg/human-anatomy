@@ -1,6 +1,6 @@
-// Motions of the chest and abdomen: breathing, a meal's journey, the liver's blood and bile, the kidney's blood and
-// urine, the drift of lymph, and milk in the breast. See ../motions.mjs for the format.
-import { smooth, during, chain, light, SPENT, FRESH, AIR, FOOD, URINE, BILE, LYMPH } from './shared.mjs';
+// Motions of the chest and abdomen: breathing, the blood's two loops, a meal's journey, the liver's blood and bile, the
+// kidney's blood and urine, the drift of lymph, milk in the breast, and the hormone glands taking their turns. See ../motions.mjs for the format.
+import { smooth, during, chain, light, SPENT, FRESH, AIR, FOOD, URINE, BILE, LYMPH, JUICE } from './shared.mjs';
 
 /* ---------- The lungs: one breath ----------
    0.00-0.42 in: the diaphragm flattens, the ribs lift, the lungs fill; 0.42-0.95 out: it all springs back; then a pause */
@@ -88,6 +88,8 @@ export const liver = {
     const duct = kit.line(named(/^Common hepatic duct$/), { from: kit.end(named(/^Common hepatic duct$/), up, 0.6) }), cystic = kit.centre(named(/^Cystic duct$/));
     const drain = kit.centre(kit.find(/^(Right|Middle|Left) hepatic vein$/)), out = kit.end(kit.find(/^(Right|Middle|Left) hepatic vein$/), up, 1);
     const curve = points => kit.curve(points).curve;
+    const juice = kit.line(named(/^Pancreatic duct$/), { to: gut, radius: 0.8 });   // from the tail of the pancreas to its head, where the duct meets the bile duct
+    const opening = kit.points(named(/^Duodenum$/)).reduce((best, point) => (point.distanceTo(juice.at(-1)) < best.distanceTo(juice.at(-1)) ? point : best));   // where both enter the duodenum: its wall nearest the duct's end
     return {
       V, gallbladder, store, liver: kit.find(/^Hepatovenous segment/), ducts: kit.entry('liverHepaticDucts'),
       streams: [
@@ -95,7 +97,8 @@ export const liver = {
         { curve: curve([kit.centre(named(/^Celiac trunk$/)), kit.centre(named(/^Common hepatic artery$/)), kit.centre(named(/^Hepatic artery proper$/)), left.clone().lerp(right, 0.4)]), colour: FRESH, count: 168, size: 0.42, spread: 0.15, speed: (where, phase, time) => 0.2 + 0.25 * Math.max(0, Math.sin(time * 5)) },   // from the heart, in pulses
         { curve: curve([right, drain, out, out.clone().add(V(0, 3.5, 0))]), colour: SPENT, count: 312, size: 0.54, spread: 0.3, speed: () => 0.18 },
         { curve: curve([right.clone().lerp(left, 0.3), ...duct, cystic, store]), colour: BILE, count: 144, size: 0.42, spread: 0.12, speed: () => 0.14, shown: phase => 1 - during(phase, 0.58, 1) },
-        { curve: curve([store, cystic, duct.at(-1).clone().lerp(gut, 0.5), gut]), colour: BILE, count: 216, size: 0.48, spread: 0.15, speed: () => 0.45, shown: phase => during(phase, 0.62, 0.98) },
+        { curve: curve([store, cystic, duct.at(-1).clone().lerp(opening, 0.5), opening]), colour: BILE, count: 216, size: 0.48, spread: 0.15, speed: () => 0.45, shown: phase => during(phase, 0.62, 0.98) },
+        { curve: curve([...juice, opening]), colour: JUICE, count: 192, size: 0.42, spread: 0.1, speed: () => 0.3, shown: phase => during(phase, 0.62, 0.98) },
       ],
     };
   },
@@ -104,7 +107,7 @@ export const liver = {
     act.rigid(rig.gallbladder, { pivot: rig.store, scale: 1 - 0.22 * squeeze });
     light(act, [rig.gallbladder], 0.5 * squeeze);
     light(act, rig.ducts, 0.35 * during(phase, 0.3, 0.6));
-    return { caption: phase < 0.3 ? 'Blood from the gut arrives by the portal vein, and from the heart by the hepatic artery; it all leaves by the hepatic veins' : phase < 0.6 ? 'The liver makes bile all day; between meals it is stored in the gallbladder' : 'After a meal the gallbladder squeezes, and bile runs down to the duodenum to break up fat' };
+    return { caption: phase < 0.3 ? 'Blood from the gut arrives by the portal vein, and from the heart by the hepatic artery; it all leaves by the hepatic veins' : phase < 0.6 ? 'The liver makes bile all day; between meals it is stored in the gallbladder' : 'After a meal the gallbladder squeezes, and bile runs down to the duodenum to break up fat. The pancreas adds its own juice at the same opening' };
   },
 };
 
@@ -175,7 +178,7 @@ export const breast = {
     /* some fifteen to twenty lobes, set round the nipple like the segments of an orange, each with its own duct */
     const milk = Array.from({ length: 9 }, (_, k) => {
       const turn = 2 * Math.PI * k / 9, far = gland.clone().add(across.clone().multiplyScalar(Math.cos(turn) * size.x * 0.36)).add(upward.clone().multiplyScalar(Math.sin(turn) * size.y * 0.36));
-      return { curve: curve([far, far.clone().lerp(sinuses, 0.6), sinuses, nipple, nipple.clone().add(outward.clone().multiplyScalar(0.8))]), colour: '#fff6e0', count: 62, size: 0.33, spread: 0.1, speed: () => 0.22, shown: phase => during(phase, 0, 0.55) };
+      return { curve: curve([far, far.clone().lerp(sinuses, 0.6), sinuses, nipple, nipple.clone().add(outward.clone().multiplyScalar(0.8))]), colour: '#fff6e0', count: 48, size: 0.15, spread: 0.04, speed: () => 0.22, shown: phase => during(phase, 0, 0.55) };
     });
     return { lobes, ducts: [...kit.entry('breastLactiferousDucts'), ...kit.entry('breastLactiferousSinuses')], nodes,
       streams: [...milk, { curve: curve([gland, gland.clone().lerp(kit.centre(nodes), 0.5).add(V(0, 0.8, 0)), kit.centre(nodes)]), colour: LYMPH, count: 144, size: 0.54, spread: 0.35, speed: () => 0.12, shown: phase => during(phase, 0.5, 1) }] };
@@ -183,5 +186,54 @@ export const breast = {
   step(rig, phase, act) {
     light(act, rig.lobes, 0.3 * during(phase, 0, 0.3)); light(act, rig.ducts, 0.4 * during(phase, 0.15, 0.55)); light(act, rig.nodes, 0.6 * during(phase, 0.6, 1));
     return { caption: phase < 0.55 ? 'When a baby feeds, milk made in the lobes runs down the ducts and out at the nipple' : 'Most of the breast\'s lymph drains to the nodes of the armpit, which is why they are checked first' };
+  },
+};
+
+/* ---------- The circulation: one heart, two loops: to the lungs and back, then round the body ---------- */
+export const circulation = {
+  cycle: 9000, watch: 'how blood goes round the body',
+  look: name => (/segment of (left|right) lung$/i.test(name) ? { opacity: 0.3 } : /^Wall of /.test(name) ? { opacity: 0.45 } : null),   // the lungs and the heart's walls part-clear, so the blood shows in them
+  build(kit) {
+    const { V } = kit, up = V(0, 1, 0), down = V(0, -1, 0), named = pattern => kit.one(pattern), middle = pattern => kit.centre(named(pattern)), curve = points => kit.curve(points).curve;
+    const rightAtrium = middle(/^Cavity of right atrium$/), rightVentricle = middle(/^Cavity of right ventricle$/), leftAtrium = middle(/^Cavity of left atrium$/), leftVentricle = middle(/^Cavity of left ventricle$/);
+    const upper = kit.line(named(/^Superior vena cava$/), { from: kit.end(named(/^Superior vena cava$/), up, 1) });
+    const lower = kit.line(kit.find(/^Inferior vena cava/), { from: kit.end(kit.find(/^Inferior vena cava/), down, 1), radius: 1.5 });
+    const trunk = kit.line(named(/^Pulmonary trunk$/), { from: rightVentricle });
+    const lungs = ['Left', 'Right'].map(side => ({
+      artery: kit.line(named(new RegExp(`^${side} pulmonary artery$`)), { from: trunk.at(-1) }),
+      lung: kit.centre(kit.find(new RegExp(`segment of ${side} lung$`, 'i'))),   // +x is the body's left
+      veins: ['superior', 'inferior'].map(which => { const vein = kit.find(new RegExp(`^${side} ${which} pulmonary vein$`)); return kit.line(vein, { to: leftAtrium, radius: 0.7 }); }),
+    }));
+    /* the aorta, piece after piece, each from where the last one ended */
+    const aorta = [/^Ascending aorta$/, /^Arch of aorta$/, /^Descending thoracic aorta$/, /^Descending aorta$/, /^Abdominal aorta$/].reduce((way, pattern) => [...way, ...kit.line(named(pattern), { from: way.at(-1) })], [leftVentricle]);
+    const beat = (where, phase, time) => 0.1 + 0.16 * Math.max(0, Math.sin(time * 5));   // blood leaves the heart in pulses
+    return {
+      streams: [
+        { curve: curve([...upper, rightAtrium]), colour: SPENT, count: 168, size: 0.5, spread: 0.25, speed: () => 0.2 },
+        { curve: curve([...lower, rightAtrium]), colour: SPENT, count: 312, size: 0.5, spread: 0.25, speed: () => 0.12 },
+        ...lungs.map(({ artery, lung }) => ({ curve: curve([rightAtrium, rightVentricle, ...trunk, ...artery, lung]), colour: SPENT, count: 264, size: 0.5, spread: 0.25, speed: beat })),
+        ...lungs.map(({ veins }) => veins.map(vein => ({ curve: curve([...vein, leftAtrium]), colour: FRESH, count: 96, size: 0.45, spread: 0.12, speed: () => 0.22 }))).flat(),
+        { curve: curve([leftAtrium, ...aorta]), colour: FRESH, count: 420, size: 0.5, spread: 0.25, speed: beat },
+      ],
+    };
+  },
+  step(rig, phase) {
+    return { caption: phase < 0.5 ? 'The right side of the heart sends used blood, in blue, to the lungs' : 'The left side sends fresh blood, in red, round the rest of the body' };
+  },
+};
+
+/* ---------- The hormone glands: the pituitary signals, and a gland answers; the pancreas on its own ----------
+   Nothing moves and nothing is shown flowing: a hormone goes wherever the blood goes. Each gland is lit in its turn. */
+export const hormones = {
+  cycle: 16000, watch: 'how hormones carry messages',
+  build(kit) {
+    return { master: [...kit.entry('hypothalamus'), ...kit.entry('pituitary')], thyroid: kit.find(/^Thyroid gland$/), adrenal: kit.entry('adrenal'), pancreas: kit.entry('pancreas') };
+  },
+  step(rig, phase, act) {
+    light(act, rig.master, 0.7 * Math.max(during(phase, 0.02, 0.4, 0.06), during(phase, 0.5, 0.65, 0.06)));
+    light(act, rig.thyroid, 0.7 * during(phase, 0.33, 0.5, 0.06));
+    light(act, rig.adrenal, 0.7 * during(phase, 0.58, 0.75, 0.06));
+    light(act, rig.pancreas, 0.7 * during(phase, 0.77, 0.98, 0.06));
+    return { caption: phase < 0.25 ? 'The pituitary, under the brain, controls several other glands' : phase < 0.5 ? 'One of its hormones tells the thyroid to release thyroid hormone' : phase < 0.75 ? 'Another tells the adrenal glands to release cortisol' : 'The pancreas measures blood sugar itself, and releases insulin or glucagon' };
   },
 };

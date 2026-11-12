@@ -82,6 +82,16 @@
    "hash": "25a8f73605",
    "seconds": 18.7
   },
+  "region:circulation": {
+   "file": "region-circulation.mp3",
+   "hash": "c478921cca",
+   "seconds": 15.2
+  },
+  "region:hormones": {
+   "file": "region-hormones.mp3",
+   "hash": "eafa68cbd1",
+   "seconds": 19.4
+  },
   "region:digestive": {
    "file": "region-digestive.mp3",
    "hash": "cb5cb8da5d",
@@ -257,6 +267,36 @@
    "hash": "32a86939fb",
    "seconds": 9.6
   },
+  "story:circulation:0": {
+   "file": "story-circulation-0.mp3",
+   "hash": "6e45936194",
+   "seconds": 9.8
+  },
+  "story:circulation:1": {
+   "file": "story-circulation-1.mp3",
+   "hash": "d9ea63d8e2",
+   "seconds": 12
+  },
+  "story:circulation:2": {
+   "file": "story-circulation-2.mp3",
+   "hash": "94925c021c",
+   "seconds": 10.5
+  },
+  "story:circulation:3": {
+   "file": "story-circulation-3.mp3",
+   "hash": "c84d0c54a4",
+   "seconds": 6.7
+  },
+  "story:circulation:4": {
+   "file": "story-circulation-4.mp3",
+   "hash": "69ab26fe5f",
+   "seconds": 8.9
+  },
+  "story:circulation:5": {
+   "file": "story-circulation-5.mp3",
+   "hash": "d9caac370d",
+   "seconds": 10
+  },
   "story:lungs:0": {
    "file": "story-lungs-0.mp3",
    "hash": "2453c27634",
@@ -331,6 +371,41 @@
    "file": "story-liver-4.mp3",
    "hash": "9633b51dd6",
    "seconds": 8.9
+  },
+  "story:liver:5": {
+   "file": "story-liver-5.mp3",
+   "hash": "1cc50459ea",
+   "seconds": 15.9
+  },
+  "story:hormones:0": {
+   "file": "story-hormones-0.mp3",
+   "hash": "1a27a8fabc",
+   "seconds": 9.5
+  },
+  "story:hormones:1": {
+   "file": "story-hormones-1.mp3",
+   "hash": "d73c63d23d",
+   "seconds": 13.3
+  },
+  "story:hormones:2": {
+   "file": "story-hormones-2.mp3",
+   "hash": "5cc9f59feb",
+   "seconds": 10.5
+  },
+  "story:hormones:3": {
+   "file": "story-hormones-3.mp3",
+   "hash": "21c23cfd65",
+   "seconds": 12.4
+  },
+  "story:hormones:4": {
+   "file": "story-hormones-4.mp3",
+   "hash": "9638ce3b05",
+   "seconds": 12.9
+  },
+  "story:hormones:5": {
+   "file": "story-hormones-5.mp3",
+   "hash": "20a610893a",
+   "seconds": 12.3
   },
   "story:kidney:0": {
    "file": "story-kidney-0.mp3",
@@ -792,6 +867,31 @@
    "hash": "4c6fde38c8",
    "seconds": 13.3
   },
+  "story:clitoris:0": {
+   "file": "story-clitoris-0.mp3",
+   "hash": "365711e4f3",
+   "seconds": 13.6
+  },
+  "story:clitoris:1": {
+   "file": "story-clitoris-1.mp3",
+   "hash": "3db6626b65",
+   "seconds": 11.1
+  },
+  "story:clitoris:2": {
+   "file": "story-clitoris-2.mp3",
+   "hash": "4e2b7b59c5",
+   "seconds": 11.3
+  },
+  "story:clitoris:3": {
+   "file": "story-clitoris-3.mp3",
+   "hash": "4e13e53c82",
+   "seconds": 9.5
+  },
+  "story:clitoris:4": {
+   "file": "story-clitoris-4.mp3",
+   "hash": "4282791afa",
+   "seconds": 9
+  },
   "story:malePelvis:0": {
    "file": "story-malePelvis-0.mp3",
    "hash": "7c1e469ec8",
@@ -814,8 +914,8 @@
   },
   "story:penis:0": {
    "file": "story-penis-0.mp3",
-   "hash": "436913cb02",
-   "seconds": 7.8
+   "hash": "8821f33f30",
+   "seconds": 9.7
   },
   "story:penis:1": {
    "file": "story-penis-1.mp3",
@@ -831,6 +931,16 @@
    "file": "story-penis-3.mp3",
    "hash": "85b64d5e88",
    "seconds": 5.2
+  },
+  "story:penis:4": {
+   "file": "story-penis-4.mp3",
+   "hash": "51b49c1c0c",
+   "seconds": 13.7
+  },
+  "story:penis:5": {
+   "file": "story-penis-5.mp3",
+   "hash": "c6ca1d48a8",
+   "seconds": 13.2
   },
   "entry:frontalLobe": {
    "file": "entry-frontalLobe.mp3",
@@ -1562,6 +1672,26 @@
    "hash": "966665f969",
    "seconds": 23.5
   },
+  "entry:heart": {
+   "file": "entry-heart.mp3",
+   "hash": "76d1ebc79b",
+   "seconds": 20.4
+  },
+  "entry:lungs": {
+   "file": "entry-lungs.mp3",
+   "hash": "c9e09a23bd",
+   "seconds": 28.8
+  },
+  "entry:venaCava": {
+   "file": "entry-venaCava.mp3",
+   "hash": "687a50ae8b",
+   "seconds": 18.5
+  },
+  "entry:aorta": {
+   "file": "entry-aorta.mp3",
+   "hash": "5e8d9ffee6",
+   "seconds": 20.2
+  },
   "entry:esophagus": {
    "file": "entry-esophagus.mp3",
    "hash": "a3a6d1ef98",
@@ -1867,6 +1997,31 @@
    "hash": "79d19e81d5",
    "seconds": 29.1
   },
+  "entry:thyroid": {
+   "file": "entry-thyroid.mp3",
+   "hash": "e7c7a8bfba",
+   "seconds": 22.4
+  },
+  "entry:adrenal": {
+   "file": "entry-adrenal.mp3",
+   "hash": "a5b5bb95af",
+   "seconds": 17.8
+  },
+  "entry:pancreas": {
+   "file": "entry-pancreas.mp3",
+   "hash": "1b10172f0d",
+   "seconds": 18.1
+  },
+  "entry:ovary": {
+   "file": "entry-ovary.mp3",
+   "hash": "baa1c6edcd",
+   "seconds": 13.4
+  },
+  "entry:testis": {
+   "file": "entry-testis.mp3",
+   "hash": "828bf0257b",
+   "seconds": 16.5
+  },
   "entry:vulvaMonsPubis": {
    "file": "entry-vulvaMonsPubis.mp3",
    "hash": "f12faf3286",
@@ -1977,11 +2132,6 @@
    "hash": "f03a90e799",
    "seconds": 17.5
   },
-  "entry:ovary": {
-   "file": "entry-ovary.mp3",
-   "hash": "baa1c6edcd",
-   "seconds": 13.4
-  },
   "entry:femalePelvisRoundLigament": {
    "file": "entry-femalePelvisRoundLigament.mp3",
    "hash": "79beeab41c",
@@ -2056,11 +2206,6 @@
    "file": "entry-penisSuperficialDorsalVein.mp3",
    "hash": "ebe551875c",
    "seconds": 18.1
-  },
-  "entry:testis": {
-   "file": "entry-testis.mp3",
-   "hash": "828bf0257b",
-   "seconds": 16.5
   },
   "entry:epididymis": {
    "file": "entry-epididymis.mp3",
@@ -2742,21 +2887,6 @@
    "hash": "a81ae548fc",
    "seconds": 17.7
   },
-  "entry:thyroid": {
-   "file": "entry-thyroid.mp3",
-   "hash": "e7c7a8bfba",
-   "seconds": 22.4
-  },
-  "entry:heart": {
-   "file": "entry-heart.mp3",
-   "hash": "76d1ebc79b",
-   "seconds": 20.4
-  },
-  "entry:lungs": {
-   "file": "entry-lungs.mp3",
-   "hash": "c9e09a23bd",
-   "seconds": 28.8
-  },
   "entry:liver": {
    "file": "entry-liver.mp3",
    "hash": "e837b6f105",
@@ -2771,16 +2901,6 @@
    "file": "entry-kidney.mp3",
    "hash": "30b9810437",
    "seconds": 23.3
-  },
-  "entry:aorta": {
-   "file": "entry-aorta.mp3",
-   "hash": "5e8d9ffee6",
-   "seconds": 20.2
-  },
-  "entry:venaCava": {
-   "file": "entry-venaCava.mp3",
-   "hash": "687a50ae8b",
-   "seconds": 18.5
   },
   "entry:brachialPlexus": {
    "file": "entry-brachialPlexus.mp3",

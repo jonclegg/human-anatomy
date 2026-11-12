@@ -1,6 +1,7 @@
-// Motions of the pelvis: an egg's journey to the uterus, and the two things that leave by the male urethra.
+// Motions of the pelvis: an egg's journey to the uterus, the clitoris filling with blood, the two things that leave by
+// the male urethra, and sperm and blood in the penis and testes.
 // See ../motions.mjs for the format.
-import { smooth, during, light, URINE, SEED } from './shared.mjs';
+import { smooth, during, light, thread, FRESH, URINE, SEED } from './shared.mjs';
 
 /* ---------- The female pelvis: an egg, from the ovary to the uterus ---------- */
 export const femalePelvis = {
@@ -25,6 +26,32 @@ export const femalePelvis = {
   },
 };
 
+/* ---------- The clitoris: blood comes in, the erectile tissue swells, muscles hold the blood there, and it drains ----------
+   0.04-0.82 the arteries bring more blood; 0.10-0.50 the bulbs, crura and body swell; 0.50-0.82 the muscles over them tighten; 0.82-0.98 it subsides */
+export const clitoris = {
+  cycle: 14000, watch: 'how the clitoris fills with blood',
+  build(kit) {
+    const sides = ['Left', 'Right'].map(side => {
+      const named = pattern => kit.one(new RegExp(pattern.replace('SIDE', side))), crus = named('^SIDE crus of clitoris$'), bulb = named('^SIDE bulb of vestibule$');
+      const artery = kit.line(named('^SIDE internal pudendal artery$'), { to: kit.centre([crus, bulb]), radius: 0.6 });
+      /* each muscle lies on the erectile body it covers, and swells with it, about the same point */
+      return { artery, swelling: [[crus, crus], [named('^SIDE ischiocavernosus$'), crus], [bulb, bulb], [named('^SIDE bulbospongiosus$'), bulb]].map(([part, on]) => ({ part, pivot: kit.centre(on) })), ends: [crus, bulb].map(part => kit.centre(part)) };
+    });
+    const body = kit.one(/^Body of clitoris$/), middle = kit.centre(body);
+    return {
+      swelling: [...sides.flatMap(side => side.swelling), { part: body, pivot: middle }, { part: kit.one(/^Glans of clitoris$/), pivot: middle }],
+      erectile: [...kit.entry('clitorisCrura'), ...kit.entry('clitorisBulbs'), body], muscles: [...kit.entry('clitorisIschiocavernosus'), ...kit.entry('clitorisBulbospongiosus')],
+      streams: sides.flatMap(({ artery, ends }) => ends.map(end => ({ curve: kit.curve([...artery, end]).curve, colour: FRESH, count: 120, size: 0.3, spread: 0.08, speed: () => 0.22, shown: phase => during(phase, 0.04, 0.82, 0.06) }))),
+    };
+  },
+  step(rig, phase, act) {
+    const swell = smooth(0.1, 0.5, phase) * (1 - smooth(0.82, 0.98, phase));
+    for (const { part, pivot } of rig.swelling) act.rigid(part, { pivot, scale: 1 + 0.1 * swell });
+    light(act, rig.erectile, 0.35 * swell); light(act, rig.muscles, 0.5 * during(phase, 0.5, 0.82, 0.08));
+    return { caption: phase < 0.5 ? 'During arousal the arteries bring more blood, and the bulbs, crura and body of the clitoris swell' : phase < 0.82 ? 'The muscles over them tighten, press on the veins, and keep the blood in' : 'Afterwards the blood drains away' };
+  },
+};
+
 /* the middle of the bladder, and the urethra's line from it outward */
 function outflow(kit) {
   const pool = kit.centre(kit.one(/^Urinary bladder$/)), pipe = kit.line(kit.find(/^Urethra$/, kit.shown), { from: pool, radius: 0.7 });
@@ -37,7 +64,7 @@ export const malePelvis = {
   build(kit) {
     const { pool, pipe } = outflow(kit), gland = kit.centre(kit.one(/^Prostate$/)), curve = points => kit.curve(points).curve;
     const after = pipe.filter(point => point.y < gland.y - 0.5);
-    const ducts = kit.entry('deferentDuct').map(duct => kit.line(duct, { from: kit.end(duct, gland.clone().sub(kit.centre(duct)).negate().normalize(), 1), radius: 0.6 }));
+    const ducts = kit.entry('deferentDuct').map(duct => thread(kit.points(duct), kit.end(duct, kit.V(0, -1, 0), 0.8)));   // each from its low end, at the testis
     return {
       bladder: kit.one(/^Urinary bladder$/), pool, adders: [...kit.entry('seminalVesicle'), ...kit.entry('prostate')],
       streams: [
@@ -53,19 +80,27 @@ export const malePelvis = {
   },
 };
 
-/* ---------- The penis and testes: where sperm are made, and their way out ---------- */
+/* ---------- The penis and testes: where sperm are made, their way out, and the blood that makes an erection ----------
+   0-0.33 made; 0.33-0.66 stored and sent on; 0.68-1 blood fills the corpora cavernosa. The penis is not shown rising:
+   the skin and everything round it would have to move with it. The blood is shown going in. */
 export const penis = {
-  cycle: 10000, watch: 'how sperm are made and stored',
+  cycle: 15000, watch: 'how sperm are made, and how an erection happens',
   build(kit) {
     const sides = ['Left', 'Right'].map(side => {
       const named = pattern => kit.one(new RegExp(pattern.replace('SIDE', side))), maker = named('^SIDE testis$'), coil = named('^SIDE epididymis$'), duct = named('^SIDE deferent duct$');
       const stored = kit.line(coil, { from: kit.end(coil, kit.V(0, 1, 0), 0.6), radius: 0.6 }), away = kit.line(duct, { from: kit.end(duct, kit.V(0, -1, 0), 0.8), radius: 1 });   // from the duct's own low end, where it leaves the epididymis
-      return { maker, coil, way: kit.curve([kit.centre(maker), ...stored, ...away]) };
+      return { maker, coil, way: kit.curve([kit.centre(maker), ...stored, ...away]), filling: kit.curve(kit.line(named('^SIDE deep artery of penis$'), { to: kit.centre(kit.entry('penisGlans')), radius: 1.5 })) };
     });
-    return { makers: sides.map(side => side.maker), coils: sides.map(side => side.coil), streams: sides.map(({ way }) => ({ curve: way.curve, colour: SEED, count: 336, size: 0.36, spread: 0.08, speed: () => 0.07 })) };
+    return {
+      makers: sides.map(side => side.maker), coils: sides.map(side => side.coil), firm: kit.entry('penisCorpusCavernosum'),
+      streams: [
+        ...sides.map(({ way }) => ({ curve: way.curve, colour: SEED, count: 336, size: 0.36, spread: 0.08, speed: () => 0.07, shown: phase => 1 - during(phase, 0.68, 1.01) })),
+        ...sides.map(({ filling }) => ({ curve: filling.curve, colour: FRESH, count: 168, size: 0.3, spread: 0.12, speed: () => 0.25, shown: phase => during(phase, 0.68, 1) })),
+      ],
+    };
   },
   step(rig, phase, act) {
-    light(act, rig.makers, 0.5 * during(phase, 0, 0.5, 0.1)); light(act, rig.coils, 0.6 * during(phase, 0.5, 1, 0.1));
-    return { caption: phase < 0.5 ? 'Sperm are made in the testes: more than a thousand every second' : 'They spend up to two weeks maturing in the coiled epididymis behind each testis, then leave by the deferent duct' };
+    light(act, rig.makers, 0.5 * during(phase, 0, 0.33, 0.08)); light(act, rig.coils, 0.6 * during(phase, 0.33, 0.66, 0.08)); light(act, rig.firm, 0.4 * during(phase, 0.7, 1, 0.1));
+    return { caption: phase < 0.33 ? 'Sperm are made in the testes: more than a thousand every second' : phase < 0.67 ? 'They spend up to two weeks maturing in the coiled epididymis behind each testis, then leave by the deferent duct' : 'In an erection, arteries inside the two corpora cavernosa widen and blood fills them' };
   },
 };

@@ -1,5 +1,5 @@
 // Close-ups: see ../closeups.mjs for the format.
-// The organs of the chest and abdomen: the heart, the lungs and airways, the gut, the liver with its ducts and vessels,
+// The organs of the chest and abdomen: the heart, the lungs and airways, the heart and lungs together, the gut, the liver with its ducts and vessels,
 // one kidney with the urinary tract, the female breast, and the lymph nodes of the whole body.
 const E = (pattern, fields) => ({ pattern, ...fields });
 
@@ -22,6 +22,14 @@ export const REGIONS = {
     text: { any: 'Air passes down the trachea and the branching bronchi to the lobes of the lungs: three on the right, two on the left. The pulmonary arteries follow the airways in, the pulmonary veins return between the segments, and the diaphragm below does most of the work of breathing.' },
     parts: ['trachea', 'lungsMainBronchi', 'lungsSegmentalBronchi', 'lungsRightUpperLobe', 'lungsRightMiddleLobe', 'lungsRightLowerLobe', 'lungsLeftUpperLobe', 'lungsLeftLowerLobe',
       'lungsPulmonaryArteries', 'lungsPulmonaryVeins', 'lungsBronchialArteries', 'lungsTracheobronchialNodes', 'diaphragm'],
+    context: [{ layer: 'skeleton' }], direction: [0.2, 0.1, 1], body: 0.08,
+  },
+  circulation: {
+    frame: ['heart', 'lungs'], margin: 2,
+    name: 'Heart, lungs and great vessels', note: 'the two loops of the blood: to the lungs, and round the body',
+    title: 'The heart, lungs and great vessels', figure: 'Close-up · The heart between the lungs, from the front',
+    text: { any: 'The heart sits between the two lungs and is joined to them by the pulmonary arteries and veins. The two venae cavae bring blood back from the body, and the aorta takes it out again.' },
+    parts: ['heart', 'lungs', 'lungsPulmonaryArteries', 'lungsPulmonaryVeins', 'venaCava', 'aorta'],
     context: [{ layer: 'skeleton' }], direction: [0.2, 0.1, 1], body: 0.08,
   },
   digestive: {
@@ -63,6 +71,13 @@ export const REGIONS = {
     text: { any: 'Fluid that leaks from the blood into the tissues returns as lymph, filtered on the way by about 600 to 800 lymph nodes gathered where the limbs and head join the trunk and along the great vessels. The tonsils, thymus and spleen are lymphoid organs too.' },
     parts: ['tonsils', 'lymphaticHeadNodes', 'lymphaticCervicalNodes', 'thymus', 'lymphaticAxillaryNodes', 'lymphaticCubitalNodes', 'lymphaticThoracicNodes', 'spleen', 'lymphaticVisceralNodes',
       'lymphaticLumbarNodes', 'lymphaticPelvicNodes', 'lymphaticInguinalNodes', 'lymphaticPoplitealNodes'],
+    context: [{ layer: 'skeleton' }], direction: [0.15, 0.05, 1], body: 0.1,
+  },
+  hormones: {
+    name: 'Hormone glands', note: 'pituitary, pineal, thyroid, adrenals, pancreas, ovaries or testes',
+    title: 'The hormone glands', figure: 'Close-up · The glands that make hormones, from the front',
+    text: { any: 'A hormone is a chemical message. A gland releases it into the blood, and it acts on organs elsewhere in the body. The pituitary, under the brain, controls the thyroid, the adrenals and the ovaries or testes. The pancreas controls blood sugar on its own.' },
+    parts: ['hypothalamus', 'pituitary', 'pineal', 'thyroid', 'adrenal', 'pancreas', 'ovary', 'testis'],
     context: [{ layer: 'skeleton' }], direction: [0.15, 0.05, 1], body: 0.1,
   },
 };

@@ -20,6 +20,7 @@ const LIVER = ['liverRightLiver', 'liverLeftLiver'];
 const MILK = [0, 1, 2, 3, 4, 5, 6, 7, 8];   // the breast's streams of milk; its lymph is the one after
 const BRAIN = ['frontalLobe', 'parietalLobe', 'temporalLobe', 'occipitalLobe', 'cerebellum'];
 const NERVES_OF_HEAD = ['opticNerve', 'cranialNervesOphthalmic', 'cranialNervesMandibular', 'cranialNervesFacial', 'cranialNervesHypoglossal'];   // the cranial nerves are each shown against the same view of the head
+const ERECTILE = ['clitorisGlans', 'clitorisBody', 'clitorisCrura', 'clitorisBulbs'];
 const SKULL = ['skullFrontalBone', 'skullParietalBone', 'skullOccipitalBone', 'skullTemporalBone', 'skullMaxilla', 'skullZygomaticBone', 'mandible'];
 export const STORIES = {
   heart: [
@@ -41,6 +42,21 @@ export const STORIES = {
       say: 'As the ventricles relax, blood in the two great arteries falls back, fills the cups of these valves, and closes them. That makes the second heart sound.' },
     { title: 'The whole beat', entry: 'heartVentricularWall', frame: ['heartVentricularWall'], open: ['heartTricuspidValve', 'heartMitralValve'], lift: 1.1, from: [0.72, 0.1, 0.68], fill: 1.05, labels: [],
       say: 'The whole beat at normal speed. The atria squeeze, then the ventricles, about a hundred thousand times a day.' },
+  ],
+
+  circulation: [
+    { title: 'Two loops', entry: 'heart', labels: ['heart', 'lungs'],
+      say: 'The heart pumps blood round two loops. One goes to the lungs and back. The other goes round the rest of the body.' },
+    { title: 'Back from the body', entry: 'venaCava', frame: ['venaCava', 'heart'], labels: ['venaCava', 'heart'], keep: 'all', streams: [0, 1],
+      say: 'Blood that has given up its oxygen is shown in blue. It comes back from the body by two large veins, the venae cavae, into the right side of the heart.' },
+    { title: 'Out to the lungs', entry: 'lungsPulmonaryArteries', frame: ['heart', 'lungs'], labels: ['lungsPulmonaryArteries', 'lungs'], keep: 'all', streams: [2, 3],
+      say: 'The right side of the heart pumps it through the pulmonary arteries into both lungs. There it gives up carbon dioxide and picks up oxygen.' },
+    { title: 'Back to the heart', entry: 'lungsPulmonaryVeins', frame: ['heart', 'lungs'], labels: ['lungsPulmonaryVeins'], keep: 'all', streams: [4, 5, 6, 7],
+      say: 'The pulmonary veins bring it back, now bright red, to the left side of the heart.' },
+    { title: 'Out to the body', entry: 'aorta', frame: ['heart', 'aorta'], labels: ['aorta'], keep: 'all', streams: [8],
+      say: 'The left side pumps it into the aorta, the largest artery. Branches of the aorta carry it to every part of the body.' },
+    { title: 'The whole circuit', entry: 'heart', labels: [],
+      say: 'The two sides of the heart beat together, so both loops flow at once. At rest, one round takes about a minute.' },
   ],
 
   lungs: [
@@ -80,6 +96,23 @@ export const STORIES = {
       say: 'The liver makes bile all day. Between meals the bile runs down the ducts and is stored in the gallbladder.' },
     { title: 'Bile goes to the gut', entry: 'liverGallbladder', frame: ['liverGallbladder', 'liverCysticDuct', 'duodenum'], labels: ['liverGallbladder', 'duodenum'], span: [0.62, 0.98], seconds: 5, streams: [4],
       say: 'After a meal the gallbladder squeezes. The bile runs down to the duodenum, where it breaks up fat.' },
+    { title: 'The pancreas adds its juice', entry: 'liverPancreas', frame: ['liverPancreas', 'liverPancreaticDuct', 'duodenum'], labels: ['liverPancreas', 'liverPancreaticDuct', 'duodenum'], span: [0.62, 0.98], seconds: 5, streams: [5],
+      say: 'The pancreas lies behind the stomach. It makes a juice that digests fat, protein and starch. The juice runs along a duct and enters the duodenum at the same opening as the bile.' },
+  ],
+
+  hormones: [
+    { title: 'Messages in the blood', entry: 'pituitary', labels: ['pituitary', 'thyroid', 'adrenal', 'pancreas'], span: [0, 0.02], seconds: 4,
+      say: 'Hormones are chemical messages. A gland releases one into the blood, and it acts on organs far away.' },
+    { title: 'The pituitary gives the orders', entry: 'pituitary', frame: ['hypothalamus', 'pituitary'], from: [0.9, 0.1, 0.4], fill: 0.5, labels: ['hypothalamus', 'pituitary'], span: [0, 0.25], seconds: 5,
+      say: 'The pituitary is the size of a pea, and hangs under the brain. The hypothalamus, just above it, tells it what to release. Its hormones control several other glands.' },
+    { title: 'The thyroid sets the pace', entry: 'thyroid', frame: ['pituitary', 'thyroid'], labels: ['pituitary', 'thyroid'], span: [0.25, 0.5], seconds: 5,
+      say: 'One pituitary hormone tells the thyroid, in the neck, to release a hormone of its own. Thyroid hormone sets how fast the body uses energy.' },
+    { title: 'The adrenals answer stress', entry: 'adrenal', frame: ['adrenal'], fill: 0.45, labels: ['adrenal'], span: [0.5, 0.75], seconds: 5,
+      say: 'Another tells the adrenal glands, on top of the kidneys, to release cortisol. The adrenals also make adrenaline, which speeds the heart when you are frightened.' },
+    { title: 'The pancreas works alone', entry: 'pancreas', frame: ['pancreas'], fill: 0.6, labels: ['pancreas'], span: [0.75, 1], seconds: 5,
+      say: 'The pancreas does not wait for the pituitary. It measures the sugar in the blood itself. Its hormone insulin lowers the sugar, and glucagon raises it.' },
+    { title: 'Enough turns it down', entry: 'pituitary', labels: ['pituitary', 'thyroid', 'adrenal'], span: [0, 0.02], seconds: 4,
+      say: 'When there is enough of a hormone in the blood, the pituitary sends less of the signal for it. That keeps each level steady. The ovaries and the testes are controlled the same way.' },
   ],
 
   kidney: [
@@ -315,25 +348,42 @@ export const STORIES = {
       say: 'The egg reaches the uterus, where the lining has thickened. A fertilised egg settles into the lining. If the egg is not fertilised, the lining is shed as a period.' },
   ],
 
+  clitoris: [
+    { title: 'Mostly inside', entry: 'clitorisGlans', labels: ERECTILE, span: [0, 0.02], seconds: 4,
+      say: 'Only the tip of the clitoris can be seen from outside. The rest is inside: a body, two legs called crura, and two bulbs beside the vaginal opening.' },
+    { title: 'Blood flows in', entry: 'clitorisPudendalVessels', frame: [...ERECTILE, 'clitorisPudendalVessels'], labels: ['clitorisPudendalVessels'], keep: 'all', span: [0.04, 0.3], seconds: 5,
+      say: 'All of it is erectile tissue, the same kind as in the penis. During arousal, an artery on each side brings in more blood.' },
+    { title: 'The bulbs and crura swell', entry: 'clitorisBulbs', frame: ERECTILE, labels: ['clitorisCrura', 'clitorisBulbs'], keep: 'all', once: true, span: [0.1, 0.52], seconds: 6,
+      say: 'The tissue fills like a sponge. The bulbs and the crura swell and become firm, and the glans becomes more sensitive.' },
+    { title: 'Muscles hold the blood in', entry: 'clitorisBulbospongiosus', frame: ERECTILE, labels: ['clitorisIschiocavernosus', 'clitorisBulbospongiosus'], keep: 'all', span: [0.54, 0.8], seconds: 5,
+      say: 'Two pairs of muscles lie over the crura and the bulbs. When they tighten, they press on the veins and keep the blood in.' },
+    { title: 'Afterwards', entry: 'clitorisBulbs', frame: ERECTILE, labels: [], keep: 'all', once: true, span: [0.8, 0.999], seconds: 5,
+      say: 'Afterwards the arteries narrow again. The blood drains away, and the tissue goes back to its resting size.' },
+  ],
+
   malePelvis: [
     { title: 'One way out for two things', entry: 'urethra', labels: ['bladder', 'prostate', 'urethra'], span: [0, 0.02], seconds: 4,
       say: 'In a man, urine and semen leave by the same tube, the urethra, but not at the same time.' },
     { title: 'Urine leaves the bladder', entry: 'bladder', frame: ['bladder', 'prostate', 'urethra'], labels: ['bladder', 'prostate', 'urethra'], keep: 'all', span: [0.02, 0.48], seconds: 5, streams: [0],
       say: 'The bladder squeezes, and urine runs out through the middle of the prostate and along the urethra.' },
-    { title: 'Sperm arrive', entry: 'deferentDuct', frame: ['deferentDuct', 'seminalVesicle', 'prostate'], from: [0.5, 0.3, -0.8], labels: ['deferentDuct'], keep: 'all', span: [0.52, 0.98], seconds: 5, streams: [1, 2],
+    { title: 'Sperm arrive', entry: 'deferentDuct', frame: ['deferentDuct', 'seminalVesicle', 'prostate'], from: [0.5, 0.3, -0.8], labels: ['deferentDuct'], span: [0.52, 0.98], seconds: 5, streams: [1, 2],
       say: 'Sperm come up from the testes by the two deferent ducts, which loop over the bladder to reach the prostate.' },
-    { title: 'Fluid is added', entry: 'seminalVesicle', frame: ['seminalVesicle', 'prostate'], from: [0.5, 0.3, -0.8], labels: ['seminalVesicle', 'prostate'], keep: 'all', span: [0.52, 0.98], seconds: 5, streams: [1, 2],
+    { title: 'Fluid is added', entry: 'seminalVesicle', frame: ['seminalVesicle', 'prostate'], from: [0.5, 0.3, -0.8], labels: ['deferentDuct', 'seminalVesicle', 'prostate'], span: [0.52, 0.98], seconds: 5, streams: [1, 2],
       say: 'The seminal vesicles and the prostate add most of the fluid. The mixture is semen, and it leaves by the urethra.' },
   ],
 
   penis: [
-    { title: 'Where sperm come from', entry: 'testis', labels: ['testis', 'epididymis', 'deferentDuct'],
-      say: 'Sperm are made in the testes. This shows where they are made and stored, and the way out.' },
-    { title: 'Made in the testes', entry: 'testis', frame: ['testis', 'epididymis'], labels: ['testis'], keep: 'all', span: [0, 0.5], seconds: 5,
+    { title: 'Where sperm come from', entry: 'testis', labels: ['testis', 'epididymis', 'deferentDuct'], streams: [0, 1],
+      say: 'Sperm are made in the testes. This shows where they are made and stored, and the way out. Then it shows how an erection happens.' },
+    { title: 'Made in the testes', entry: 'testis', frame: ['testis', 'epididymis'], labels: ['testis'], keep: 'all', span: [0, 0.33], seconds: 5, streams: [0, 1],
       say: 'Sperm are made inside the testes, more than a thousand every second.' },
-    { title: 'Stored in the epididymis', entry: 'epididymis', frame: ['testis', 'epididymis'], from: [0.6, 0.1, -0.8], labels: ['epididymis'], keep: 'all', span: [0.5, 1], seconds: 5,
+    { title: 'Stored in the epididymis', entry: 'epididymis', frame: ['testis', 'epididymis'], from: [0.6, 0.1, -0.8], labels: ['epididymis'], keep: 'all', span: [0.33, 0.66], seconds: 5, streams: [0, 1],
       say: 'They move into the epididymis, a coiled tube behind each testis, and spend up to two weeks there maturing.' },
-    { title: 'Up the deferent duct', entry: 'deferentDuct', frame: ['epididymis', 'deferentDuct'], labels: ['deferentDuct'], keep: 'all', span: [0.5, 1], seconds: 5,
+    { title: 'Up the deferent duct', entry: 'deferentDuct', frame: ['epididymis', 'deferentDuct'], labels: ['deferentDuct'], keep: 'all', span: [0.33, 0.66], seconds: 5, streams: [0, 1],
       say: 'From there the deferent duct carries them up into the pelvis.' },
+    { title: 'Blood fills the penis', entry: 'penisDeepArtery', frame: ['penisCorpusCavernosum', 'penisGlans'], labels: ['penisCorpusCavernosum', 'penisDeepArtery'], keep: 'all', span: [0.7, 0.98], seconds: 5, streams: [2, 3],
+      say: 'An erection is made by blood. An artery runs down the middle of each of the two corpora cavernosa. The arteries widen, and blood fills the spongy tissue.' },
+    { title: 'The veins are pressed shut', entry: 'penisDeepDorsalVein', frame: ['penisCorpusCavernosum', 'penisGlans'], labels: ['penisCorpusCavernosum', 'penisDeepDorsalVein'], keep: 'all', span: [0.7, 0.98], seconds: 5, streams: [2, 3],
+      say: 'The tissue swells inside a tough coat and presses the veins shut against it. Blood comes in faster than it can leave, and the penis becomes firm.' },
   ],
 };

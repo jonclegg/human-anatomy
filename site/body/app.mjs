@@ -593,6 +593,7 @@ function goStep(index) {
      is about stays as it is drawn in motion (glass, with its blood showing), labelled and gently lit */
   if (story.kind === 'tour') { applyView(step.view); selectEntry(step.entry); focusSelection(viewInfo()); }
   else { select(null); focusStep(step); }
+  renderProgress(story.stepStart);   // the bar and the clock jump with the step, not a frame after it
 }
 /* a step closes in on what it is about, from where it is best seen; one that names nothing shows the whole region */
 function focusStep(step) {

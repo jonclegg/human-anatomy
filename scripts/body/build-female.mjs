@@ -68,11 +68,23 @@ console.log(`female: ${structures.length} of his structures carried across, ${le
    is: his coils and their mesentery, as one piece, turned, sized and placed where the reshaping would put them. */
 const SHARED = /jejunum|ileum|ileocecal|^Mesentery of small intestine$/i;
 const shared = structures.filter(structure => structure.layer === 'organs' && SHARED.test(structure.name)), his = shared.map(structure => structure.positions.slice());
+/* A tooth is hard: reshaped with the body and pressed under the lips point by point, the front ones come out dented.
+   Each keeps his shape, turned, sized and placed where the reshaping would put it. */
+const teeth = structures.filter(structure => structure.layer === 'skeleton' && /\btooth$/i.test(structure.name)), hisTeeth = teeth.map(structure => structure.positions.slice());
 const { lining, breast, rest } = transfer(structures, `${root}/MakeHuman (CC0)`, HIS_SHAPE, HER_SHAPE, { height: HEIGHT });
 {
   const place = likeness(his, shared.map(structure => structure.positions));
   shared.forEach((structure, which) => { for (let k = 0; k < his[which].length; k += 3) structure.positions.set(place(his[which][k], his[which][k + 1], his[which][k + 2]), k); });
   console.log(`female: his small bowel shared as it is: ${shared.length} structures, at ${place.scale.toFixed(3)} of his size`);
+}
+{
+  if (!teeth.length) throw new Error('he has no teeth to share');
+  const sizes = teeth.map((structure, which) => {
+    const place = likeness([hisTeeth[which]], [structure.positions]);
+    for (let k = 0; k < hisTeeth[which].length; k += 3) structure.positions.set(place(hisTeeth[which][k], hisTeeth[which][k + 1], hisTeeth[which][k + 2]), k);
+    return place.scale;
+  });
+  console.log(`female: his teeth shared as they are: ${teeth.length}, at ${Math.min(...sizes).toFixed(3)} to ${Math.max(...sizes).toFixed(3)} of his size`);
 }
 const skin = structures.find(structure => structure.layer === 'skin');
 const hers = name => { const found = structures.filter(structure => structure.name === name); if (!found.length) throw new Error(`she has no ${name}`); return found; };

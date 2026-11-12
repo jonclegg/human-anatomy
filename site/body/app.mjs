@@ -545,7 +545,7 @@ function stepWords(kind, id, step) {
 }
 /* how long a story takes told aloud, in whole minutes: the voice takes about SPEECH_MS over each character (measured
    from the clips), and a breath after each step. Read with the sound off, a step lasts as long as its words take to read. */
-const SPEECH_MS = 88, READ_MS = 60, STEP_MS = 7000;
+const SPEECH_MS = 88, READ_MS = 60, STEP_MS = 7000, VOICE_GRACE_MS = 4000;
 function storyMinutes(id) {
   const kind = storyKind(id), spoken = storySteps(id, kind).reduce((ms, step) => ms + stepWords(kind, id, step).length * SPEECH_MS + AFTER_VOICE_MS, 0);
   return Math.max(1, Math.round(spoken / 60_000));
@@ -664,7 +664,9 @@ function stepStory(now) {
   if (!story?.playing || story.kind === 'motion') return;   // a motion goes round until it is left
   /* with the sound on, a step that is spoken lasts as long as the voice, and a breath more */
   const unspoken = Math.max(STEP_MS, stepWords(story.kind, story.region, story.steps[story.index]).length * READ_MS);
-  if (sound.on && sound.clip ? sound.speaking || now - sound.endedAt < AFTER_VOICE_MS : now - story.stepStart < unspoken) return;
+  /* a voice that never finishes (a clip that will not load or play) does not hold the story for ever: the step moves on a little after the clip should have ended */
+  const overdue = now - story.stepStart > stepLength(story, story.index) + VOICE_GRACE_MS;
+  if (sound.on && sound.clip && !overdue ? sound.speaking || now - sound.endedAt < AFTER_VOICE_MS : now - story.stepStart < unspoken) return;
   if (story.index + 1 < story.steps.length) goStep(story.index + 1);
   else exitStory();   // told to its end, it goes back to where it was started
 }
@@ -1127,6 +1129,7 @@ const SOURCE_TEXT = {
    the stops of the tour, or the numbered parts of a region in motion, with the one being told marked. Phones have no
    room for it during a story. */
 const lowerFirst = text => text.charAt(0).toLowerCase() + text.slice(1);
+let sheetAbout = null;
 function renderSheet() {
   const el = $('sheet');
   el.classList.toggle('full', state.sheet === 'full');
@@ -1136,6 +1139,9 @@ function renderSheet() {
   const again = held && (held.dataset.step ? `[data-step="${held.dataset.step}"]` : held.hasAttribute('data-sheet') ? '[data-sheet]' : null);
   el.innerHTML = `<button type="button" class="sheet-handle" data-sheet aria-label="${state.sheet === 'peek' ? 'Show more' : 'Show less'}"></button>${sheetContent()}`;
   if (held) (again && el.querySelector(again) || $('sheetTitle')).focus();
+  /* a sheet about something else starts at its top, where its way back is; the same one drawn again stays where it was read to */
+  const about = `${state.region}|${state.selection?.entry ?? state.selection?.part ?? ''}|${state.story ? state.story.name : ''}|${state.view}`;
+  if (about !== sheetAbout) { sheetAbout = about; el.scrollTop = 0; }
   el.querySelector('[aria-current="true"]')?.scrollIntoView({ block: 'nearest' });
 }
 function storySections() {
@@ -1207,10 +1213,34 @@ function goUp() {
   else if (state.selection) leavePart();
   else if (state.region) setView(state.view);
 }
+/* On a phone the sheet is pulled up and down by its handle: it follows the finger, and settles taller or shorter,
+   whichever it was left nearer. A tap on the handle still does the same. */
+const sheetDrag = { from: null, height: 0, ended: 0 };
+$('sheet').addEventListener('pointerdown', event => {
+  const handle = event.target.closest('.sheet-handle');
+  if (!handle) return;
+  sheetDrag.from = event.clientY; sheetDrag.height = $('sheet').getBoundingClientRect().height; sheetDrag.moved = false;
+  handle.setPointerCapture(event.pointerId);
+});
+$('sheet').addEventListener('pointermove', event => {
+  if (sheetDrag.from === null) return;
+  const pulled = sheetDrag.from - event.clientY;
+  if (Math.abs(pulled) > 6) sheetDrag.moved = true;
+  if (sheetDrag.moved) { $('sheet').style.maxHeight = `${THREE.MathUtils.clamp(sheetDrag.height + pulled, 60, innerHeight * 0.8)}px`; resize(); invalidate(); }
+});
+for (const type of ['pointerup', 'pointercancel']) $('sheet').addEventListener(type, () => {
+  if (sheetDrag.from === null) return;
+  sheetDrag.from = null;
+  if (!sheetDrag.moved) return;
+  sheetDrag.ended = performance.now();
+  state.sheet = $('sheet').getBoundingClientRect().height > innerHeight * 0.45 ? 'full' : 'peek';
+  $('sheet').style.maxHeight = '';
+  renderSheet(); resize(); invalidate();
+});
 document.addEventListener('click', event => {
   const target = event.target.closest('[data-entry],[data-step],[data-go],[data-up],[data-sheet],[data-region],[data-watch],[data-contents],[data-layer],[data-story]');
   if (!target) return;
-  if (target.hasAttribute('data-sheet')) { state.sheet = state.sheet === 'peek' ? 'full' : 'peek'; renderSheet(); }
+  if (target.hasAttribute('data-sheet')) { if (performance.now() - sheetDrag.ended > 400) { state.sheet = state.sheet === 'peek' ? 'full' : 'peek'; renderSheet(); } }   // a tap, or the keyboard; a drag has already set it
   else if (target.hasAttribute('data-contents')) { setContents(true); $('contents').focus(); }
   else if (target.hasAttribute('data-up')) goUp();
   else if (target.hasAttribute('data-watch')) { startStory(target.dataset.watch || null); $('transport').querySelector('[data-story="play"]').focus(); }
@@ -1499,7 +1529,9 @@ document.addEventListener('keydown', event => {
     else if (story.steps[story.index + delta]) goStep(story.index + delta);
   }
   if (event.key === 'ArrowUp' || event.key === 'ArrowDown') { event.preventDefault(); flight = null; controls.lift((event.key === 'ArrowUp' ? 1 : -1) * Math.max(3, visibleHeight() * 0.08)); clampLift(); invalidate(); }
-  if (event.key === ' ' && state.story && !event.target.closest('button, a, [role="button"]')) { event.preventDefault(); playStory(!state.story.playing); }   // the space bar pauses a story, as it does a film
+  /* the space bar pauses a story, as it does a film: wherever in the story the keyboard is (on a step just clicked, on
+     the strip), and not only on nothing. A button there is still pressed with Enter. The bar's own buttons keep the space bar. */
+  if (event.key === ' ' && state.story && !event.target.closest('.bar')) { event.preventDefault(); playStory(!state.story.playing); }
 });
 for (const button of $('sexSwitch').children) button.addEventListener('click', () => switchSex(button.dataset.sex));
 
@@ -1986,6 +2018,13 @@ window.bodyModel = {
   holdMotion: phase => { motion.held = phase; },
   motion: () => ({ moving: moving() && motion.for === motionKey(), phase: motion.phase, caption: motion.caption, open: motion.open.amount, drops: motion.rig && moving() ? motion.rig.streams.reduce((sum, stream) => sum + stream.drops.length, 0) : 0 }),
   moveOf: index => Array.from(stateTexture.moves.image.data.slice(index * 16, index * 16 + 16)),
+  /* every drop of every stream that shows at this moment: [stream, x, y, z] (cm) */
+  dropsShown: () => (motion.rig && moving() ? motion.rig.streams.flatMap((stream, which) => {
+    if (!stream.cloud.visible) return [];
+    const { position, alpha } = stream.cloud.geometry.attributes, out = [];
+    for (let k = 0; k < position.count; k++) if (alpha.getX(k) > 0.2) out.push([which, position.getX(k), position.getY(k), position.getZ(k)]);
+    return out;
+  }) : []),
   models: () => (motion.rig && moving() ? motion.rig.models.map(model => ({ name: model.name, shown: model.mesh.visible, solid: model.mesh.material.opacity, ...model.state })) : []),
   motions: () => Object.keys(MOTIONS),
   sound: () => ({ on: sound.on, key: sound.key, clip: sound.clip, speaking: sound.speaking, voicePaused: sound.voice.paused, music: sound.music.src.split('/').pop(), musicPlaying: !sound.music.paused, musicLevel: sound.music.volume }),

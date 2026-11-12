@@ -9,7 +9,7 @@
 //   build(kit)      measures the body once and returns the rig: whatever step needs, plus streams (the specs of what
 //                   flows: see makeStream in app.mjs) and sounds, if they depend on the body
 //   step(rig, phase, act, time)   sets this moment: phase runs 0 to 1 over the cycle, time is seconds since it began.
-//                   act.rigid / act.bend / act.held move a part, act.fade and act.glow change its look (app.mjs);
+//                   act.rigid / act.held move a part, act.fade and act.glow change its look (app.mjs);
 //                   returns { caption }
 //   sounds          [[phase, play => ...]]: what sounds as the cycle passes each moment
 import { heart } from './motions/heart.mjs';

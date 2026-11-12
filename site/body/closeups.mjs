@@ -55,6 +55,8 @@ export function indexParts(parts, sex, height, region = null) {
 }
 
 /* the box around a region's parts, and which other structures are its faint context */
+const HAND_BONES = /scaphoid|lunate|triquetr|pisiform|trapezi|trapezoid|capitate|hamate|metacarpal bone|phalanx of .*(finger|thumb)/i;
+const FOOT_BONES = /talus|calcaneus|navicular bone|cuboid bone|cuneiform bone|metatarsal bone|phalanx of .*toe|sesamoid bone of .*foot/i;
 export function regionContext(parts, index, region) {
   const min = [Infinity, Infinity, Infinity], max = [-Infinity, -Infinity, -Infinity];
   for (const key of index.order) for (const at of index.entries[key]) for (let c = 0; c < 3; c++) { min[c] = Math.min(min[c], parts[at].min[c]); max[c] = Math.max(max[c], parts[at].max[c]); }
@@ -65,5 +67,12 @@ export function regionContext(parts, index, region) {
     if (!(region.context || []).some(rule => (!rule.layer || rule.layer === part.layer) && (!rule.pattern || rule.pattern.test(part.name)))) return;
     if ([0, 1, 2].every(c => part.max[c] >= min[c] && part.min[c] <= max[c])) context.add(at);
   });
+  /* A hand or a foot is shown whole or not at all. The box catches whatever reaches into it, and of a foot below a
+     knee that is the ankle and one long bone: cut off like that it reads as a stray piece, not as a foot. */
+  for (const bones of [HAND_BONES, FOOT_BONES]) for (const side of [-1, 1]) {
+    const all = parts.map((part, at) => at).filter(at => parts[at].layer === 'skeleton' && bones.test(parts[at].name) && Math.sign(parts[at].centre[0]) === side);
+    const faint = all.filter(at => context.has(at));
+    if (faint.length && faint.length < all.length && !all.some(at => own.has(at))) for (const at of faint) context.delete(at);
+  }
   return { min, max, own, context };
 }

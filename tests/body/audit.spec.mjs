@@ -67,6 +67,19 @@ test.describe('what the stories are made of', () => {
       expect(existsSync(new URL(`../../site/body/audio/${clip.file}`, import.meta.url)), `${clip.file} is on disk`).toBe(true);
     }
   });
+  test('no region shows part of a hand or a foot: all of it, or none', async ({ page }, testInfo) => {
+    chromiumOnly(testInfo);
+    test.setTimeout(300_000);
+    const HAND = /scaphoid|lunate|triquetr|pisiform|trapezi|trapezoid|capitate|hamate|metacarpal bone|phalanx of .*(finger|thumb)/i, FOOT = /talus|calcaneus|navicular bone|cuboid bone|cuneiform bone|metatarsal bone|phalanx of .*toe|sesamoid bone of .*foot/i;
+    for (const sex of ['female', 'male']) for (const id of Object.keys(REGIONS).filter(id => !REGIONS[id].sex || REGIONS[id].sex === sex)) {
+      await open(page, `sex=${sex}&closeup=${id}`);
+      const shown = await model(page, () => { const body = window.bodyModel.body(), bones = at => body.parts[at].layer === 'skeleton'; return { all: body.parts.filter(part => part.layer === 'skeleton').map(part => [part.name, Math.sign(part.centre[0])]), seen: [...body.around.own, ...body.around.context].filter(bones).map(at => [body.parts[at].name, Math.sign(body.parts[at].centre[0])]) }; });
+      for (const [what, bones] of [['hand', HAND], ['foot', FOOT]]) for (const side of [-1, 1]) {
+        const whole = shown.all.filter(([name, at]) => at === side && bones.test(name)).length, seen = shown.seen.filter(([name, at]) => at === side && bones.test(name)).length;
+        expect([0, whole], `${sex} ${id}: ${seen} of the ${whole} bones of a ${what}`).toContain(seen);
+      }
+    }
+  });
   test('no words on the page promise what is not there', () => {
     const page = readFileSync(new URL('../../site/body/index.html', import.meta.url), 'utf8');
     expect(page).not.toMatch(/manual|Guided tour|Close-ups<\/|Callouts/);

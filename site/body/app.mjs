@@ -191,9 +191,7 @@ const FETCH_STATE = `
 `;
 /* A part that moves (the texels are written by the motion, below). By kind:
    1 rigid: scaled about its pivot (texel 3), turned about it (texel 1), then shifted (texel 2)
-   2 bent: turned about its pivot by a share that grows along a direction (texel 2), from none to all across a band
-     (texel 3: where the band starts and ends, in cm from the pivot), as a muscle that crosses a bending joint
-   3 held at one end: turned in full near the pivot and not at all far from it (texel 2: the two distances), as the
+   2 held at one end: turned in full near the pivot and not at all far from it (texel 2: the two distances), as the
      muscles of the eye, fixed to the orbit behind and to the turning eyeball in front */
 const MOVE = (point, normal) => `
   vec4 move = texelFetch(uMoves, ivec2(cell.x * 4, cell.y), 0);
@@ -202,8 +200,7 @@ const MOVE = (point, normal) => `
     vec3 arm = ${point} - move.xyz;
     if (move.w < 1.5) { arm *= texelFetch(uMoves, ivec2(cell.x * 4 + 3, cell.y), 0).xyz; ${point} = move.xyz + turned(turn, arm) + more.xyz; }
     else {
-      vec4 band = texelFetch(uMoves, ivec2(cell.x * 4 + 3, cell.y), 0);
-      float share = move.w < 2.5 ? smoothstep(band.x, band.y, dot(arm, more.xyz)) : 1.0 - smoothstep(more.x, more.y, length(arm));
+      float share = 1.0 - smoothstep(more.x, more.y, length(arm));
       turn = normalize(mix(vec4(0.0, 0.0, 0.0, 1.0), turn, share));
       ${point} = move.xyz + turned(turn, arm);
     }
@@ -917,16 +914,12 @@ function writeMove(part, kind, pivot, turn, more, last) {
 const act = {
   /* scaled about a pivot (a number, or a vector for each axis), turned about it, then shifted */
   rigid(part, { pivot, turn = STILL, shift, scale = 1 }) { writeMove(part, 1, pivot, turn, shift ? four(MORE, shift.x, shift.y, shift.z, 0) : NONE, scale.isVector3 ? four(FOUR, scale.x, scale.y, scale.z, 0) : four(FOUR, scale, scale, scale, 0)); },
-  /* turned about a pivot by a share that goes from none to all across a band: from `from` to `to`, in cm from the pivot along a direction */
-  bend(part, { pivot, turn, along, from, to }) { writeMove(part, 2, pivot, turn, four(MORE, along.x, along.y, along.z, 0), four(FOUR, from, to, 0, 0)); },
   /* turned in full within `near` cm of the pivot, not at all beyond `far` */
-  held(part, { pivot, turn, near, far }) { writeMove(part, 3, pivot, turn, four(MORE, near, far, 0, 0), NONE); },
+  held(part, { pivot, turn, near, far }) { writeMove(part, 2, pivot, turn, four(MORE, near, far, 0, 0), NONE); },
   fade(part, opacity) {
     if (motion.chosen.has(part.index)) return;
     stateTexture.colour.image.data[part.index * 4 + 3] = Math.round(THREE.MathUtils.clamp(opacity, 0, 1) * 255); motion.touched.add(part.index);
   },
-  /* as solid as a share of what it is at rest */
-  dim(part, share) { act.fade(part, motion.base[part.index * 4 + 3] / 255 * share); },
   /* lit, from 0 to 1: its colour drawn toward a light, and a see-through part made more solid */
   glow(part, amount, colour = GLOW) {
     const colours = stateTexture.colour.image.data, k = part.index * 4, share = THREE.MathUtils.clamp(amount, 0, 1) * 0.8;

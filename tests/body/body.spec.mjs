@@ -663,7 +663,9 @@ test.describe('motion', () => {
           expect(moment, id).toMatchObject({ moving: true, finite: true });
           expect(moment.caption.length, `${id} has a caption`).toBeGreaterThan(12);
           expect(moment.caption.length, `${id}'s caption fits under the model`).toBeLessThan(190);
-          expect(moment.moved + moment.drops, `${id} moves something or has something flowing`).toBeGreaterThan(0);
+          /* the joints and the back light the muscles that work them, and move nothing: every other region moves something or has something flowing */
+          if (['shoulder', 'elbow', 'hip', 'knee', 'foot', 'hand', 'spine'].includes(id)) expect(moment.moved, `${id}: nothing is moved`).toBe(0);
+          else expect(moment.moved + moment.drops, `${id} moves something or has something flowing`).toBeGreaterThan(0);
           expect(moment.words.length, `${id}'s words are under the model`).toBeGreaterThan(12);
           expect(moment.trail, id).toBe(`›${REGIONS[id].name}›${MOTIONS[id].watch.charAt(0).toUpperCase()}${MOTIONS[id].watch.slice(1)}`);
         }

@@ -163,6 +163,23 @@ test.describe('every story, step by step', () => {
   }
 });
 
+test.describe('the two bodies', () => {
+  test('her body has every structure of his but what is his alone, each of a like size', () => {
+    const parts = sex => JSON.parse(readFileSync(new URL(`../../site/body/data/${sex}/parts.json`, import.meta.url), 'utf8')).parts;
+    const his = parts('male'), hers = new Map(), met = new Map();
+    for (const part of parts('female')) hers.set(part.name, [...(hers.get(part.name) || []), part]);   // a name can have several pieces: they are met in order
+    const HIS_ALONE = /penis|\btest(is|es|icular)\b|prostate|seminal|deferent|epididymis|^External ear$|^(Eyebrow|Hair of head|Lip|Pubic hair)$/i;
+    const size = part => Math.hypot(...part.max.map((value, axis) => value - part.min[axis]));
+    for (const part of his) {
+      if (HIS_ALONE.test(part.name)) continue;
+      const nth = met.get(part.name) || 0, her = hers.get(part.name)?.[nth];
+      met.set(part.name, nth + 1);
+      expect(her, `she has ${part.name}`).toBeTruthy();
+      if (size(part) > 2 && part.name !== 'Urethra') { const ratio = size(her) / size(part); expect(ratio, `${part.name}: hers is ${ratio.toFixed(2)} of his`).toBeGreaterThan(0.45); expect(ratio, `${part.name}: hers is ${ratio.toFixed(2)} of his`).toBeLessThan(2); }
+    }
+  });
+});
+
 test.describe('a first draft, open to fixes', () => {
   test('the bar says so on every screen, on one line clear of the controls, and a part has a link that opens an issue about it', async ({ page }) => {
     const errors = await open(page, 'sex=female&closeup=heart');

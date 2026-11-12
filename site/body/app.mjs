@@ -899,10 +899,10 @@ function setMotion() {
       rig.caps = [...capMeshes([...rig.opened].filter(([, look]) => look.cap).map(([index]) => index)), ...kit.hollows];
       motion.rigs[key] = rig;
     }
-    motion.rig = motion.rigs[key]; motion.for = key; motion.clock = 0; motion.phase = 0;   // each motion starts from its beginning
+    motion.rig = motion.rigs[key]; motion.for = key; motion.clock = 0; motion.phase = 0; motion.earlier = null; motion.told = undefined; motion.drawn = null;   // each motion starts from its beginning
     capSheet.material.color.set(motion.definition.cut || CUT_FACE);
   }
-  if (key) motion.base = stateTexture.colour.image.data.slice();   // how each part looks before the moment's fades and glows
+  if (key) { motion.base = stateTexture.colour.image.data.slice(); motion.drawn ||= motion.base.slice(); }   // how each part looks before the moment's fades and glows
 }
 /* what a motion's step may do to a part, for this moment */
 const STILL = new THREE.Quaternion(), NONE = [0, 0, 0, 0], FOUR = [0, 0, 0, 0], MORE = [0, 0, 0, 0];
@@ -958,15 +958,48 @@ function stepOpening(seconds) {
   return open.amount;
 }
 const spot = new THREE.Vector3();
+const BREATH = 0.5, GLIDE = 0.8;   // seconds: the pause between two tellings of a step's stretch, and the blend from one look to the next
+/* The look of this moment, kept to be blended into what follows: where each part is, how it is coloured, and the shape of each model */
+function keepLook(rig, seconds) {
+  motion.earlier = { moves: stateTexture.moves.image.data.slice(), colours: motion.drawn.slice(), shapes: rig.models.map(model => model.geometry.attributes.position.array.slice()), left: seconds, seconds };
+}
+const UNMOVED = [0, 0, 0, 1, 0, 0, 0, 0, 1, 1, 1, 0];   // a part that is not moved: no turn, no shift, its own size
+function blendLook(rig, seconds) {
+  const look = motion.earlier, share = THREE.MathUtils.smootherstep(1 - look.left / look.seconds, 0, 1);
+  const moves = stateTexture.moves.image.data, colours = stateTexture.colour.image.data, modelled = new Set(rig.models.flatMap(model => model.parts.map(part => part.index)));
+  for (let index = 0; index < body.parts.length; index++) {
+    const m = index * 16, was = look.moves[m + 3], is = moves[m + 3];
+    if ((was || is) && (!was || !is || was === is)) {
+      const kind = was || is, held = kind === 2;   // a part held at one end keeps its two distances
+      const from = k => (was ? look.moves[m + k] : k < 3 ? moves[m + k] : held && k >= 8 ? moves[m + k] : k >= 4 ? UNMOVED[k - 4] : kind);
+      const to = k => (is ? moves[m + k] : k < 3 ? look.moves[m + k] : held && k >= 8 ? look.moves[m + k] : k >= 4 ? UNMOVED[k - 4] : kind);
+      const same = from(4) * to(4) + from(5) * to(5) + from(6) * to(6) + from(7) * to(7) < 0 ? -1 : 1;   // the short way round
+      const out = [];
+      for (let k = 0; k < 16; k++) out[k] = k === 3 ? kind : from(k) * (k >= 4 && k < 8 ? same : 1) * (1 - share) + to(k) * share;
+      const length = Math.hypot(out[4], out[5], out[6], out[7]) || 1;
+      for (let k = 4; k < 8; k++) out[k] /= length;
+      moves.set(out, m);
+    }
+    if (modelled.has(index)) continue;   // a model's look is its material's
+    const c = index * 4;
+    for (let k = 0; k < 4; k++) if (look.colours[c + k] !== colours[c + k]) { colours[c + k] = Math.round(look.colours[c + k] * (1 - share) + colours[c + k] * share); motion.touched.add(index); }
+  }
+  rig.models.forEach((model, which) => { const now = model.geometry.attributes.position.array, was = look.shapes[which]; for (let k = 0; k < now.length; k++) now[k] = was[k] * (1 - share) + now[k] * share; });
+  look.left -= seconds;
+  if (look.left <= 0) motion.earlier = null;
+}
 function stepMotion(now) {
   const key = motionKey();
   if (!key || motion.for !== key) return;
   const { definition, rig } = motion, cycle = definition.cycle / 1000;
   const seconds = paused() ? 0 : THREE.MathUtils.clamp((now - motion.last) / 1000, 0, 0.05); motion.last = now;   // frames can arrive out of order by a hair: nothing steps back; a story that is paused holds its motion too
-  /* a story's step plays one stretch of the cycle, slowed, over and over, with a breath between: the drops fade out and in across the join */
+  /* a story's step plays one stretch of the cycle, slowed, over and over, with a breath between (a step marked `once`
+     plays it one time and holds its end). Nothing jumps: where the stretch starts again, and from one step to the
+     next, the look of the moment before is kept and blended into the new one */
   const step = telling(), span = motion.held === null && step?.span ? step : null;
   if (motion.told !== step) {
-    motion.told = step; motion.clock = 0;
+    keepLook(rig, GLIDE);   // the first step too: a story begins from the region as it stood
+    motion.told = step; motion.clock = 0; motion.into = 0;
     /* what a step is about: the parts it frames, names and labels. The rest stands back while it is told. */
     motion.kept = step?.frame && step.keep !== 'all' ? new Set([...step.frame, ...(step.labels || []), step.entry].flatMap(key => body.entries[key] || [])) : null;
     motion.opening = step?.open ? openingOf(step, rig) : null;
@@ -975,9 +1008,11 @@ function stepMotion(now) {
   if (motion.held === null) motion.clock += seconds;
   let time = motion.held === null ? motion.clock : motion.held * cycle, join = 1, rejoined = false;
   if (span) {
-    const round = span.seconds + 0.6, into = motion.clock % round;
-    time = (span.span[0] + (span.span[1] - span.span[0]) * Math.min(1, into / span.seconds)) * cycle;
-    join = THREE.MathUtils.clamp(Math.min(into / 0.35, (round - into) / 0.35), 0, 1); rejoined = into < motion.into; motion.into = into;
+    const round = span.seconds + BREATH, into = span.once ? Math.min(motion.clock, span.seconds) : motion.clock % round;
+    time = (span.span[0] + (span.span[1] - span.span[0]) * Math.min(0.999, into / span.seconds)) * cycle;   // short of its end, which may be the first moment of what the next step tells
+    join = THREE.MathUtils.clamp(span.once ? into / 0.35 : Math.min(into / 0.35, (round - into) / 0.35), 0, 1);
+    rejoined = into < motion.into; motion.into = into;
+    if (rejoined) keepLook(rig, GLIDE);
   }
   const before = motion.phase, phase = motion.phase = (time % cycle) / cycle;
   const colours = stateTexture.colour.image.data;
@@ -996,6 +1031,7 @@ function stepMotion(now) {
     for (const index of body.around.own) if (!motion.kept.has(index) && !(motion.opening && rig.opened.has(index))) act.fade(body.parts[index], motion.base[index * 4 + 3] / 255 * (1 - 0.85 * away));
     for (const index of body.around.context) act.fade(body.parts[index], motion.base[index * 4 + 3] / 255 * (1 - 0.6 * away));
   }
+  if (motion.earlier) blendLook(rig, seconds);
   /* each model takes the look its parts have at this moment, and stands in for them */
   for (const model of rig.models) {
     const k = model.parts[0].index * 4, solid = colours[k + 3] / 255, material = model.mesh.material;
@@ -1006,6 +1042,7 @@ function stepMotion(now) {
     for (const part of model.parts) { colours[part.index * 4 + 3] = 0; motion.touched.add(part.index); }
     model.geometry.attributes.position.needsUpdate = true; model.geometry.computeVertexNormals();
   }
+  motion.drawn.set(colours);   // as drawn at this moment: going to a step redraws the colours plainly, and the blend starts from these
   stateTexture.moves.needsUpdate = true; stateTexture.colour.needsUpdate = true;
   dropHeight.value = renderer.domElement.height;
   rig.streams.forEach((stream, which) => {
@@ -2040,6 +2077,7 @@ window.bodyModel = {
   holdMotion: phase => { motion.held = phase; },
   motion: () => ({ moving: moving() && motion.for === motionKey(), phase: motion.phase, caption: motion.caption, open: motion.open.amount, drops: motion.rig && moving() ? motion.rig.streams.reduce((sum, stream) => sum + stream.drops.length, 0) : 0 }),
   moveOf: index => Array.from(stateTexture.moves.image.data.slice(index * 16, index * 16 + 16)),
+  moves: () => stateTexture.moves.image.data, colours: () => stateTexture.colour.image.data,
   /* every drop of every stream that shows at this moment: [stream, x, y, z] (cm) */
   dropsShown: () => (motion.rig && moving() ? motion.rig.streams.flatMap((stream, which) => {
     if (!stream.cloud.visible) return [];

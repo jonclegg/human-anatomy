@@ -32,7 +32,29 @@ const HER_SHAPE = { 'caucasian-female-young': 1, 'universal-female-young-average
 
 /* ---------- His body, without what is his alone ---------- */
 /* his outer ear is a part of its own; her skin has ears */
-const HIS_ALONE = /penis|penile|testi|scrot|prostat|seminal|vesicular|deferent|epididym|cremaster|^urethra$|^External ear$/i;
+const HIS_ALONE = /penis|penile|\btest(is|es|icular)\b|scrot|prostat|seminal|vesicular|deferent|epididym|cremaster|^urethra$|^External ear$/i;
+/* The turn, size and place that carry one set of points onto another as nearly as a rigid body can (Horn's method):
+   returns the map, with its scale. `from` and `to` are matching lists of positions. */
+function likeness(from, to) {
+  const mean = lists => { const sum = [0, 0, 0]; let count = 0; for (const list of lists) for (let k = 0; k < list.length; k += 3) { sum[0] += list[k]; sum[1] += list[k + 1]; sum[2] += list[k + 2]; count++; } return sum.map(value => value / count); };
+  const a = mean(from), b = mean(to), M = [[0, 0, 0], [0, 0, 0], [0, 0, 0]];
+  let spreadFrom = 0, spreadTo = 0;
+  from.forEach((list, which) => { for (let k = 0; k < list.length; k += 3) {
+    const p = [list[k] - a[0], list[k + 1] - a[1], list[k + 2] - a[2]], q = [to[which][k] - b[0], to[which][k + 1] - b[1], to[which][k + 2] - b[2]];
+    for (let r = 0; r < 3; r++) for (let c = 0; c < 3; c++) M[r][c] += p[r] * q[c];
+    spreadFrom += p[0] ** 2 + p[1] ** 2 + p[2] ** 2; spreadTo += q[0] ** 2 + q[1] ** 2 + q[2] ** 2;
+  } });
+  const [[xx, xy, xz], [yx, yy, yz], [zx, zy, zz]] = M;
+  const N = [[xx + yy + zz, yz - zy, zx - xz, xy - yx], [yz - zy, xx - yy - zz, xy + yx, zx + xz], [zx - xz, xy + yx, yy - xx - zz, yz + zy], [xy - yx, zx + xz, yz + zy, zz - xx - yy]];
+  const shift = Math.max(...N.map(row => row.reduce((sum, value) => sum + Math.abs(value), 0)));   // makes the wanted eigenvalue the largest in size
+  let q = [1, 0, 0, 0];
+  for (let round = 0; round < 500; round++) { const next = N.map((row, r) => row.reduce((sum, value, c) => sum + value * q[c], shift * q[r])), length = Math.hypot(...next); q = next.map(value => value / length); }
+  const [w, x, y, z] = q, scale = Math.min(1, Math.sqrt(spreadTo / spreadFrom));   // never larger than it was
+  const R = [[1 - 2 * (y * y + z * z), 2 * (x * y - w * z), 2 * (x * z + w * y)], [2 * (x * y + w * z), 1 - 2 * (x * x + z * z), 2 * (y * z - w * x)], [2 * (x * z - w * y), 2 * (y * z + w * x), 1 - 2 * (x * x + y * y)]];
+  const place = (px, py, pz) => { const p = [px - a[0], py - a[1], pz - a[2]]; return R.map((row, r) => b[r] + scale * (row[0] * p[0] + row[1] * p[1] + row[2] * p[2])); };
+  place.scale = scale;
+  return place;
+}
 const male = readParts('male');
 const structures = [];
 let left = 0;
@@ -42,7 +64,16 @@ for (const layer of LAYERS) for (const piece of await readLayer('male', layer)) 
   structures.push({ positions: piece.positions, indices: piece.indices, name: part.name, layer, part });
 }
 console.log(`female: ${structures.length} of his structures carried across, ${left} left out`);
+/* The small bowel is a long soft coil, and reshaping it with the body pulls its loops out of shape. It is shared as it
+   is: his coils and their mesentery, as one piece, turned, sized and placed where the reshaping would put them. */
+const SHARED = /jejunum|ileum|ileocecal|^Mesentery of small intestine$/i;
+const shared = structures.filter(structure => structure.layer === 'organs' && SHARED.test(structure.name)), his = shared.map(structure => structure.positions.slice());
 const { lining, breast, rest } = transfer(structures, `${root}/MakeHuman (CC0)`, HIS_SHAPE, HER_SHAPE, { height: HEIGHT });
+{
+  const place = likeness(his, shared.map(structure => structure.positions));
+  shared.forEach((structure, which) => { for (let k = 0; k < his[which].length; k += 3) structure.positions.set(place(his[which][k], his[which][k + 1], his[which][k + 2]), k); });
+  console.log(`female: his small bowel shared as it is: ${shared.length} structures, at ${place.scale.toFixed(3)} of his size`);
+}
 const skin = structures.find(structure => structure.layer === 'skin');
 const hers = name => { const found = structures.filter(structure => structure.name === name); if (!found.length) throw new Error(`she has no ${name}`); return found; };
 
@@ -83,14 +114,32 @@ const detail = readDetail(toHer);
    and so do the muscles of his pelvic floor, which had no opening for a vagina */
 const PELVIC_FLOOR = /levator ani|pubococcygeus|puborectalis|iliococcygeus|anal sphincter/i;
 {
-  const uterus = added.filter(mesh => /uterus|cervi|vagina|ovary/i.test(mesh.name)), grid = obstacleOf(uterus), centre = centreOf(uterus);
-  const { min, max } = bounds(Float32Array.from(uterus.flatMap(mesh => [...mesh.positions])));
+  /* what they give way to is each solid organ on its own: her uterus with its cervix and vagina, and each ovary. Not the
+     ligaments, which run forward and out to the groin: taken with the uterus they made everything between count as inside it */
+  const solid = pattern => { const meshes = added.filter(mesh => pattern.test(mesh.name) && !/ligament|pouch/i.test(mesh.name)); if (!meshes.length) throw new Error(`nothing scanned matches ${pattern}`); return { grid: obstacleOf(meshes), centre: centreOf(meshes), ...bounds(Float32Array.from(meshes.flatMap(mesh => [...mesh.positions]))) }; };
+  const uterus = solid(/uterus|cervi|vagina/i), obstacles = [uterus, solid(/^Left ovary$/), solid(/^Right ovary$/)];
+  const near = (structure, { min, max }) => { const box = bounds(structure.positions); return ![0, 1, 2].some(c => box.min[c] > max[c] + 1 || box.max[c] < min[c] - 1); };
+  /* the shared small bowel stays one piece: where its lowest loops would lie in her uterus, all of it is lifted clear */
+  {
+    const { grid, centre } = uterus;
+    const inside = lift => shared.reduce((count, { positions }) => {
+      for (let k = 0; k < positions.length; k += 3) {
+        const [index] = grid.nearest(positions[k], positions[k + 1] + lift, positions[k + 2], 3);
+        if (index < 0) continue;
+        const p = [0, 1, 2].map(c => grid.points[3 * index + c]), out = p.map((value, c) => value - centre[c]), length = Math.hypot(...out) || 1;
+        if (((positions[k] - p[0]) * out[0] + (positions[k + 1] + lift - p[1]) * out[1] + (positions[k + 2] - p[2]) * out[2]) / length < 0.25) count++;
+      }
+      return count;
+    }, 0);
+    let lift = 0;
+    while (lift < 5 && inside(lift) > 0) lift += 0.25;
+    for (const { positions } of shared) for (let k = 1; k < positions.length; k += 3) positions[k] += lift;
+    console.log(`  her small bowel lifted ${lift} cm clear of her uterus`);
+  }
   let cleared = 0;
   for (const structure of structures) {
     if (structure.layer !== 'organs' && structure.layer !== 'vessels' && !PELVIC_FLOOR.test(structure.name)) continue;
-    const box = bounds(structure.positions);
-    if ([0, 1, 2].some(c => box.min[c] > max[c] + 1 || box.max[c] < min[c] - 1)) continue;
-    cleared += pushOutOf(structure, grid, centre, { gap: 0.25 });
+    for (const obstacle of obstacles) if (near(structure, obstacle)) cleared += pushOutOf(structure, obstacle.grid, obstacle.centre, { gap: 0.25, reach: 3 });
   }
   console.log(`  his bladder, rectum and bowel kept clear of her uterus: ${cleared} points moved`);
   /* the bladder is a couple of hundred triangles: the points pushed clear of the uterus stand out of it as corners, so it is rounded off again */

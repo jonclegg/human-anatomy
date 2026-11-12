@@ -7,6 +7,7 @@
 //   labels   the parts labelled during the step (default: its entry alone; [] for none)
 //   keep     'all': nothing stands back while the step is told (default: all but the parts it frames, names and labels do)
 //   span     the stretch of the motion's cycle that plays, over and over, taking `seconds` each time (default: all of it, at its own pace)
+//   once     the stretch plays one time and holds its end (for a change that goes one way, as bones drawn apart)
 //   streams  which of the motion's streams show (default: all)
 const FRONT = [0.6, 0.1, 0.8], LEFT = [0.85, 0.1, 0.5];   // both sides are seen from the front and the body's left, the left side from further round, as an opened heart is drawn in an atlas
 const ABOVE = [-0.25, 1, -0.1];     // from above, down the two great arteries onto their valves
@@ -154,11 +155,11 @@ export const STORIES = {
   skull: [
     { title: 'One skull, 22 bones', entry: 'skullParietalBone', labels: [], span: [0, 0.1], seconds: 4,
       say: 'The skull looks like one bone, but it is twenty-two. Most are joined along wavy seams called sutures.' },
-    { title: 'The bones round the brain', entry: 'skullParietalBone', frame: SKULL, from: [0.8, 0.35, 0.5], labels: ['skullFrontalBone', 'skullParietalBone', 'skullOccipitalBone', 'skullTemporalBone'], keep: 'all', span: [0.1, 0.5], seconds: 6,
+    { title: 'The bones round the brain', entry: 'skullParietalBone', frame: SKULL, from: [0.8, 0.35, 0.5], labels: ['skullFrontalBone', 'skullParietalBone', 'skullOccipitalBone', 'skullTemporalBone'], keep: 'all', once: true, span: [0.1, 0.5], seconds: 6,
       say: 'Here they are pulled apart. Eight bones surround the brain: the frontal, two parietal, two temporal, the occipital, the sphenoid and the ethmoid.' },
     { title: 'The bones of the face', entry: 'skullMaxilla', frame: SKULL, from: [0.15, 0, 1], labels: ['skullMaxilla', 'skullZygomaticBone', 'skullNasalBone', 'mandible'], keep: 'all', span: [0.4, 0.6], seconds: 5,
       say: 'Fourteen bones form the face. The largest are the two upper jaw bones and the lower jaw.' },
-    { title: 'Only the jaw moves', entry: 'mandible', frame: SKULL, from: [0.9, 0, 0.45], labels: ['mandible'], keep: 'all', span: [0.6, 0.95], seconds: 5,
+    { title: 'Only the jaw moves', entry: 'mandible', frame: SKULL, from: [0.9, 0, 0.45], labels: ['mandible'], keep: 'all', once: true, span: [0.6, 0.95], seconds: 5,
       say: 'They come back together. In an adult the seams are fixed, and the lower jaw is the only bone of the skull that moves.' },
   ],
 

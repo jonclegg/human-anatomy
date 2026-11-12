@@ -282,7 +282,7 @@ export const STORIES = {
   hand: [
     { title: 'Twenty-seven bones', entry: 'handMetacarpals', labels: ['handMetacarpals', 'handFingerBones'], span: [0, 0.04], seconds: 4,
       say: 'The hand has twenty-seven bones. Most of the muscles that move the fingers are not in the hand at all.' },
-    { title: 'Making a fist', entry: 'handMetacarpals', frame: ['handMetacarpals', 'handFingerBones'], from: [-0.2, -0.35, 1], labels: ['handMetacarpals'], keep: 'all', span: [0, 0.5], seconds: 5,
+    { title: 'Tendons from the forearm', entry: 'handMetacarpals', frame: ['handMetacarpals', 'handFingerBones'], from: [-0.2, -0.35, 1], labels: ['handMetacarpals'], keep: 'all', span: [0, 0.5], seconds: 5,
       say: 'To make a fist, tendons pull the fingers closed. The tendons come from muscles up in the forearm.' },
     { title: 'No muscles in the fingers', entry: 'handMetacarpals', frame: ['handMetacarpals', 'handFingerBones'], from: [0, -1, 0.75], labels: ['handMetacarpals'], keep: 'all', span: [0.5, 1], seconds: 5,
       say: 'The fingers themselves contain bones and tendons, and no muscles.' },

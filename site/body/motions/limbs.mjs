@@ -25,7 +25,7 @@ export const knee = turns({ cycle: 4800, watch: 'how the knee bends', first: ['k
   captions: ['Bending: the hamstrings, at the back of the thigh, pull the shin back', 'Straightening: the quadriceps pull through the kneecap, which works as a pulley and makes them up to a third stronger'] });
 export const foot = turns({ cycle: 3600, watch: 'how the ankle moves the foot', first: ['footCalcanealTendon'], second: ['footDorsalMuscles'],
   captions: ['Pushing off: the calf muscles pull the heel up by the Achilles tendon, the strongest tendon in the body', 'Lifting the toes, so that they clear the ground on the next step'] });
-export const hand = turns({ cycle: 6000, watch: 'how the hand makes a fist', first: ['handFingerBones'], second: ['handThenar', 'handHypothenar'],
+export const hand = turns({ cycle: 6000, watch: 'what moves the fingers', first: ['handFingerBones'], second: ['handThenar', 'handHypothenar'],
   captions: ['Making a fist: the fingers are curled by tendons from muscles up in the forearm', 'The fingers contain tendons and bone, and no muscles'] });
 /* the back keeps its skin: it is seen in the whole trunk */
 export const spine = { ...turns({ cycle: 9000, watch: 'how the spine bends', first: ['discs'], second: ['thoracicVertebrae', 'lumbarVertebrae'],

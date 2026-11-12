@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
-import { LAYER_INFO, GROUP_INFO, VIEW_INFO, TOUR, colourOf, SHOWN_WHEN_CHOSEN } from './parts.mjs';
+import { LAYER_INFO, GROUP_INFO, VIEW_INFO, TOUR, colourOf, SHOWN_WHEN_CHOSEN, NEVER_DRAWN } from './parts.mjs';
 import { REGIONS, GROUPS, DETAILS, ALL, indexParts, regionContext, sideOfPart } from './closeups.mjs';
 import { MOTIONS } from './motions.mjs';
 import { STORIES } from './stories.mjs';
@@ -428,7 +428,7 @@ const UNDER_COVER = /penis|scrot|testi|epididym|vagin|vulva|clitor|labi(a|um) (m
 const revealed = () => selectedParts().some(index => body.parts[index].group === 'reproductive' || UNDER_COVER.test(body.parts[index].name));
 function clothingOpacity() {
   if (!state.clothed || state.layers.skin === 'off' || revealed() || state.region) return 0;   // a close-up is of what lies under it
-  if (isolating()) return 0.12;
+  if (isolating()) return Math.min(0.12, state.rest * 3);   // beside a part picked out, as faint as the rest of the body is set to be, and gone when that is
   return Math.min(1, state.body / 0.05) * (0.35 + 0.65 * state.body);   // solid on solid skin; fainter with it but still covering; gone only as the skin goes
 }
 
@@ -510,6 +510,7 @@ function applyVisibility() {
     else if (around) opacity = around.own.has(index) ? 1 : around.context.has(index) ? GHOST * (live?.context ?? 1) : 0;   // a close-up: its parts, and its context faint
     if (mode === 'solid' && !state.blend && view.xray.includes(part.layer)) opacity = 1 - (1 - GHOST) * state.xray;
     if (SHOWN_WHEN_CHOSEN.test(part.name) && !chosen.has(index)) opacity = 0;
+    if (NEVER_DRAWN.test(part.name)) opacity = 0;
     if (isolate) opacity = chosen.has(index) ? 1 : Math.min(opacity, part.layer === 'skin' ? Math.min(0.05, state.rest) : state.rest);
     if (chosen.has(index) && !isolate) opacity = Math.max(opacity, 1);
     const look = live?.look && around.own.has(index) ? live.look(part.name) : null;   // how a part looks while its close-up moves: the heart's walls as glass, its cavities the colour of their blood

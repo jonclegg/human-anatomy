@@ -25,6 +25,29 @@ export function weld({ positions, indices }, tolerance = 0.002) {
   return { positions: new Float32Array(welded), indices: new Uint32Array(kept) };
 }
 
+/* Round a mesh off in place: each point moves toward the middle of its neighbours and then a little further back out,
+   so that corners soften and the whole neither shrinks nor swells (Taubin). Points at the same place move together.
+   held(x, y, z): points that stay where they are. */
+export function soften({ positions, indices }, rounds = 8, held = () => false) {
+  const place = v => `${Math.round(positions[3 * v] * 500)},${Math.round(positions[3 * v + 1] * 500)},${Math.round(positions[3 * v + 2] * 500)}`;
+  const spot = new Map(), of = new Uint32Array(positions.length / 3);
+  for (let v = 0; v < of.length; v++) { const key = place(v); if (!spot.has(key)) spot.set(key, spot.size); of[v] = spot.get(key); }
+  const near = Array.from({ length: spot.size }, () => new Set());
+  for (let t = 0; t < indices.length; t += 3) for (let e = 0; e < 3; e++) { const a = of[indices[t + e]], b = of[indices[t + (e + 1) % 3]]; if (a !== b) { near[a].add(b); near[b].add(a); } }
+  let at = new Float64Array(spot.size * 3);
+  for (let v = 0; v < of.length; v++) at.set(positions.subarray(3 * v, 3 * v + 3), 3 * of[v]);
+  const still = Array.from({ length: spot.size }, (_, s) => held(at[3 * s], at[3 * s + 1], at[3 * s + 2]));
+  for (let round = 0; round < 2 * rounds; round++) {
+    const by = round % 2 ? -0.53 : 0.5, next = new Float64Array(at.length);
+    for (let s = 0; s < spot.size; s++) for (let c = 0; c < 3; c++) {
+      let sum = 0; for (const other of near[s]) sum += at[3 * other + c];
+      next[3 * s + c] = near[s].size && !still[s] ? at[3 * s + c] + by * (sum / near[s].size - at[3 * s + c]) : at[3 * s + c];
+    }
+    at = next;
+  }
+  for (let v = 0; v < of.length; v++) for (let c = 0; c < 3; c++) positions[3 * v + c] = at[3 * of[v] + c];
+}
+
 /* simplify to a surface error in cm, never below a share of the triangles, then drop the vertices no triangle uses */
 export function simplify(mesh, error, minimumShare = 0.04) {
   const target = Math.min(mesh.indices.length, Math.max(3 * 12, Math.floor(mesh.indices.length * minimumShare / 3) * 3));

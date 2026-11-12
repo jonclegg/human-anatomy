@@ -18,7 +18,7 @@ import { register, warpMesh, startMap } from './register.mjs';
 import { pushOutOf, obstacleOf, centreOf } from './clearance.mjs';
 import { Assembly } from './assemble.mjs';
 import { readGarment, wear, writeClothing } from './garments.mjs';
-import { bounds } from './mesh.mjs';
+import { bounds, soften } from './mesh.mjs';
 import { LAYERS } from './systems.mjs';
 import { readDetail, detailParts, meetOpening, joinToBladder, vulvaSkin } from './pelvic-detail.mjs';
 import { breastSurface, breastFat } from './breast-surface.mjs';
@@ -93,6 +93,8 @@ const PELVIC_FLOOR = /levator ani|pubococcygeus|puborectalis|iliococcygeus|anal 
     cleared += pushOutOf(structure, grid, centre, { gap: 0.25 });
   }
   console.log(`  his bladder, rectum and bowel kept clear of her uterus: ${cleared} points moved`);
+  /* the bladder is a couple of hundred triangles: the points pushed clear of the uterus stand out of it as corners, so it is rounded off again */
+  { const bladder = hers('Urinary bladder')[0], floor = bounds(bladder.positions).min[1]; soften(bladder, 8, (x, y) => y < floor + 1.5); }   // its neck, where the urethra leaves it, stays where it is
 }
 
 /* ---------- Her scanned breasts ---------- */

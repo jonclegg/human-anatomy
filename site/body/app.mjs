@@ -127,6 +127,13 @@ class TurntableControls extends THREE.EventDispatcher {
   /* move the view straight up or down the body, by cm */
   lift(cm) { this.target.y += cm; this.camera.position.y += cm; }
   update() {
+    /* what is looked at never leaves what there is to look at: however the view is dragged, pinched or thrown, the
+       middle of the screen stays inside the body (or the region), so the model cannot be lost off the edge */
+    const within = this.within?.();
+    if (within && !within.containsPoint(this.target)) {
+      const held = within.clampPoint(this.target, new THREE.Vector3());
+      this.camera.position.add(held.clone().sub(this.target)); this.target.copy(held);
+    }
     this.camera.lookAt(this.target);
     const { last } = this;
     if (last.position.equals(this.camera.position) && last.target.equals(this.target) && last.up.equals(this.camera.up)) return;
@@ -447,6 +454,20 @@ try { const saved = JSON.parse(localStorage.getItem('wl-body') || '{}'); if (sav
 const params = new URLSearchParams(location.search);
 if (params.get('sex') === 'female' || params.get('sex') === 'male') state.sex = params.get('sex');
 let body = null;   // the body on show
+/* the box the view's middle is kept inside: the whole body, or in a region its own parts and their faint context */
+const inView = { for: null, box: new THREE.Box3() };
+controls.within = () => {
+  if (!body) return null;
+  const about = body.around || body;   // a region's parts, or the body's
+  if (inView.for !== about) {
+    const parts = body.around ? [...body.around.own, ...body.around.context].map(index => body.parts[index]) : body.parts.filter(part => part.layer === 'skin');
+    if (!parts.length) return null;
+    inView.box.makeEmpty();
+    for (const part of parts) inView.box.expandByPoint(new THREE.Vector3(...part.min)).expandByPoint(new THREE.Vector3(...part.max));
+    inView.for = about;
+  }
+  return inView.box;
+};
 /* what is on show: one of the whole-body views, or a close-up, which has the same fields */
 const closeUp = () => (state.region ? REGIONS[state.region] : null);
 function viewInfo() {

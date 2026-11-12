@@ -541,6 +541,18 @@ test.describe('the model', () => {
     for (let k = 0; k < 40; k++) await page.mouse.wheel(0, -900);
     await page.waitForTimeout(600);
     expect((await view()).far).toBeGreaterThanOrEqual(4.9);   // it stops short of going inside
+    /* swiped sideways or up and down as far as it will go (two fingers on a trackpad), the model is never lost: the middle of the view stays inside the body */
+    const lost = () => model(page, () => {
+      const m = window.bodyModel, skin = m.body().parts.find(part => part.name === 'Skin'), target = m.controls.target;
+      const inside = [0, 1, 2].every(axis => target.getComponent(axis) >= skin.min[axis] - 0.01 && target.getComponent(axis) <= skin.max[axis] + 0.01);
+      const middle = target.clone().project(m.camera);
+      return { inside, onScreen: Math.abs(middle.x) < 1 && Math.abs(middle.y) < 1 && middle.z < 1 };
+    });
+    for (const [dx, dy] of [[4000, 0], [-9000, 0], [0, 6000], [0, -12000], [5000, 5000]]) {
+      for (let k = 0; k < 6; k++) await page.mouse.wheel(dx / 6, dy / 6);
+      await page.waitForTimeout(250);
+      expect(await lost(), `swiped by ${dx}, ${dy}`).toEqual({ inside: true, onScreen: true });
+    }
     /* the window changes size */
     await page.setViewportSize({ width: 1000, height: 700 });
     await page.waitForTimeout(500);

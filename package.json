@@ -1,7 +1,7 @@
 {
-  "name": "vagina-anatomy",
+  "name": "human-anatomy",
   "version": "1.0.0",
-  "description": "Interactive 3D anatomy of the vulva, clitoris and pelvic organs",
+  "description": "Interactive 3D human anatomy, male and female",
   "scripts": {
     "serve": "node tests/server.mjs",
     "test": "playwright test",
@@ -20,7 +20,7 @@
   "private": true,
   "repository": {
     "type": "git",
-    "url": "https://github.com/jonclegg/vagina-anatomy.git"
+    "url": "https://github.com/jonclegg/human-anatomy.git"
   },
-  "homepage": "https://vagina.wooten-labs.com"
+  "homepage": "https://anatomy.wooten-labs.com"
 }

@@ -42,14 +42,17 @@ button:focus-visible, input:focus-visible, a:focus-visible, .contents:focus-visi
 .fetching { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); z-index: 2; padding: 6px 12px; border-radius: 5px; background: var(--panel); border: 1px solid var(--line-strong); font-size: 13px; font-weight: 600; color: var(--muted); pointer-events: none; }
 
 /* The bar: the trail on the left, from the title down to what is on show; the search, the body, the sound and Contents on the right */
-.bar { position: relative; z-index: 7; display: flex; align-items: center; gap: 10px; min-width: 0; padding: 6px var(--gutter); border-bottom: 1px solid var(--line); background: var(--panel); }
-.trail { display: flex; flex-wrap: wrap; align-items: center; gap: 0 8px; min-width: 0; margin-right: auto; font-size: 14px; color: var(--faint); }
+.bar { position: relative; z-index: 7; display: flex; flex-wrap: wrap; align-items: center; gap: 0 10px; min-width: 0; padding: 6px var(--gutter); border-bottom: 1px solid var(--line); background: var(--panel); }
+.trail { display: flex; flex: 1 1 0; flex-wrap: wrap; align-items: center; gap: 0 8px; min-width: 0; font-size: 14px; color: var(--faint); }
 .trail h1, .trail #crumbs { display: contents; }
 .trail button { border: 0; background: transparent; min-height: 40px; padding: 0 2px; cursor: pointer; color: var(--muted); text-decoration: underline; text-decoration-color: var(--line-strong); text-underline-offset: 4px; }
 .trail button:hover { color: var(--ink); }
 .trail .home { font: 600 17px var(--display); letter-spacing: -0.01em; color: var(--ink); text-decoration: none; white-space: nowrap; }
 .trail b { color: var(--ink); font-weight: 600; padding: 0 2px; }
 .trail i { font-style: normal; }
+.draft { flex: 1 0 100%; margin: 0; font-size: 12px; line-height: 16px; color: var(--faint); }
+.draft a { color: var(--muted); text-underline-offset: 3px; }
+.draft a:hover { color: var(--ink); }
 /* find any part, region or story by name, from anywhere */
 .finder { position: relative; display: flex; align-items: center; }
 .finder svg { position: absolute; left: 13px; width: 16px; height: 16px; fill: none; stroke: var(--muted); stroke-width: 1.8; stroke-linecap: round; pointer-events: none; }
@@ -182,6 +185,7 @@ button:focus-visible, input:focus-visible, a:focus-visible, .contents:focus-visi
 .stats dd { margin: 0; font-weight: 500; text-align: right; color: var(--ink); }
 .homolog { font-size: 14px; color: var(--muted); }
 .homolog b { color: var(--ink); }
+.homolog a { color: inherit; text-underline-offset: 3px; }
 .source { font-size: 12.5px; color: var(--muted); display: flex; gap: 8px; align-items: baseline; }
 .source em { font-style: normal; font-weight: 700; font-size: 11px; border: 1px solid var(--line-strong); border-radius: 3px; padding: 0 5px; color: var(--ink); white-space: nowrap; }
 .source em.fitted { background: var(--mark); border-color: var(--mark); color: var(--mark-ink); }
@@ -234,6 +238,7 @@ input[type="range"]::-moz-range-thumb { width: 14px; height: 14px; border-radius
   .trail { flex: 1 0 100%; font-size: 13px; }
   .trail button { min-height: 34px; }
   .trail .home { font-size: 16px; }
+  .draft span { display: none; }
   .finder { flex: 1; min-width: 0; }
   .finder input { width: 100%; min-height: 36px; padding-left: 32px; }
   .finder svg { left: 10px; }
@@ -294,6 +299,7 @@ input[type="range"]::-moz-range-thumb { width: 14px; height: 14px; border-radius
     <button type="button" class="sound-btn" id="soundBtn" aria-pressed="false" aria-label="Sound: music, and a voice during a story"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9.5v5h3.5l4.5 4v-13l-4.5 4z"/><path class="waves" d="M15.5 9a4 4 0 0 1 0 6M18 6.5a7.5 7.5 0 0 1 0 11"/><path class="mute" d="M16 9.5l5 5M21 9.5l-5 5"/></svg><span>Sound</span></button>
     <button type="button" class="sound-btn labels-btn" id="labelsBtn" aria-pressed="true" aria-label="Labels on the model">Labels</button>
     <button type="button" class="contents-btn" id="contentsBtn" aria-expanded="false" aria-controls="contents">Contents</button>
+    <p class="draft">A first open-source draft<span>, built with AI models</span>. It <span>surely </span>has mistakes. <a href="https://github.com/jonclegg/human-anatomy" target="_blank" rel="noopener">Fixes<span> and reuse are</span> welcome</a>.</p>
   </header>
 
   <div class="work">
@@ -371,7 +377,7 @@ input[type="range"]::-moz-range-thumb { width: 14px; height: 14px; border-radius
         <h2>About</h2>
         <div class="list">
           <a href="https://wooten-labs.com">Wooten Labs</a>
-          <a href="https://github.com/jonclegg/vagina-anatomy">Source on GitHub</a>
+          <a href="https://github.com/jonclegg/human-anatomy">Source on GitHub</a>
         </div>
       </section>
       <section class="credits" id="credits">
@@ -382,8 +388,8 @@ input[type="range"]::-moz-range-thumb { width: 14px; height: 14px; border-radius
         <p>Female skin: MakeHuman base mesh and young-female shape targets, CC0 (<a href="https://github.com/makehumancommunity/makehuman">makehumancommunity/makehuman</a>).</p>
         <p>The rest of the female body is the male body, reshaped to that skin, not scanned from a woman.</p>
         <p>Measurements from Gray's Anatomy (42nd ed.), Standring 2020, Moore's Clinically Oriented Anatomy, and published studies (some named in a part's details).</p>
-        <p>Educational model, simplified for clarity. Bodies vary widely. Not medical advice.</p>
-        <p>Open source (MIT): <a href="https://github.com/jonclegg/vagina-anatomy">github.com/jonclegg/vagina-anatomy</a>. Corrections welcome. The female pelvis is under Pelvis in Contents; for how it changes with arousal, and its cross-sections, see <a href="https://vagina.wooten-labs.com">Vagina Anatomy</a>.</p>
+        <p>A first draft, built largely with AI models. It will have mistakes. Bodies vary widely. Not medical advice.</p>
+        <p>Open source: the code and text are MIT, so use them for anything; the 3D data is CC BY-SA 4.0. Source: <a href="https://github.com/jonclegg/human-anatomy">github.com/jonclegg/human-anatomy</a>. To report a mistake, use the link under any part, or open an issue. Pull requests are welcome. The female pelvis is under Pelvis in Contents; for how it changes with arousal, and its cross-sections, see <a href="https://vagina.wooten-labs.com">Vagina Anatomy</a>.</p>
       </section>
     </div>
   </div>

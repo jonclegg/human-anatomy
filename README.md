@@ -1,76 +1,42 @@
 <div align="center">
 
-# Vagina Anatomy
+# Human Anatomy
 
-**An interactive 3D model of the vulva, clitoris and pelvic organs.**
+**An interactive 3D model of the whole human body, male and female. A first open-source draft.**
 
-[**Open the model →**](https://vagina.wooten-labs.com) &nbsp;·&nbsp; made by [Wooten Labs](https://wooten-labs.com)
+[**Open the model →**](https://anatomy.wooten-labs.com) &nbsp;·&nbsp; made by [Wooten Labs](https://wooten-labs.com)
 
-[![Live](https://img.shields.io/badge/live-vagina.wooten--labs.com-111416)](https://vagina.wooten-labs.com)
+[![Live](https://img.shields.io/badge/live-anatomy.wooten--labs.com-111416)](https://anatomy.wooten-labs.com)
 [![License: MIT](https://img.shields.io/badge/license-MIT-ffd400)](LICENSE)
 [![three.js](https://img.shields.io/badge/three.js-0.160-555d63)](https://threejs.org)
 
-<a href="https://vagina.wooten-labs.com"><img src="docs/demo.gif" alt="Turning the model, switching to the clitoris and side-cut views, raising arousal, and stepping through the parts" width="680"></a>
-
 </div>
 
-## What you can do
+This repository holds two models: the whole body ([`site/body/`](site/body/), live at [anatomy.wooten-labs.com](https://anatomy.wooten-labs.com)) and a close-up of the vulva, clitoris and pelvic organs ([`site/index.html`](site/index.html), live at [vagina.wooten-labs.com](https://vagina.wooten-labs.com)), which came first and is described [further down](#the-close-up-model-human-anatomy).
 
-| | |
-|---|---|
-| **See it in a body** | Opens on a see-through body with the pelvis inside, so you know where everything sits. Fade the body in or out. |
-| **Switch views** | Body, Outside (the vulva), Clitoris (the whole organ, mostly internal), Side cut (a midline section) and All organs. |
-| **Explore 33 parts** | Click any numbered callout, or step through them with ‹ › or the arrow keys. Each part has a description, a fact worth knowing, published measurements and its male equivalent. |
-| **Slice across** | Cut across the vagina at any depth to see its H-shaped, front-to-back flattened cross-section. |
-| **Arousal** | Drag the slider to watch the clitoris and bulbs swell, the inner vagina lengthen and balloon, and the uterus lift, following Masters & Johnson. |
-| **Guided tour** | An automatic walk through every part, outside in, with Back, Pause and Next. |
+## The whole body
 
-It works on phones too: the tools move to a bottom bar, details open in a sheet, and you turn the model with one finger and pinch to zoom.
+[`site/body/`](site/body/) is the whole human body, male and female. It has the skeleton, the muscles, the organs, the vessels, the nervous system and the skin, about 3,000 named structures in each body. The close-up model is also built into the female body: her vulva, clitoris and urethra are its shapes, placed in her pelvis.
 
-<div align="center">
-<img src="docs/phone.png" alt="The model on an iPhone: the body view, the clitoris view, and a selected part with its details sheet" width="760">
-</div>
+### How accurate is it?
 
-## How accurate is it?
+This is a first draft of an open-source anatomy model, built largely with AI models. It will have mistakes: shapes, positions, names and the written notes can all be wrong. It is not medical advice, and it should not be used to study for an exam or to make a decision about a body.
 
-Sizes and angles are checked by automated tests against published ranges (the `anatomy` tests in [`tests/manual.spec.mjs`](tests/manual.spec.mjs)). Main sources:
+What is checked:
 
-- **Longhurst et al., *Clinical Anatomy* 2023:** clitoris meta-analysis of 21 studies.
-- **Lloyd et al., *BJOG* 2005:** vulval and vaginal ranges.
-- **MRI studies** of vaginal and uterine angles.
-- **NIH Human Reference Atlas** (Visible Human Female): the bony pelvis is used directly. The ovaries, fallopian tubes, rectum and uterine ligaments were positioned and checked against it, and tests confirm no organ passes through bone.
+- **Shapes** come from published 3D data (BodyParts3D, Z-Anatomy, the NIH Visible Human scans, MakeHuman), listed under [Where the shapes come from](#where-the-shapes-come-from). The female body is mostly the male body reshaped, and each such part says *Fitted* in the app. Parts built in code say *Modelled*.
+- **Sizes**: the tests measure each body's height, femur, humerus, tibia, kidney, heart, spleen, trachea, spinal cord, pelvic width and uterus against published adult ranges.
+- **Collisions**: the tests check that no major organ passes through bone, and that bone and muscle stay inside the skin.
+- **An audit script** lists structures with no twin on the other side, twins that differ, muscles that touch no bone, and structures drawn twice.
 
-It's an educational model, simplified for clarity. Bodies vary widely, and it isn't medical advice. Spotted something wrong? Please [open an issue](https://github.com/jonclegg/vagina-anatomy/issues).
+Passing the tests means numbers fall in published ranges, not that the anatomy is right. Nobody with medical training has reviewed the model or its text.
 
-## How it's built
+### Contributing
 
-The whole app is one static page, [`site/index.html`](site/index.html), using [three.js](https://threejs.org) with no build step.
+- **Report a mistake**: every part in the app has a "Suggest a fix on GitHub" link under its details, which opens an issue with the part's name filled in. Or [open an issue](https://github.com/jonclegg/human-anatomy/issues) directly. Say what is wrong and what is right, with a source if you have one.
+- **Pull requests are welcome**, for the models, the text, the code or the tests.
+- **Use it for anything.** The code and text are MIT. The 3D data in `site/body/data/` is CC BY-SA 4.0, because it includes Z-Anatomy (see [Licence](#licence)).
 
-- **Built in code:** most of the anatomy (vulva, clitoris, vagina, uterus, bladder and so on) is generated from measured dimensions, so arousal can reshape it live.
-- **Embedded meshes:** the pelvis comes from the NIH Human Reference Atlas, and the body outline is a slim young adult woman built from [MakeHuman](https://github.com/makehumancommunity/makehuman). Both are simplified, compressed and embedded in the page.
-- **Rendering:** ink outlines like a technical drawing, an X-ray mode that fades parts to their silhouettes, and isolation that keeps a chosen part solid with everything else as context.
-
-## Run it locally
-
-```bash
-npm install
-npx playwright install webkit chromium
-npm run serve        # http://127.0.0.1:4173
-npm test             # Playwright: desktop Safari, desktop Chrome and iPhone
-```
-
-### Scripts
-
-| Script | What it does |
-|---|---|
-| `scripts/build-pelvis.mjs <HRA_bony_pelvis_female_VHF.glb>` | Rebuilds the embedded pelvis from the [Human Reference Atlas](https://humanatlas.io) female bony pelvis, aligned to the model in [`hra-frame.mjs`](scripts/hra-frame.mjs). |
-| `scripts/build-body.mjs <folder>` | Rebuilds the body outline from the MakeHuman base mesh and morph targets (the folder needs `base.obj` and the targets listed in the script). |
-| `scripts/export-standalone.mjs <out.html>` | Writes the page as deployed on [wooten-labs.com](https://wooten-labs.com). |
-| `scripts/ui-review.mjs <round>` | Screenshots the page and asks several AI models to score the design against benchmark sites (needs `OPENROUTER_API_KEY`). Each round's scores and comments are in [`design-review/`](design-review/). |
-
-## Human Anatomy: the whole body
-
-[`site/body/`](site/body/) is a second, larger model: the whole human body, male and female, at the same standard. It has the skeleton, the muscles, the organs, the vessels, the nervous system and the skin, about 3,000 named structures in each body. The close-up model above is also built into the female body: her vulva, clitoris and urethra are its shapes, placed in her pelvis.
 
 | | |
 |---|---|
@@ -98,7 +64,7 @@ npm test             # Playwright: desktop Safari, desktop Chrome and iPhone
 - **Added from [Z-Anatomy](https://github.com/Z-Anatomy/Models-of-human-anatomy):** about 750 structures BodyParts3D lacks: the muscles of the face, jaw, back and abdominal wall (latissimus dorsi, rectus abdominis, masseter, temporalis and others), the tendon sheets of the scalp and palm, the middle and lower pharynx, the parathyroid glands, ligaments and joint capsules, the peripheral and cranial nerves, lymph nodes, the thyroid gland, and many vessels. Z-Anatomy is built on BodyParts3D but remodelled, so it is aligned to the BodyParts3D bones: every bone the two have in common (about 180, down to the bones of the face, fingers and toes) pins the fit, so the face muscles follow the facial bones and the toe ligaments the toes. A Z-Anatomy structure is kept only where BodyParts3D has nothing of the same name or in the same place, a structure kept on one side only gets its twin by mirroring (Z-Anatomy's left side is its right side mirrored; not the organs of the chest and belly, which are one-sided by nature), its orbicularis oris, modelled as a ring around an open mouth, has its lips closed, and whatever still lies a little outside his skin is brought under it with the layers beneath ([`scripts/body/zanatomy.mjs`](scripts/body/zanatomy.mjs), [`scripts/body/build-male.mjs`](scripts/body/build-male.mjs)). Its non-commercial parts (the inner ear, a kidney) and its brain models with no stated licence are never exported.
 - **Female, fitted:** no free model of a whole female body exists; scans of women give organs, but no skeleton or muscles that belong with them. So her body is the male body, reshaped as a whole onto a slim young woman's skin (below). In the app, each part that came this way says *Fitted* in its details.
 - **Female, modelled:** her skin is [MakeHuman](https://github.com/makehumancommunity/makehuman)'s base mesh with its young Caucasian female and low-weight shape targets (CC0).
-- **Female, modelled in code:** her vulva (mons, outer and inner lips, hood, vestibule and its openings), her clitoris (glans, body, crura and bulbs), her urethra, the glands beside it and the muscles over the bulbs and crura are the shapes of the close-up model above, which is built from published measurements. That model is built around the Visible Human Female's pelvis, the same scan whose organs are fitted into her, so the map that carries the scan's pelvis onto hers carries these too ([`scripts/body/pelvic-detail.mjs`](scripts/body/pelvic-detail.mjs)). Placed by the bones alone, they land within about half a centimetre of her skin.
+- **Female, modelled in code:** her vulva (mons, outer and inner lips, hood, vestibule and its openings), her clitoris (glans, body, crura and bulbs), her urethra, the glands beside it and the muscles over the bulbs and crura are the shapes of the close-up model, which is built from published measurements. That model is built around the Visible Human Female's pelvis, the same scan whose organs are fitted into her, so the map that carries the scan's pelvis onto hers carries these too ([`scripts/body/pelvic-detail.mjs`](scripts/body/pelvic-detail.mjs)). Placed by the bones alone, they land within about half a centimetre of her skin.
 - **Female, scanned:** what is hers alone: her uterus, vagina, ovaries, tubes and their ligaments, and her breasts, from the NIH Visible Human Female ([Human Reference Atlas](https://humanatlas.io/3d-reference-library)), fitted into her pelvis and under her skin. The man's own reproductive organs are left out.
 
 How the male's lungs and spinal cord are carried in ([`scripts/body/register.mjs`](scripts/body/register.mjs)): matching structures of the Visible Human Male and the BodyParts3D man (hip bones, femurs, tibias, kneecaps, heart, liver, kidneys, trachea, larynx) are aligned one by one with affine ICP, and the spine disc by disc. A thin-plate spline through all of those points carries the rest across; near a matched structure, soft tissue moves with that structure's own fit.
@@ -162,6 +128,68 @@ blender -b --disable-autoexec "<Z-Anatomy folder>/Startup.blend" --python script
 ```
 
 The male build takes a few minutes. The builds write `site/body/data/<sex>/` (one GLB per layer, `parts.json`, and `clothing.glb`). The text for each main part is in [`site/body/parts.mjs`](site/body/parts.mjs). Serve the site with `npm run serve:body` (http://127.0.0.1:4174).
+
+## The close-up model: Vagina Anatomy
+
+An interactive 3D model of the vulva, clitoris and pelvic organs: [vagina.wooten-labs.com](https://vagina.wooten-labs.com).
+
+<div align="center">
+<a href="https://vagina.wooten-labs.com"><img src="docs/demo.gif" alt="Turning the model, switching to the clitoris and side-cut views, raising arousal, and stepping through the parts" width="680"></a>
+</div>
+
+### What you can do
+
+| | |
+|---|---|
+| **See it in a body** | Opens on a see-through body with the pelvis inside, so you know where everything sits. Fade the body in or out. |
+| **Switch views** | Body, Outside (the vulva), Clitoris (the whole organ, mostly internal), Side cut (a midline section) and All organs. |
+| **Explore 33 parts** | Click any numbered callout, or step through them with ‹ › or the arrow keys. Each part has a description, a fact worth knowing, published measurements and its male equivalent. |
+| **Slice across** | Cut across the vagina at any depth to see its H-shaped, front-to-back flattened cross-section. |
+| **Arousal** | Drag the slider to watch the clitoris and bulbs swell, the inner vagina lengthen and balloon, and the uterus lift, following Masters & Johnson. |
+| **Guided tour** | An automatic walk through every part, outside in, with Back, Pause and Next. |
+
+It works on phones too: the tools move to a bottom bar, details open in a sheet, and you turn the model with one finger and pinch to zoom.
+
+<div align="center">
+<img src="docs/phone.png" alt="The model on an iPhone: the body view, the clitoris view, and a selected part with its details sheet" width="760">
+</div>
+
+### How accurate is it?
+
+Sizes and angles are checked by automated tests against published ranges (the `anatomy` tests in [`tests/manual.spec.mjs`](tests/manual.spec.mjs)). Main sources:
+
+- **Longhurst et al., *Clinical Anatomy* 2023:** clitoris meta-analysis of 21 studies.
+- **Lloyd et al., *BJOG* 2005:** vulval and vaginal ranges.
+- **MRI studies** of vaginal and uterine angles.
+- **NIH Human Reference Atlas** (Visible Human Female): the bony pelvis is used directly. The ovaries, fallopian tubes, rectum and uterine ligaments were positioned and checked against it, and tests confirm no organ passes through bone.
+
+It's an educational model, simplified for clarity. Bodies vary widely, and it isn't medical advice. Spotted something wrong? Please [open an issue](https://github.com/jonclegg/human-anatomy/issues).
+
+### How it's built
+
+The whole app is one static page, [`site/index.html`](site/index.html), using [three.js](https://threejs.org) with no build step.
+
+- **Built in code:** most of the anatomy (vulva, clitoris, vagina, uterus, bladder and so on) is generated from measured dimensions, so arousal can reshape it live.
+- **Embedded meshes:** the pelvis comes from the NIH Human Reference Atlas, and the body outline is a slim young adult woman built from [MakeHuman](https://github.com/makehumancommunity/makehuman). Both are simplified, compressed and embedded in the page.
+- **Rendering:** ink outlines like a technical drawing, an X-ray mode that fades parts to their silhouettes, and isolation that keeps a chosen part solid with everything else as context.
+
+### Run it locally
+
+```bash
+npm install
+npx playwright install webkit chromium
+npm run serve        # http://127.0.0.1:4173
+npm test             # Playwright: desktop Safari, desktop Chrome and iPhone
+```
+
+#### Scripts
+
+| Script | What it does |
+|---|---|
+| `scripts/build-pelvis.mjs <HRA_bony_pelvis_female_VHF.glb>` | Rebuilds the embedded pelvis from the [Human Reference Atlas](https://humanatlas.io) female bony pelvis, aligned to the model in [`hra-frame.mjs`](scripts/hra-frame.mjs). |
+| `scripts/build-body.mjs <folder>` | Rebuilds the body outline from the MakeHuman base mesh and morph targets (the folder needs `base.obj` and the targets listed in the script). |
+| `scripts/export-standalone.mjs <out.html>` | Writes the page as deployed on [wooten-labs.com](https://wooten-labs.com). |
+| `scripts/ui-review.mjs <round>` | Screenshots the page and asks several AI models to score the design against benchmark sites (needs `OPENROUTER_API_KEY`). Each round's scores and comments are in [`design-review/`](design-review/). |
 
 ## Licence
 

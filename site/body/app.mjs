@@ -1208,9 +1208,13 @@ function sheetContent() {
     ${selection.isolate ? `<div class="slide"><label for="rest">Rest of the body</label><input type="range" id="rest" min="0" max="${MOST_REST * 100}" value="${Math.round(state.rest * 100)}" style="--fill:${state.rest / MOST_REST * 100}%"></div>` : ''}
     <dl class="stats">${facts.map(([k, v]) => `<dt>${escapeHtml(k)}</dt><dd>${escapeHtml(v)}</dd>`).join('')}</dl>
     ${equivalent ? `<div class="homolog">${state.sex === 'male' ? 'Female' : 'Male'} equivalent: <b>${escapeHtml(equivalent)}</b></div>` : ''}
+    <div class="homolog">Something wrong here? <a href="${escapeHtml(fixLink(title))}" target="_blank" rel="noopener">Suggest a fix on GitHub</a></div>
     ${partNav(at)}
     ${sourceNote(selection.parts)}`;
 }
+/* A new issue on GitHub about one part, with its name and the body it is in already written */
+const ISSUES = 'https://github.com/jonclegg/human-anatomy/issues/new';
+const fixLink = name => `${ISSUES}?${new URLSearchParams({ title: `Fix: ${name}`, body: `Part: ${name} (Human Anatomy, ${state.sex} body)\n\nWhat is wrong:\n\nWhat is right, with a source:\n` })}`;
 /* Next and Previous, each named for the part it leads to (the numbered parts, in order). The way back up (to the
    region, or on the whole body to the layer) is at the top of the sheet, where it is always in sight. */
 function partNav(at) {

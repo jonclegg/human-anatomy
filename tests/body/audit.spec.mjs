@@ -163,6 +163,30 @@ test.describe('every story, step by step', () => {
   }
 });
 
+test.describe('a first draft, open to fixes', () => {
+  test('the bar says so on every screen, on one line clear of the controls, and a part has a link that opens an issue about it', async ({ page }) => {
+    const errors = await open(page, 'sex=female&closeup=heart');
+    const note = page.locator('.bar .draft');
+    await expect(note).toBeInViewport();
+    await expect(note).toContainText('first open-source draft');
+    await expect(note.locator('a')).toHaveAttribute('href', 'https://github.com/jonclegg/human-anatomy');
+    const box = await note.boundingBox(), bar = await page.locator('.bar').boundingBox();
+    expect(box.height).toBeLessThan(20);   // one line, on a phone too
+    expect(box.y + box.height).toBeLessThanOrEqual(bar.y + bar.height);
+    for (const other of ['#find', '#sexSwitch', '#homeBtn']) { const b = await page.locator(other).boundingBox(); expect(b.y + b.height, `${other} is above the note`).toBeLessThanOrEqual(box.y + 1); }
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    await page.locator('#sheet .parts button').first().click();
+    await settle(page);
+    const name = await page.locator('#sheetTitle').textContent();
+    const link = new URL(await page.locator('#sheet a', { hasText: 'Suggest a fix on GitHub' }).getAttribute('href'));
+    expect(link.origin + link.pathname).toBe('https://github.com/jonclegg/human-anatomy/issues/new');
+    expect(link.searchParams.get('title')).toBe(`Fix: ${name}`);
+    expect(link.searchParams.get('body')).toContain('What is wrong:');
+    expect(link.searchParams.get('body')).toContain('female body');
+    expect(errors).toEqual([]);
+  });
+});
+
 test.describe('playing a story', () => {
   test('the bar and the clock run with the story, hold when it is paused, and jump with a step', async ({ page }, testInfo) => {
     desktopOnly(testInfo);

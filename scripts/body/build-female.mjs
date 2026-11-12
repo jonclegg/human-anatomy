@@ -21,6 +21,7 @@ import { readGarment, wear, writeClothing } from './garments.mjs';
 import { bounds } from './mesh.mjs';
 import { LAYERS } from './systems.mjs';
 import { readDetail, detailParts, meetOpening, joinToBladder, vulvaSkin } from './pelvic-detail.mjs';
+import { breastSurface, breastFat } from './breast-surface.mjs';
 
 const [root, reproductive] = process.argv.slice(2);
 if (!root || !reproductive) throw new Error('usage: node scripts/body/build-female.mjs <"Human Anatomy 3D Models" folder> <female-reproductive-3d-models folder>');
@@ -95,6 +96,8 @@ const PELVIC_FLOOR = /levator ani|pubococcygeus|puborectalis|iliococcygeus|anal 
 }
 
 /* ---------- Her scanned breasts ---------- */
+/* what of a breast is too small for the scan to have caught, and is modelled on her own skin instead (breast-surface.mjs) */
+const MODELLED_ON_SKIN = /nipple$|areola$|areolar tubercles$|lactiferous sinuses$|^fat of (left|right) breast$/i, onSkin = [];
 /* The scan's breasts are a heavier, older woman's. Each is fitted into the breast of her skin: its nipple under the tip,
    its back on her chest wall, its top, bottom and sides inside the breast's own, each side of the nipple scaled on its
    own (the scan's nipple sits low on the breast). */
@@ -104,9 +107,11 @@ for (const [side, word, sign] of [['left', 'Left', 1], ['right', 'Right', -1]]) 
   /* her breast: the skin MakeHuman gives to it on this side; its tip is its most forward point */
   const low = [Infinity, Infinity], high = [-Infinity, -Infinity];
   let tip = null;
+  const ofBreast = [];
   for (let v = 0; v < breast.length; v++) {
     const p = skin.positions.subarray(3 * v, 3 * v + 3);
     if (breast[v] < 0.3 || p[0] * sign < 0) continue;
+    ofBreast.push(v);
     for (let c = 0; c < 2; c++) { low[c] = Math.min(low[c], p[c]); high[c] = Math.max(high[c], p[c]); }
     if (!tip || p[2] > tip[2]) tip = Array.from(p);
   }
@@ -121,7 +126,13 @@ for (const [side, word, sign] of [['left', 'Left', 1], ['right', 'Right', -1]]) 
   const INSET = 0.8;   // of the way from the tip to the breast's edge
   const scale = [0, 1].map(c => [INSET * (tip[c] - low[c]) / (nipple[c] - from.min[c]), INSET * (high[c] - tip[c]) / (from.max[c] - nipple[c])]);
   const place = p => [tip[0] + (p[0] - nipple[0]) * scale[0][p[0] < nipple[0] ? 0 : 1], tip[1] + (p[1] - nipple[1]) * scale[1][p[1] < nipple[1] ? 0 : 1], front + (p[2] - nipple[2]) * depth / (nipple[2] - from.min[2])];
-  for (const mesh of gland) added.push({ ...warpMesh(mesh, (x, y, z) => place([x, y, z])), name: mesh.name, layer: 'organs', group: 'breast' });
+  for (const mesh of gland) if (!MODELLED_ON_SKIN.test(mesh.name)) added.push({ ...warpMesh(mesh, (x, y, z) => place([x, y, z])), name: mesh.name, layer: 'organs', group: 'breast' });
+  const base = [(low[0] + high[0]) / 2, (low[1] + high[1]) / 2, wall + 0.15];
+  /* the mound of fat runs as far from the tip as the scanned gland is placed, and no further up or down than a little more than it is wide: the skin's own breast area runs on up toward the collarbone */
+  const sideways = [INSET * (tip[0] - low[0]), INSET * (high[0] - tip[0])], most = 1.2 * Math.max(...sideways);
+  const made = [...breastSurface(word, skin.positions, ofBreast, tip, base), breastFat(side, skin.positions, tip, wall, [...sideways, Math.min(most, INSET * (tip[1] - low[1])), Math.min(most, INSET * (high[1] - tip[1]))])];
+  if (gland.filter(mesh => MODELLED_ON_SKIN.test(mesh.name)).length !== made.length) throw new Error(`${side} breast: the scan's parts ${gland.filter(mesh => MODELLED_ON_SKIN.test(mesh.name)).map(mesh => mesh.name).join(', ')} are not the five that are modelled`);
+  for (const part of made) onSkin.push({ ...part, layer: 'organs', group: 'breast' });
   console.log(`  ${side} breast: ${(high[0] - low[0]).toFixed(1)} cm wide, ${(high[1] - low[1]).toFixed(1)} cm high, ${depth.toFixed(1)} cm from chest wall to nipple (the scan's: ${(from.max[0] - from.min[0]).toFixed(1)}, ${(from.max[1] - from.min[1]).toFixed(1)}, ${(nipple[2] - from.min[2]).toFixed(1)})`);
 }
 console.log(`  her scanned parts kept under the skin: ${keepUnder(skin, added, { lining })}`);
@@ -143,7 +154,9 @@ for (const structure of structures) {
 for (const mesh of added) if (mesh.name !== 'Vagina') assembly.add({ name: mesh.name, layer: mesh.layer, group: mesh.group, source: 'NIH female' }, mesh);
 /* the modelled skin comes with its own shading, which simplifying would lose */
 for (const part of modelled) assembly.add({ name: part.name, layer: part.layer, group: part.group, source: 'Wooten Labs' }, part, { prepared: part.layer === 'skin' });
-console.log(`female: ${structures.length} structures from the male body, ${added.length} scanned, ${modelled.length} modelled`);
+/* built to their final shape, a few hundred triangles each: simplifying would only spoil them */
+for (const part of onSkin) assembly.add({ name: part.name, layer: part.layer, group: part.group, source: 'Wooten Labs' }, part, { prepared: true });
+console.log(`female: ${structures.length} structures from the male body, ${added.length} scanned, ${modelled.length + onSkin.length} modelled`);
 await assembly.write(new URL('../../site/body/data/female/', import.meta.url));
 
 /* ---------- Her clothing ---------- */

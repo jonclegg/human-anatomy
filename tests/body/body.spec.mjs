@@ -460,7 +460,7 @@ test.describe('close-ups', () => {
     await open(page, { sex: 'female', view: 'organs' });
     const seen = await model(page, () => {
       const m = window.bodyModel, parts = m.body().parts, named = name => { const part = parts.find(item => item.name === name); if (!part) throw new Error(`no ${name}`); return part; };
-      const hips = [named('Left hip bone'), named('Right hip bone')], modelled = parts.filter(part => part.source === 'Wooten Labs');
+      const hips = [named('Left hip bone'), named('Right hip bone')], modelled = parts.filter(part => part.source === 'Wooten Labs' && part.group !== 'breast');   // the breast's small parts are modelled too, on her chest
       const box = { min: [0, 1, 2].map(c => Math.min(...hips.map(hip => hip.min[c]))), max: [0, 1, 2].map(c => Math.max(...hips.map(hip => hip.max[c]))) };
       const crura = [named('Left crus of clitoris'), named('Right crus of clitoris')], urethra = named('Urethra'), bladder = named('Urinary bladder'), vagina = named('Vagina'), hymen = named('Hymen'), glans = named('Glans of clitoris');
       return {

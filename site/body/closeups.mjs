@@ -55,6 +55,8 @@ export function indexParts(parts, sex, height, region = null) {
 }
 
 /* the box around a region's parts, and which other structures are its faint context */
+const ARM_BONES = /humerus|radius$|ulna$|scaphoid|lunate|triquetr|pisiform|trapezi|trapezoid|capitate|hamate|metacarpal bone|phalanx of .*(finger|thumb)|elbow joint|interosseous membrane of .*forearm/i;
+const LEG_BONES = /hip bone|femur|patella|tibia$|fibula$|talus|calcaneus|navicular bone|cuboid bone|cuneiform bone|metatarsal bone|phalanx of .*toe|hip joint|frenula capsulae|pubofemoral|triradiate|sacro-?iliac|obturator membrane|interosseous membrane of .*leg/i;
 const HAND_BONES = /scaphoid|lunate|triquetr|pisiform|trapezi|trapezoid|capitate|hamate|metacarpal bone|phalanx of .*(finger|thumb)/i;
 const FOOT_BONES = /talus|calcaneus|navicular bone|cuboid bone|cuneiform bone|metatarsal bone|phalanx of .*toe|sesamoid bone of .*foot/i;
 export function regionContext(parts, index, region) {
@@ -74,5 +76,10 @@ export function regionContext(parts, index, region) {
     const faint = all.filter(at => context.has(at));
     if (faint.length && faint.length < all.length && !all.some(at => own.has(at))) for (const at of faint) context.delete(at);
   }
+  /* An arm hangs beside the hip, so a region of one catches pieces of the other: the hip bone beside an elbow, a
+     forearm beside a hip. They are no part of what is shown, and cut off as they are they read as stray fragments. */
+  const has = bones => [...own].some(at => parts[at].layer === 'skeleton' && bones.test(parts[at].name));
+  const other = has(ARM_BONES) && !has(LEG_BONES) ? LEG_BONES : has(LEG_BONES) && !has(ARM_BONES) ? ARM_BONES : null;
+  if (other) for (const at of [...context]) if (parts[at].layer === 'skeleton' && other.test(parts[at].name)) context.delete(at);
   return { min, max, own, context };
 }

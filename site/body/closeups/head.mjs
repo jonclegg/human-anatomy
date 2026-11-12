@@ -256,7 +256,7 @@ export const DETAILS = {
     does: 'Makes the watery layer of the tear film and carries the used tears away.',
     bug: 'Tears well up at the inner corner of the eye, but they are made at the outer corner. The inner corner is where they collect and drain.',
     stats: [['Gland', 'Almond-shaped, about 20 mm long'], ['Canaliculi', 'About 10 mm long each'], ['Nasolacrimal duct', 'About 12–18 mm, opening under the inferior concha']], other: { any: 'Same' } }),
-  eyeEyelids: E(/^tarsal plate of|levator palpebrae superioris$/i, { side: 'right', name: 'Tarsal plates and levator palpebrae superioris', short: 'Eyelid plates and lifter', aka: 'Stiffening plates and lifting muscle of the eyelids',
+  eyeEyelids: E(/^tarsal plate of|^(left|right) levator palpebrae superioris$/i, { side: 'right', name: 'Tarsal plates and levator palpebrae superioris', short: 'Eyelid plates and lifter', aka: 'Stiffening plates and lifting muscle of the eyelids',
     what: 'A plate of dense fibrous tissue stiffens each eyelid. The levator palpebrae superioris runs from the back of the orbit, above the superior rectus, and fans out into the upper lid.',
     does: 'The plates give the lids their shape and hold the glands whose oil stops the tears evaporating. The levator raises the upper lid and holds it open.',
     bug: 'The tarsal plates are often called cartilages, but they contain no cartilage. They are dense connective tissue.',

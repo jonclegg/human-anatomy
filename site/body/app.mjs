@@ -250,7 +250,8 @@ function partMaterial(pass) {
   return material;
 }
 /* ink outlines, as in a technical drawing: a copy of each layer pushed outward a fixed number of screen pixels, drawn back
-   faces only, in a darker shade of each part's colour (ink for the selected part). Only solid parts get a line. */
+   faces only, in a darker shade of each part's colour (darker and wider for the selected part: its own colour still,
+   not black, so that where a scanned part has an opening the inside seen through it is its own dark and not a hole). Only solid parts get a line. */
 function outlineMaterial() {
   const material = new THREE.MeshBasicMaterial({ side: THREE.BackSide });
   const uniforms = { uColour: { value: stateTexture.colour }, uFlags: { value: stateTexture.flags }, uMoves: { value: stateTexture.moves }, uCut: cutUniform, uOpen: opened.plane, uOpenBall: opened.ball };
@@ -265,7 +266,7 @@ function outlineMaterial() {
     shader.fragmentShader = 'varying vec4 vState; varying vec4 vFlags;\n' + CUT_FRAGMENT + shader.fragmentShader.replace('vec4 diffuseColor = vec4( diffuse, opacity );', `
   ${CUT_TEST}
   if (vState.a < 0.999 || vFlags.b > 0.5) discard;
-  vec4 diffuseColor = vec4(vFlags.r > 0.5 ? vec3(0.006, 0.007, 0.008) : pow(vState.rgb * 0.42, vec3(2.2)), 1.0);`);
+  vec4 diffuseColor = vec4(pow(vState.rgb * (vFlags.r > 0.5 ? 0.36 : 0.42), vec3(2.2)), 1.0);`);
   };
   return material;
 }
@@ -1126,10 +1127,11 @@ function sourceNote(parts) {
   const source = body.parts[parts[0]].source;
   return fitted
     ? `<div class="source"><em class="fitted">Fitted</em><span>The male body's part (${escapeHtml(SOURCE_NAME[source] || source)}), reshaped with the whole body to a young woman's build. No free female model of this part exists.</span></div>`
-    : `<div class="source"><em>${MODELLED.includes(source) ? 'Modelled' : 'Scanned'}</em><span>${escapeHtml(SOURCE_TEXT[source] || source)}</span></div>`;
+    : `<div class="source"><em>${MODELLED.includes(source) ? 'Modelled' : 'Scanned'}</em><span>${escapeHtml(source === 'Wooten Labs' && body.parts[parts[0]].group === 'breast' ? BREAST_MODELLED : SOURCE_TEXT[source] || source)}</span></div>`;
 }
 const SOURCE_NAME = { 'NIH male': 'NIH Visible Human Male' };
 const MODELLED = ['MakeHuman', 'Wooten Labs'];
+const BREAST_MODELLED = 'Built in code on her own skin, to textbook sizes for a young adult. The scanned breast is a larger one, and its small parts lost their shape when fitted to this body.';
 const SOURCE_TEXT = {
   BodyParts3D: 'BodyParts3D: an adult Japanese man, built from CT and MRI.',
   'NIH female': 'NIH Visible Human Female: a 59-year-old woman, from cryosection images. Fitted into the slim young body here.',

@@ -80,6 +80,18 @@ test.describe('what the stories are made of', () => {
       }
     }
   });
+  test('the small parts of her breast are clean shapes of the right size, and say they are modelled', async ({ page }, testInfo) => {
+    chromiumOnly(testInfo);
+    await open(page, 'sex=female&closeup=breast');
+    const sizes = await model(page, () => Object.fromEntries(['breastNipple', 'breastAreola', 'breastFat'].map(key => { const size = window.bodyModel.size(key, 'left'); return [key, Math.max(size.x, size.y)]; })));
+    expect(sizes.breastNipple).toBeGreaterThan(0.8); expect(sizes.breastNipple).toBeLessThan(1.4);   // about 1 cm across
+    expect(sizes.breastAreola).toBeGreaterThan(2.5); expect(sizes.breastAreola).toBeLessThan(5);     // about 3.5 cm across
+    expect(sizes.breastFat).toBeGreaterThan(sizes.breastAreola * 1.5);
+    await page.locator('#sheet .parts button').first().click();
+    await expect(page.locator('#sheetTitle')).toHaveText('Nipple');
+    await expect(page.locator('#sheet .source em')).toHaveText('Modelled');
+    await expect(page.locator('#sheet .source')).toContainText('on her own skin');
+  });
   test('no words on the page promise what is not there', () => {
     const page = readFileSync(new URL('../../site/body/index.html', import.meta.url), 'utf8');
     expect(page).not.toMatch(/manual|Guided tour|Close-ups<\/|Callouts/);

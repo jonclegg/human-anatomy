@@ -100,7 +100,7 @@ export const TOUR = [
 
 /* Shown only when chosen (from the parts list or by search): the platysma is a paper-thin sheet in the skin of the neck
    that would cover the sternocleidomastoid and the muscles of the throat, as atlases draw the neck with it lifted away */
-export const SHOWN_WHEN_CHOSEN = /platysma$/i;
+export const SHOWN_WHEN_CHOSEN = /platysma$|^tendon of (left|right) levator palpebrae superioris/i;   // and the eyelid lifter's tendon, which BodyParts3D has twice: once in the muscle and once on its own, in the same place
 
 
 /* ---------- The main parts ----------

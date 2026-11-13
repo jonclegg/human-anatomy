@@ -30,36 +30,118 @@ export function surfaceSamples({ positions, indices }, spacing, skip = () => fal
   return { points: Float32Array.from(points), normals: Float32Array.from(normals), corners: Uint32Array.from(corners), weights: Float32Array.from(weights) };
 }
 
+/* A surface's triangles, kept by the centimetre cells each one crosses, to find the point of the surface nearest a place. */
+class Surface {
+  constructor({ positions, indices }, cell = 1) {
+    this.positions = positions; this.cell = cell; this.cells = new Map();
+    const corners = [], normals = [];
+    for (let t = 0; t < indices.length; t += 3) {
+      const [a, b, c] = [0, 1, 2].map(k => [0, 1, 2].map(axis => positions[3 * indices[t + k] + axis]));
+      const u = [0, 1, 2].map(k => b[k] - a[k]), v = [0, 1, 2].map(k => c[k] - a[k]);
+      const n = [u[1] * v[2] - u[2] * v[1], u[2] * v[0] - u[0] * v[2], u[0] * v[1] - u[1] * v[0]], area = Math.hypot(...n);
+      if (area < 1e-9) continue;
+      const triangle = normals.length / 3;
+      corners.push(...a, ...b, ...c); normals.push(n[0] / area, n[1] / area, n[2] / area);
+      const low = [0, 1, 2].map(axis => Math.floor(Math.min(a[axis], b[axis], c[axis]) / cell)), high = [0, 1, 2].map(axis => Math.floor(Math.max(a[axis], b[axis], c[axis]) / cell));
+      for (let i = low[0]; i <= high[0]; i++) for (let j = low[1]; j <= high[1]; j++) for (let k = low[2]; k <= high[2]; k++) {
+        const key = this.key(i, j, k);
+        let list = this.cells.get(key); if (!list) this.cells.set(key, list = []);
+        list.push(triangle);
+      }
+    }
+    this.corners = Float64Array.from(corners); this.normals = Float64Array.from(normals); this.seen = new Int32Array(normals.length / 3).fill(-1); this.query = 0;
+  }
+  key(i, j, k) { return ((i + 512) * 1024 + (j + 512)) * 1024 + (k + 512); }
+  /* the point of triangle t nearest p (Ericson, Real-Time Collision Detection 5.1.5), written into out */
+  onTriangle(t, px, py, pz, out) {
+    const q = this.corners, o = 9 * t;
+    const ax = q[o], ay = q[o + 1], az = q[o + 2], abx = q[o + 3] - ax, aby = q[o + 4] - ay, abz = q[o + 5] - az, acx = q[o + 6] - ax, acy = q[o + 7] - ay, acz = q[o + 8] - az;
+    const apx = px - ax, apy = py - ay, apz = pz - az;
+    const d1 = abx * apx + aby * apy + abz * apz, d2 = acx * apx + acy * apy + acz * apz;
+    let v, w;
+    if (d1 <= 0 && d2 <= 0) { v = 0; w = 0; } else {
+      const bpx = apx - abx, bpy = apy - aby, bpz = apz - abz, d3 = abx * bpx + aby * bpy + abz * bpz, d4 = acx * bpx + acy * bpy + acz * bpz;
+      if (d3 >= 0 && d4 <= d3) { v = 1; w = 0; } else {
+        const vc = d1 * d4 - d3 * d2;
+        if (vc <= 0 && d1 >= 0 && d3 <= 0) { v = d1 / (d1 - d3); w = 0; } else {
+          const cpx = apx - acx, cpy = apy - acy, cpz = apz - acz, d5 = abx * cpx + aby * cpy + abz * cpz, d6 = acx * cpx + acy * cpy + acz * cpz;
+          if (d6 >= 0 && d5 <= d6) { v = 0; w = 1; } else {
+            const vb = d5 * d2 - d1 * d6;
+            if (vb <= 0 && d2 >= 0 && d6 <= 0) { v = 0; w = d2 / (d2 - d6); } else {
+              const va = d3 * d6 - d5 * d4;
+              if (va <= 0 && d4 - d3 >= 0 && d5 - d6 >= 0) { w = (d4 - d3) / (d4 - d3 + d5 - d6); v = 1 - w; }
+              else { const sum = va + vb + vc; v = vb / sum; w = vc / sum; }
+            }
+          }
+        }
+      }
+    }
+    out[0] = ax + v * abx + w * acx; out[1] = ay + v * aby + w * acy; out[2] = az + v * abz + w * acz;
+  }
+  /* the nearest point, within reach, of a triangle whose normal lies within `facing` (a cosine) of (nx, ny, nz):
+     written into out, and its distance returned; Infinity if there is none */
+  nearestFacing(px, py, pz, nx, ny, nz, facing, reach, out) {
+    const { cell, normals, seen } = this, query = this.query++, point = [0, 0, 0];
+    let best = Infinity;
+    for (let i = Math.floor((px - reach) / cell); i <= Math.floor((px + reach) / cell); i++) for (let j = Math.floor((py - reach) / cell); j <= Math.floor((py + reach) / cell); j++) for (let k = Math.floor((pz - reach) / cell); k <= Math.floor((pz + reach) / cell); k++) {
+      const list = this.cells.get(this.key(i, j, k));
+      if (!list) continue;
+      for (const t of list) {
+        if (seen[t] === query) continue;
+        seen[t] = query;
+        if (normals[3 * t] * nx + normals[3 * t + 1] * ny + normals[3 * t + 2] * nz < facing) continue;
+        this.onTriangle(t, px, py, pz, point);
+        const d = Math.hypot(point[0] - px, point[1] - py, point[2] - pz);
+        if (d < best) { best = d; out[0] = point[0]; out[1] = point[1]; out[2] = point[2]; }
+      }
+    }
+    return best <= reach ? best : Infinity;
+  }
+}
+
 /**
- * Draws a posed MakeHuman mesh onto a skin surface. Each round, every vertex looks for the nearest skin point that
- * faces the same way; the mesh then moves toward those points as a sheet that resists stretching (each edge keeps its
- * vector as far as it can), stiff at first and looser each round, so a vertex slides little along the skin and the
+ * Draws a posed MakeHuman mesh onto a skin surface. Each round, every vertex looks for the nearest point of the skin
+ * that faces the same way; the mesh then moves toward those points as a sheet that resists stretching (each edge keeps
+ * its vector as far as it can), stiff at first and looser each round, so a vertex slides little along the skin and the
  * mesh keeps its layout: a knee stays a knee. Vertices where free(v) is false take no target of their own and follow
  * their neighbours.
+ * The nearest point is the true one, on the skin's triangles, not the nearest of a set of samples: a vertex's target
+ * then moves no more than the vertex does, so a change to the skin in one place (the mouth) leaves the mesh as it was
+ * a few edges away, and how the skin is cut into triangles does not matter.
+ * apart(x, y, z): true where the skin covers something the mesh has no part for (his genitals, under a mesh that is
+ * smooth there). A vertex whose nearest point of the skin is such a place takes no target that round and follows
+ * its neighbours.
  * Returns { positions, matched: per vertex, whether it found the skin in the last round }.
  */
-export function drawOnto(mesh, skin, { free = () => true, rounds = [[4, 8], [3, 4], [2.5, 2], [2, 1], [1.5, 0.5], [1.5, 0.3]], log = console.log } = {}) {
-  const count = mesh.positions.length / 3, samples = surfaceSamples(skin, 0.4), grid = new PointGrid(samples.points, 1);
+export function drawOnto(mesh, skin, { free = () => true, apart = () => false, rounds = [[4, 8], [3, 4], [2.5, 2], [2, 1], [1.5, 0.5], [1.5, 0.3]], log = console.log } = {}) {
+  /* a skin may be a shell with an inner wall facing into the body (BodyParts3D's is): only the wall that faces out is
+     drawn onto, the one a short step along whose normal leaves the body. A point has left the body if, along any
+     axis, it lies before the skin's first crossing or past its last: that turns on the skin nearby alone, so a
+     change to the mouth cannot change the answer at the pelvis, as counting crossings up and down the body would. */
+  const outer = [], test = new InsideAllWays(skin, 0.25), p = skin.positions;
+  for (let t = 0; t < skin.indices.length; t += 3) {
+    const [a, b, c] = [0, 1, 2].map(k => 3 * skin.indices[t + k]);
+    const u = [0, 1, 2].map(k => p[b + k] - p[a + k]), v = [0, 1, 2].map(k => p[c + k] - p[a + k]);
+    const n = [u[1] * v[2] - u[2] * v[1], u[2] * v[0] - u[0] * v[2], u[0] * v[1] - u[1] * v[0]], area = Math.hypot(...n);
+    if (area < 1e-9) continue;
+    if (!test.between(...[0, 1, 2].map(k => (p[a + k] + p[b + k] + p[c + k]) / 3 + 0.15 * n[k] / area))) outer.push(skin.indices[t], skin.indices[t + 1], skin.indices[t + 2]);
+  }
+  const count = mesh.positions.length / 3, surface = new Surface({ positions: p, indices: outer });
   const neighbours = Array.from({ length: count }, () => new Set());
   for (let t = 0; t < mesh.indices.length; t += 3) for (const [a, b] of [[0, 1], [1, 2], [2, 0]]) { neighbours[mesh.indices[t + a]].add(mesh.indices[t + b]); neighbours[mesh.indices[t + b]].add(mesh.indices[t + a]); }
   const list = neighbours.map(set => [...set]);
   let x = Float64Array.from(mesh.positions), matched = new Uint8Array(count);
   for (const [reach, stiffness] of rounds) {
-    const normal = vertexNormals({ positions: x, indices: mesh.indices }), goal = new Float64Array(count * 3);
+    const normal = vertexNormals({ positions: x, indices: mesh.indices }), goal = new Float64Array(count * 3), point = [0, 0, 0];
     matched = new Uint8Array(count);
     let total = 0, found = 0;
     for (let v = 0; v < count; v++) {
       if (!free(v)) continue;
-      /* the nearest skin point facing the same way: the nearest of all may be the wrong side of a thin part, or the
-         side of the chest where the arm hangs close */
-      let best = -1, bestDistance = Infinity;
-      for (const index of grid.within(x[3 * v], x[3 * v + 1], x[3 * v + 2], reach)) {
-        if (samples.normals[3 * index] * normal[3 * v] + samples.normals[3 * index + 1] * normal[3 * v + 1] + samples.normals[3 * index + 2] * normal[3 * v + 2] < 0.35) continue;
-        const d = Math.hypot(samples.points[3 * index] - x[3 * v], samples.points[3 * index + 1] - x[3 * v + 1], samples.points[3 * index + 2] - x[3 * v + 2]);
-        if (d < bestDistance) { bestDistance = d; best = index; }
-      }
-      if (best < 0) continue;
-      matched[v] = 1; goal.set(samples.points.subarray(3 * best, 3 * best + 3), 3 * v); total += bestDistance; found++;
+      /* facing the same way: the nearest of all may be the wrong side of a thin part, or the side of the chest where
+         the arm hangs close */
+      const distance = surface.nearestFacing(x[3 * v], x[3 * v + 1], x[3 * v + 2], normal[3 * v], normal[3 * v + 1], normal[3 * v + 2], 0.35, reach, point);
+      if (distance === Infinity || apart(point[0], point[1], point[2])) continue;
+      matched[v] = 1; goal.set(point, 3 * v); total += distance; found++;
     }
     const before = Float64Array.from(x);
     for (let sweep = 0; sweep < 60; sweep++) for (let v = 0; v < count; v++) {
@@ -256,11 +338,11 @@ const endOf = segment => (/^(hand|foot)/.test(segment) ? segment : /^(lowerForeA
 
 /**
  * Lays the MakeHuman mesh onto a body's skin: posed to its skeleton, then drawn onto its skin surface, so every vertex
- * marks a known spot on that body. sourceTargets: the morph targets nearest the body.
+ * marks a known spot on that body. sourceTargets: the morph targets nearest the body. apart: see drawOnto.
  * Returns { named, skin, target (the body's landmarks), like (MakeHuman in that shape, at rest), posed, lining (1 where
  * a vertex lines the mouth or an eye socket), onSkin: { positions, matched } }.
  */
-export function layMakeHumanOnto(structures, folder, sourceTargets, log = console.log) {
+export function layMakeHumanOnto(structures, folder, sourceTargets, log = console.log, { apart = () => false } = {}) {
   const named = (layer, name, { optional = false } = {}) => {
     const found = structures.find(structure => structure.layer === layer && structure.name === name);
     if (!found && optional) return null;
@@ -282,7 +364,7 @@ export function layMakeHumanOnto(structures, folder, sourceTargets, log = consol
     log(`${lining.reduce((sum, value) => sum + value, 0)} vertices line the eye sockets and mouth`);
   }
   log('and drawn onto the source skin:');
-  const onSkin = drawOnto({ positions: posed.positions, indices: like.indices }, skin, { free: v => !HAND_OR_FOOT.test(posed.segment[v]) && !lining[v], log });
+  const onSkin = drawOnto({ positions: posed.positions, indices: like.indices }, skin, { free: v => !HAND_OR_FOOT.test(posed.segment[v]) && !lining[v], apart, log });
   return { named, skin, target, like, posed, lining, onSkin };
 }
 const HAND_OR_FOOT = /^(hand|foot)/;
@@ -291,11 +373,12 @@ const HAND_OR_FOOT = /^(hand|foot)/;
  * structures: the source body, [{ name, layer, positions, indices }], positions changed in place; its 'Skin' takes the
  *   new skin's positions and indices
  * folder: the MakeHuman files; sourceTargets: the morph targets nearest the source body; targets: the new body's
+ * apart(x, y, z): true where the source skin covers something the new body has not (see drawOnto)
  * Returns { segment: each new skin vertex's body segment, lining: 1 where it lines the mouth or an eye socket, breast: its
  *   share of the breast (0 to 1), rest: the new body's MakeHuman shape before it was posed (readMakeHuman) }
  */
-export function transfer(structures, folder, sourceTargets, targets, { height = null, log = console.log } = {}) {
-  const { named, skin, target, like, posed, lining, onSkin } = layMakeHumanOnto(structures, folder, sourceTargets, log);
+export function transfer(structures, folder, sourceTargets, targets, { height = null, apart = () => false, log = console.log } = {}) {
+  const { named, skin, target, like, posed, lining, onSkin } = layMakeHumanOnto(structures, folder, sourceTargets, log, { apart });
   const body = readMakeHuman(folder, targets);
   /* The new skin: his own skin, changed by what separates the two MakeHuman shapes in this pose, so the pose's own
      flaws (a twisted forearm, a trunk a little too narrow), which both shapes share, cancel. The head, hands and feet

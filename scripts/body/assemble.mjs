@@ -10,8 +10,9 @@ export const MINIMUM_SHARE = { skeleton: 0.04, muscles: 0.04, organs: 0.04, vess
 
 export class Assembly {
   constructor(sex, height) { this.sex = sex; this.height = height; this.parts = []; this.pieces = Object.fromEntries(LAYERS.map(layer => [layer, []])); }
-  /* a mesh already in the model frame; welded and simplified here unless told it already is */
-  add({ name, layer, group = null, source, fitted = false, id = null, concept = null }, mesh, { prepared = false } = {}) {
+  /* a mesh already in the model frame; welded and simplified here unless told it already is. distinct: it is known to
+     be a structure of its own (it comes from a body already assembled), so it is not looked for among those added */
+  add({ name, layer, group = null, source, fitted = false, id = null, concept = null }, mesh, { prepared = false, distinct = false } = {}) {
     if (!LAYERS.includes(layer)) throw new Error(`unknown layer ${layer} for ${name}`);
     const ready = prepared ? mesh : simplify(weld(mesh), ERROR[layer], MINIMUM_SHARE[layer]);
     if (ready.indices.length === 0) throw new Error(`${name} simplified to nothing`);
@@ -20,8 +21,8 @@ export class Assembly {
     /* the same mesh twice under one name (BodyParts3D has a few pelvic-floor muscles twice) is drawn once */
     const size = max.map((value, axis) => value - min[axis]);
     const key = `${name}|${layer}|${centre.map(value => Math.round(value * 2)).join(',')}|${size.map(value => Math.round(value * 2)).join(',')}`;   // to half a centimetre
-    if ((this.seen ||= new Set()).has(key)) { this.repeats = (this.repeats || 0) + 1; return null; }
-    this.seen.add(key);
+    if (!distinct && (this.seen ||= new Set()).has(key)) { this.repeats = (this.repeats || 0) + 1; return null; }
+    (this.seen ||= new Set()).add(key);
     const part = {
       name, layer, group: group || regionOf(name, centre, this.height),
       side: /^left\b|\bleft\b/i.test(name) ? 'left' : /^right\b|\bright\b/i.test(name) ? 'right' : null,

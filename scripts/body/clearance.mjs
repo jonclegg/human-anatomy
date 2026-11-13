@@ -91,6 +91,12 @@ export class InsideTest {
        surfaces (BodyParts3D's), where counting crossings would not be */
     return list.length >= 2 && z > list[0] && z < list[list.length - 1];
   }
+  /* whether a point lies between its column's first and last crossing, whether or not the column is closed: this
+     turns only on the skin at those two crossings, not on any opening along the way */
+  between(x, y, z) {
+    const list = this.columns.get(`${Math.floor(x / this.cell)},${Math.floor(y / this.cell)}`);
+    return list !== undefined && list.length >= 2 && z > list[0] && z < list[list.length - 1];
+  }
 }
 
 /* The same test along all three axes. One axis alone calls the air between two parts that line up along it inside
@@ -113,6 +119,11 @@ export class InsideAllWays {
       else if (answer === null) unsure++;
     }
     return out >= this.agree ? false : out || unsure ? null : true;
+  }
+  /* whether a point lies between the skin's first and last crossing along all three axes */
+  between(x, y, z) {
+    const p = [x, y, z];
+    return this.tests.every((test, shift) => test.between(p[shift % 3], p[(1 + shift) % 3], p[(2 + shift) % 3]));
   }
 }
 

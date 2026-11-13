@@ -116,10 +116,15 @@ export function handAndFootPairs(named, target, bones, marks, place) {
     const big = [`Proximal phalanx of ${lower} big toe`, `Distal phalanx of ${lower} big toe`];
     big.forEach((name, k) => pairs.push([ends(name, ankle)[0], mh(`toe1-${k + 1}`)]));
     pairs.push([ends(big[1], ankle)[1], mh('toe1-2', 'tail')]);
+    /* A lesser toe's base and tip go onto MakeHuman's; the two joints between fall along its toe as far along as they
+       are along the bones'. MakeHuman's own joints there cut the toe in three near-equal lengths, which a toe is not
+       (its first bone is over half of it): matched joint to joint, the first bone came out half its length and the
+       last half as long again. */
     for (let n = 2; n <= 5; n++) {
       const chain = ['Proximal', 'Middle', 'Distal'].map(level => `${level} phalanx of ${lower} ${TOE[n - 1]}`);
-      chain.forEach((name, k) => pairs.push([ends(name, ankle)[0], mh(`toe${n}-${k + 1}`)]));
-      pairs.push([ends(chain[2], ankle)[1], mh(`toe${n}-3`, 'tail')]);
+      const joints = [...chain.map(name => ends(name, ankle)[0]), ends(chain[2], ankle)[1]];
+      const toe = [1, 2, 3].map(k => mh(`toe${n}-${k}`)).concat([mh(`toe${n}-3`, 'tail')]);
+      joints.forEach((joint, k) => pairs.push([joint, asFarAlong(joints, k, toe)]));
     }
     for (let k = footStart; k < pairs.length; k++) pairs[k].push('foot' + side);
   }
@@ -182,6 +187,16 @@ export function fitHandsAndFeet(structures, named, target, bones, marks, place) 
     report.push(`${limb} ${most.toFixed(1)} cm`);
   }
   return report.join(', ');
+}
+/* the point as far along one line of points, by its share of the line's length, as point k is along another */
+function asFarAlong(line, k, other) {
+  const lengths = points => points.slice(1).map((point, i) => distance(point, points[i])), total = list => list.reduce((sum, value) => sum + value, 0);
+  const mine = lengths(line), theirs = lengths(other);
+  let left = total(mine.slice(0, k)) / total(mine) * total(theirs);
+  for (let i = 0; i < theirs.length; i++) {
+    if (left <= theirs[i] || i === theirs.length - 1) return other[i].map((value, c) => value + (other[i + 1][c] - value) * left / theirs[i]);
+    left -= theirs[i];
+  }
 }
 const sub3 = (a, b) => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
 const unit3 = a => { const length = Math.hypot(...a); return a.map(value => value / length); };

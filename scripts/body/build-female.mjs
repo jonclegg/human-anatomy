@@ -19,6 +19,7 @@ import { pushOutOf, obstacleOf, centreOf } from './clearance.mjs';
 import { Assembly } from './assemble.mjs';
 import { readGarment, wear, writeClothing } from './garments.mjs';
 import { bounds, soften } from './mesh.mjs';
+import { PointGrid } from './fit.mjs';
 import { LAYERS } from './systems.mjs';
 import { readDetail, detailParts, meetOpening, joinToBladder, vulvaSkin } from './pelvic-detail.mjs';
 import { breastSurface, breastFat } from './breast-surface.mjs';
@@ -34,8 +35,9 @@ const HER_SHAPE = { 'caucasian-female-young': 1, 'universal-female-young-average
 /* his outer ear is a part of its own; her skin has ears */
 const HIS_ALONE = /penis|penile|\btest(is|es|icular)\b|scrot|prostat|seminal|vesicular|deferent|epididym|cremaster|^urethra$|^External ear$/i;
 /* The turn, size and place that carry one set of points onto another as nearly as a rigid body can (Horn's method):
-   returns the map, with its scale. `from` and `to` are matching lists of positions. */
-function likeness(from, to) {
+   returns the map, with its scale. `from` and `to` are matching lists of positions. size: the scale to use, where it
+   is not to be taken from these points. */
+function likeness(from, to, size = null) {
   const mean = lists => { const sum = [0, 0, 0]; let count = 0; for (const list of lists) for (let k = 0; k < list.length; k += 3) { sum[0] += list[k]; sum[1] += list[k + 1]; sum[2] += list[k + 2]; count++; } return sum.map(value => value / count); };
   const a = mean(from), b = mean(to), M = [[0, 0, 0], [0, 0, 0], [0, 0, 0]];
   let spreadFrom = 0, spreadTo = 0;
@@ -49,17 +51,20 @@ function likeness(from, to) {
   const shift = Math.max(...N.map(row => row.reduce((sum, value) => sum + Math.abs(value), 0)));   // makes the wanted eigenvalue the largest in size
   let q = [1, 0, 0, 0];
   for (let round = 0; round < 500; round++) { const next = N.map((row, r) => row.reduce((sum, value, c) => sum + value * q[c], shift * q[r])), length = Math.hypot(...next); q = next.map(value => value / length); }
-  const [w, x, y, z] = q, scale = Math.min(1, Math.sqrt(spreadTo / spreadFrom));   // never larger than it was
+  const [w, x, y, z] = q, scale = size ?? Math.min(1, Math.sqrt(spreadTo / spreadFrom));   // never larger than it was
   const R = [[1 - 2 * (y * y + z * z), 2 * (x * y - w * z), 2 * (x * z + w * y)], [2 * (x * y + w * z), 1 - 2 * (x * x + z * z), 2 * (y * z - w * x)], [2 * (x * z - w * y), 2 * (y * z + w * x), 1 - 2 * (x * x + y * y)]];
   const place = (px, py, pz) => { const p = [px - a[0], py - a[1], pz - a[2]]; return R.map((row, r) => b[r] + scale * (row[0] * p[0] + row[1] * p[1] + row[2] * p[2])); };
   place.scale = scale;
   return place;
 }
+/* what of his hangs outside his body: his skin runs over it, and her skin has no such place */
+const OUTSIDE = /penis|penile|\btest(is|es|icular)\b|scrot|epididym/i, outside = [];
 const male = readParts('male');
 const structures = [];
 let left = 0;
 for (const layer of LAYERS) for (const piece of await readLayer('male', layer)) {
   const part = male.parts[piece.part];
+  if (OUTSIDE.test(part.name)) outside.push(...piece.positions);
   if (HIS_ALONE.test(part.name) || (layer === 'organs' && part.group === 'reproductive') || (layer === 'skin' && part.name !== 'Skin')) { left++; continue; }
   structures.push({ positions: piece.positions, indices: piece.indices, name: part.name, layer, part });
 }
@@ -69,9 +74,12 @@ console.log(`female: ${structures.length} of his structures carried across, ${le
 const SHARED = /jejunum|ileum|ileocecal|^Mesentery of small intestine$/i;
 const shared = structures.filter(structure => structure.layer === 'organs' && SHARED.test(structure.name)), his = shared.map(structure => structure.positions.slice());
 /* A tooth is hard: reshaped with the body and pressed under the lips point by point, the front ones come out dented.
-   Each keeps his shape, turned, sized and placed where the reshaping would put it. */
+   Each keeps his shape, turned and placed where the reshaping would put it. All are sized alike, by how the whole set
+   came out: a tooth sized by its own outcome was the smaller the more it had been dented. */
 const teeth = structures.filter(structure => structure.layer === 'skeleton' && /\btooth$/i.test(structure.name)), hisTeeth = teeth.map(structure => structure.positions.slice());
-const { lining, breast, rest } = transfer(structures, `${root}/MakeHuman (CC0)`, HIS_SHAPE, HER_SHAPE, { height: HEIGHT });
+if (!outside.length) throw new Error('he has no penis or scrotum to tell his skin over them by');
+const genitals = new PointGrid(Float32Array.from(outside), 1);
+const { lining, breast, rest } = transfer(structures, `${root}/MakeHuman (CC0)`, HIS_SHAPE, HER_SHAPE, { height: HEIGHT, apart: (x, y, z) => genitals.nearest(x, y, z, 2)[0] >= 0 });
 {
   const place = likeness(his, shared.map(structure => structure.positions));
   shared.forEach((structure, which) => { for (let k = 0; k < his[which].length; k += 3) structure.positions.set(place(his[which][k], his[which][k + 1], his[which][k + 2]), k); });
@@ -79,12 +87,12 @@ const { lining, breast, rest } = transfer(structures, `${root}/MakeHuman (CC0)`,
 }
 {
   if (!teeth.length) throw new Error('he has no teeth to share');
-  const sizes = teeth.map((structure, which) => {
-    const place = likeness([hisTeeth[which]], [structure.positions]);
+  const { scale } = likeness(hisTeeth, teeth.map(structure => structure.positions));
+  teeth.forEach((structure, which) => {
+    const place = likeness([hisTeeth[which]], [structure.positions], scale);
     for (let k = 0; k < hisTeeth[which].length; k += 3) structure.positions.set(place(hisTeeth[which][k], hisTeeth[which][k + 1], hisTeeth[which][k + 2]), k);
-    return place.scale;
   });
-  console.log(`female: his teeth shared as they are: ${teeth.length}, at ${Math.min(...sizes).toFixed(3)} to ${Math.max(...sizes).toFixed(3)} of his size`);
+  console.log(`female: his teeth shared as they are: ${teeth.length}, each at ${scale.toFixed(3)} of his size`);
 }
 const skin = structures.find(structure => structure.layer === 'skin');
 const hers = name => { const found = structures.filter(structure => structure.name === name); if (!found.length) throw new Error(`she has no ${name}`); return found; };
@@ -207,9 +215,11 @@ console.log(`  urethra drawn ${joinToBladder(modelled.find(part => part.name ===
 
 /* ---------- Assembly ---------- */
 const assembly = new Assembly('female', HEIGHT);
+/* his structures were rid of repeats when he was assembled: two of his that come out alike in her to half a
+   centimetre (two short pieces of one vein, side by side) are still two */
 for (const structure of structures) {
   const { part } = structure, isSkin = structure.layer === 'skin';
-  assembly.add({ name: structure.name, layer: structure.layer, group: part.group, source: isSkin ? 'MakeHuman' : part.source, fitted: !isSkin, id: part.id, concept: part.concept }, isSkin ? vulva.skin : structure, { prepared: true });
+  assembly.add({ name: structure.name, layer: structure.layer, group: part.group, source: isSkin ? 'MakeHuman' : part.source, fitted: !isSkin, id: part.id, concept: part.concept }, isSkin ? vulva.skin : structure, { prepared: true, distinct: true });
 }
 /* her scanned vagina is not drawn: the scan took in the tissue round it, and gives a slab 6 cm wide where the vagina
    is a flattened tube about half that. The modelled one is drawn in its place; the scanned one has still set where

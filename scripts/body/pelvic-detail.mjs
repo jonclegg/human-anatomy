@@ -120,15 +120,23 @@ export function meetOpening(scanned, detail, bones, log = console.log) {
   return thinPlateSpline(Float64Array.from(from), Float64Array.from(to), 0.3);
 }
 
-/* the urethra's upper end is drawn up to the bladder it drains: each point moves by its share of the way up the tube */
+/* the urethra's upper end is drawn up to the bladder it drains: each point moves by its share of the way up the tube.
+   The bladder's neck is the middle of its lowest part, and the urethra's end the middle of its highest: each point
+   counts the more the nearer it is to the very bottom (or top), so neither middle jumps when one point of a coarse
+   mesh rises or sinks past a line. */
 export function joinToBladder(urethra, bladder) {
-  const lowest = bounds(bladder.positions).min[1], neck = [0, 0, 0];
-  let count = 0;
-  for (let k = 0; k < bladder.positions.length; k += 3) if (bladder.positions[k + 1] < lowest + 0.4) { for (let c = 0; c < 3; c++) neck[c] += bladder.positions[k + c]; count++; }
-  const { min, max } = bounds(urethra.positions), top = [0, 0, 0];
-  let tops = 0;
-  for (let k = 0; k < urethra.positions.length; k += 3) if (urethra.positions[k + 1] > max[1] - 0.3) { for (let c = 0; c < 3; c++) top[c] += urethra.positions[k + c]; tops++; }
-  const shift = [0, 1, 2].map(c => neck[c] / count - top[c] / tops);
+  const middle = (positions, from, sign, depth) => {
+    const sum = [0, 0, 0]; let total = 0;
+    for (let k = 0; k < positions.length; k += 3) {
+      const weight = Math.max(0, 1 - sign * (positions[k + 1] - from) / depth) ** 2;
+      for (let c = 0; c < 3; c++) sum[c] += weight * positions[k + c];
+      total += weight;
+    }
+    return sum.map(value => value / total);
+  };
+  const { min, max } = bounds(urethra.positions);
+  const neck = middle(bladder.positions, bounds(bladder.positions).min[1], 1, 0.4), top = middle(urethra.positions, max[1], -1, 0.3);
+  const shift = [0, 1, 2].map(c => neck[c] - top[c]);
   shift[1] += 0.3;   // its end sits just inside the bladder's floor
   for (let k = 0; k < urethra.positions.length; k += 3) {
     const share = ((urethra.positions[k + 1] - min[1]) / (max[1] - min[1])) ** 2;
@@ -266,8 +274,19 @@ export function vulvaSkin(skin, detail, outward, log = console.log) {
   for (let spoke = 0; spoke < SPOKES; spoke++) {
     let best = -1;
     for (let ring = 0; ring < RINGS; ring++) { const v = ring * SPOKES + spoke; if (reach(v) >= NEAREST_RIM && reach(v) <= 1 && !Number.isNaN(height[v]) && (best < 0 || Math.abs(height[v]) < Math.abs(height[best]))) best = v; }
-    if (best < 0) throw new Error(`the vulva sheet finds none of her skin on spoke ${spoke}`);
-    rim[spoke] = reach(best);
+    rim[spoke] = best < 0 ? NaN : reach(best);
+  }
+  /* a spoke may find none of her skin that far out (its lines pass between her thighs): it takes its rim from the
+     nearest spokes that found theirs, as a vertex without a height takes its neighbours' below */
+  {
+    const lost = [...rim.keys()].filter(spoke => Number.isNaN(rim[spoke]));
+    if (lost.length > 0.1 * SPOKES) throw new Error(`the vulva sheet finds none of her skin on ${lost.length} of its ${SPOKES} spokes`);
+    const found = rim.slice();
+    for (const spoke of lost) {
+      const next = step => { for (let k = 1; k < SPOKES; k++) { const other = (spoke + step * k + SPOKES * k) % SPOKES; if (!Number.isNaN(found[other])) return [k, found[other]]; } };
+      const [before, low] = next(-1), [after, high] = next(1);
+      rim[spoke] = (low * after + high * before) / (before + after);
+    }
   }
   for (let pass = 0; pass < 12; pass++) rim = rim.map((value, spoke) => (rim[(spoke + SPOKES - 1) % SPOKES] + 2 * value + rim[(spoke + 1) % SPOKES]) / 4);
   const share = v => reach(v) / rim[v % SPOKES];   // 0 at the layout's middle, 1 at the rim

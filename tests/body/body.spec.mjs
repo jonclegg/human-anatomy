@@ -148,6 +148,14 @@ test.describe('clothing', () => {
       await page.locator('#contents [data-toggle="clothed"]').click();
       await expect(page.locator('#contents [data-toggle="clothed"]')).toHaveText('ClothingOff');
       expect((await model(page, () => window.bodyModel.clothing())).shown).toBe(false);
+      /* the bar has its own Clothes button, always in view, and it follows the one in Contents */
+      await page.keyboard.press('Escape');
+      const bar = page.locator('header [data-toggle="clothed"]');
+      await expect(bar).toBeVisible();
+      await expect(bar).toHaveAttribute('aria-pressed', 'false');
+      await bar.click();
+      expect((await model(page, () => window.bodyModel.clothing())).shown).toBe(true);
+      await expect(page.locator('#contents [data-toggle="clothed"]')).toHaveAttribute('aria-pressed', 'true');
     });
   }
 

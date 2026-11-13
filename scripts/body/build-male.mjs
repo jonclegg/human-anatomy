@@ -6,6 +6,7 @@
 import { listStructures, readMesh } from './bodyparts3d.mjs';
 import { classify } from './systems.mjs';
 import { weld, simplify } from './mesh.mjs';
+import { skinWithLips } from './lips.mjs';
 import { readOrgan, FRAMES } from './hra.mjs';
 import { register, warpMesh, meanGap, startMap } from './register.mjs';
 import { Assembly, ERROR, MINIMUM_SHARE } from './assemble.mjs';
@@ -194,6 +195,15 @@ console.log(`  check left femur: ${meanGap(warpMesh(vh(/M_femur_L$/)[0], warp), 
   const eyeLevel = (eyes[0] + eyes[1]) / 2;
   const share = (x, y) => { const t = Math.min(1, Math.max(0, (y - (eyeLevel - 1)) / 2.5)); return 1 - t * t * (3 - 2 * t); };
   console.log(`  kept under his skin: ${keepUnder(skin, inside, { thin, share, openings: true })}`);
+}
+/* His lips: BodyParts3D's are a scrap of the scan over a skin left blank at the mouth. His skin is shaped there to
+   MakeHuman's lips (lips.mjs), and the lips are the part of it so shaped. Last of all, so nothing above is fitted to
+   or kept under a skin other than the one he came with. */
+{
+  const entry = name => { const found = everything.filter(({ info }) => info.layer === 'skin' && info.name === name); if (found.length !== 1) throw new Error(`expected one ${name}, found ${found.length}`); return found[0]; };
+  const skin = entry('Skin'), lip = entry('Lip');
+  const made = skinWithLips(everything.map(({ info, mesh }) => ({ name: info.name, layer: info.layer, positions: mesh.positions, indices: mesh.indices })), `${root}/MakeHuman (CC0)`, { 'caucasian-male-young': 1 }, line => console.log(`  ${line}`));
+  skin.mesh = made.skin; lip.mesh = made.lip;
 }
 for (const { info, mesh } of everything) assembly.add(info, mesh, { prepared: true });
 await assembly.write(new URL('../../site/body/data/male/', import.meta.url));

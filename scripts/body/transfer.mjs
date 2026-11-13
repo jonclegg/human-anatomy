@@ -209,7 +209,7 @@ export function keepUnder(skin, structures, { gap = 0.2, reach = 5, lining = nul
 /* MakeHuman's lips stand a few millimetres apart, and the teeth show in the gap as a broken line. The lips are closed:
    along the line where the outer lip turns into the lining of the mouth, the upper and lower edges meet halfway, and
    the skin around follows by less and less. Returns a line for the log. */
-function closeLips(skin, weights, lining) {
+export function closeLips(skin, weights, lining) {
   const count = skin.positions.length / 3, lip = new Float32Array(count);
   for (const [bone, list] of Object.entries(weights)) if (/^oris/.test(bone)) for (const [vertex, weight] of list) lip[vertex] += weight;
   const neighbours = Array.from({ length: count }, () => new Set());

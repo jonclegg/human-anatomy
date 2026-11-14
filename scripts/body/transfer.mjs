@@ -508,15 +508,64 @@ export function transfer(structures, folder, sourceTargets, targets, { height = 
   for (const [a, b] of joints) { from.push(...a); to.push(...b); }
   log(`${skinPairs} skin points move by ${(move / skinPairs).toFixed(1)} cm on average; ${joints.length} hand and foot joints`);
 
+  /* A bone does not stretch. A deformation through the skin alone follows the new skin, and where that skin is narrow
+     or long or wide for the body under it, it took the bones with it: under her waist his lumbar vertebrae came out
+     seven tenths as wide and sheared, their spines hanging a vertebra low; his breastbone a quarter longer; his thigh
+     bones a fifth thicker; the sockets of his hips four centimetres further apart under her wide hips.
+     So the deformation is made twice. The first, through the skin alone, says where each bone goes. Each of these
+     bones then keeps its shape: it is placed where that deformation takes it, turned and sized as it is there on the
+     whole, as one rigid piece; the pelvis (the hip bones, the sacrum and what joins them) as one piece together; and
+     each thigh bone is turned about the knee so its head sits in the socket of the pelvis as placed. The second
+     deformation goes through the skin and through points of those bones as placed, so the muscles on a bone and the
+     organs beside it go with it. (Not the skull, whose bones meet edge to edge all round and which the head's own fit
+     places, nor the ribs, which bend; the hands and feet are fitted joint by joint below.) */
+  const first = thinPlateSpline(Float64Array.from(from), Float64Array.from(to), 0.3);
+  const ALONE = /vertebra$|^Atlas$|^Axis$|^Manubrium$|^Body of sternum$|^Xiphoid process$|^(Left|Right) (femur|tibia|fibula|patella|humerus|radius|ulna|clavicle|scapula)$/;
+  const PELVIS = /^(Left|Right) hip bone$|^Sacrum$|^Pubic symphysis$|^Interpubic disc$|^(Left|Right) triradiate cartilage$/;
+  const bones = structures.filter(structure => structure.layer === 'skeleton');
+  const pieces = [...bones.filter(structure => ALONE.test(structure.name)).map(structure => [structure]), bones.filter(structure => PELVIS.test(structure.name))];
+  if (pieces.at(-1).length < 3) throw new Error('no pelvis found among the bones');
+  const then = (A, B) => { const at = point => applyAffine(B, ...applyAffine(A, ...point)), o = at([0, 0, 0]); return Float64Array.from([...[[1, 0, 0], [0, 1, 0], [0, 0, 1]].flatMap(axis => at(axis).map((value, c) => value - o[c])), ...o]); };
+  const size = fit => Math.cbrt(fit[0] * (fit[4] * fit[8] - fit[5] * fit[7]) - fit[3] * (fit[1] * fit[8] - fit[2] * fit[7]) + fit[6] * (fit[1] * fit[5] - fit[2] * fit[4]));
+  const placed = pieces.map(members => {
+    const was = Float32Array.from(members.flatMap(structure => Array.from(structure.positions))), there = new Float32Array(was.length);
+    for (let k = 0; k < was.length; k += 3) there.set(first(was[k], was[k + 1], was[k + 2]), k);
+    return { members, was, fit: fitSimilarity(was, there) };
+  });
+  {
+    /* the thigh bones into their sockets: the middle of the head of each, as the pelvis carries it and as the femur does */
+    const pelvis = placed.at(-1), moved = [];
+    for (const side of ['Left', 'Right']) {
+      const femur = placed.find(({ members }) => members[0].name === `${side} femur`);
+      if (!femur) throw new Error(`no ${side.toLowerCase()} femur`);
+      const p = femur.was, count = p.length / 3, top = Math.max(...Array.from({ length: count }, (_, v) => p[3 * v + 1])), low = Math.min(...Array.from({ length: count }, (_, v) => p[3 * v + 1]));
+      const mean = keep => { const sum = [0, 0, 0]; let n = 0; for (let v = 0; v < count; v++) if (keep(p[3 * v], p[3 * v + 1], p[3 * v + 2])) { for (let c = 0; c < 3; c++) sum[c] += p[3 * v + c]; n++; } return sum.map(value => value / n); };
+      /* the head: what of the bone's top five centimetres lies nearest the midline, within a head's width of its inmost point */
+      let inmost = Infinity; for (let v = 0; v < count; v++) if (p[3 * v + 1] > top - 5) inmost = Math.min(inmost, Math.abs(p[3 * v]));
+      const head = mean((x, y) => y > top - 5.5 && Math.abs(x) < inmost + 4.6), knee = mean((x, y) => y < low + 3);
+      const k = applyAffine(femur.fit, ...knee), h = applyAffine(femur.fit, ...head), t = applyAffine(pelvis.fit, ...head);
+      const u = h.map((value, c) => value - k[c]), w = t.map((value, c) => value - k[c]), lu = Math.hypot(...u), lw = Math.hypot(...w), a = u.map(value => value / lu), b = w.map(value => value / lw);
+      const axis = [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]], sin = Math.hypot(...axis), cos = a[0] * b[0] + a[1] * b[1] + a[2] * b[2], n = sin > 1e-9 ? axis.map(value => value / sin) : [1, 0, 0];
+      /* Rodrigues: turn about n through the angle from a to b, sized lw / lu, about the knee */
+      const turn = point => { const d = point.map((value, c) => value - k[c]), dot = n[0] * d[0] + n[1] * d[1] + n[2] * d[2], cross = [n[1] * d[2] - n[2] * d[1], n[2] * d[0] - n[0] * d[2], n[0] * d[1] - n[1] * d[0]]; return d.map((value, c) => k[c] + lw / lu * (value * cos + cross[c] * sin + n[c] * dot * (1 - cos))); };
+      const o = turn([0, 0, 0]), about = Float64Array.from([...[[1, 0, 0], [0, 1, 0], [0, 0, 1]].flatMap(e => turn(e).map((value, c) => value - o[c])), ...o]);
+      femur.fit = then(femur.fit, about);
+      moved.push(`${side.toLowerCase()} ${Math.hypot(...t.map((value, c) => value - h[c])).toFixed(1)} cm`);
+    }
+    log(`the heads of the thigh bones brought into the sockets of the pelvis: ${moved.join(', ')}`);
+  }
+  /* points of each piece, about a centimetre and a half apart, for the deformation to pass through */
+  let through = 0;
+  for (const { was, fit } of placed) {
+    const taken = new Set();
+    for (let k = 0; k < was.length; k += 3) {
+      const key = `${Math.floor(was[k] / 1.5)},${Math.floor(was[k + 1] / 1.5)},${Math.floor(was[k + 2] / 1.5)}`;
+      if (taken.has(key)) continue;
+      taken.add(key);
+      from.push(was[k], was[k + 1], was[k + 2]); to.push(...applyAffine(fit, was[k], was[k + 1], was[k + 2])); through++;
+    }
+  }
   const spline = thinPlateSpline(Float64Array.from(from), Float64Array.from(to), 0.3);
-  /* A bone does not stretch. The deformation follows the new skin, and where that skin is narrow or long for the body
-     under it, it took the bones with it: under her waist his lumbar vertebrae came out seven tenths as wide and
-     sheared, their spines hanging a vertebra low; his breastbone a quarter longer; his thigh bones a fifth thicker.
-     These bones keep their shape: each goes where the deformation takes it, turned and sized as it is there on the
-     whole, as one rigid piece. (Not the pelvis and skull, whose bones meet edge to edge all round, nor the ribs, which
-     bend; the hands and feet are fitted joint by joint below.) */
-  const RIGID = /vertebra$|^Atlas$|^Axis$|^Manubrium$|^Body of sternum$|^Xiphoid process$|^(Left|Right) (femur|tibia|fibula|patella|humerus|radius|ulna|clavicle|scapula)$/;
-  const rigid = structures.filter(structure => structure.layer === 'skeleton' && RIGID.test(structure.name)).map(structure => ({ structure, was: structure.positions.slice() }));
   let most = 0;
   for (const structure of structures) {
     if (structure === skin) continue;
@@ -529,14 +578,13 @@ export function transfer(structures, folder, sourceTargets, targets, { height = 
   }
   log(`everything inside moved by up to ${most.toFixed(1)} cm`);
   {
-    const sizes = [];
     let furthest = 0;
-    for (const { structure, was } of rigid) {
-      const fit = fitSimilarity(was, structure.positions), p = structure.positions;
-      sizes.push(Math.cbrt(fit[0] * (fit[4] * fit[8] - fit[5] * fit[7]) - fit[3] * (fit[1] * fit[8] - fit[2] * fit[7]) + fit[6] * (fit[1] * fit[5] - fit[2] * fit[4])));
-      for (let k = 0; k < p.length; k += 3) { const q = applyAffine(fit, was[k], was[k + 1], was[k + 2]); furthest = Math.max(furthest, Math.hypot(q[0] - p[k], q[1] - p[k + 1], q[2] - p[k + 2])); p[k] = q[0]; p[k + 1] = q[1]; p[k + 2] = q[2]; }
+    for (const { members, was, fit } of placed) {
+      let at = 0;
+      for (const structure of members) { const p = structure.positions; for (let k = 0; k < p.length; k += 3, at += 3) { const q = applyAffine(fit, was[at], was[at + 1], was[at + 2]); furthest = Math.max(furthest, Math.hypot(q[0] - p[k], q[1] - p[k + 1], q[2] - p[k + 2])); p[k] = q[0]; p[k + 1] = q[1]; p[k + 2] = q[2]; } }
     }
-    log(`${rigid.length} bones kept their shape: sized x${Math.min(...sizes).toFixed(2)} to x${Math.max(...sizes).toFixed(2)}, their points up to ${furthest.toFixed(1)} cm from where the deformation alone put them`);
+    const sizes = placed.map(({ fit }) => size(fit));
+    log(`${placed.length} pieces of the skeleton kept their shape (the pelvis sized x${sizes.at(-1).toFixed(2)}, the rest x${Math.min(...sizes.slice(0, -1)).toFixed(2)} to x${Math.max(...sizes.slice(0, -1)).toFixed(2)}); the deformation passes through ${through} of their points and leaves them within ${furthest.toFixed(1)} cm`);
   }
   skin.positions = fresh; skin.indices = body.indices;
   log(`hands and feet fitted joint by joint: ${fitHandsAndFeet(structures.filter(structure => structure !== skin), named, landmarks(named), body.bones, landmarksOf(body), there.place)}`);

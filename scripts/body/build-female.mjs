@@ -21,7 +21,7 @@ import { readGarment, wear, writeClothing } from './garments.mjs';
 import { bounds, soften } from './mesh.mjs';
 import { PointGrid } from './fit.mjs';
 import { LAYERS } from './systems.mjs';
-import { readDetail, detailParts, meetOpening, joinToBladder, vulvaSkin, seat, layoutForward, pressTogether, partCentre } from './pelvic-detail.mjs';
+import { readDetail, detailParts, meetOpening, joinToBladder, vulvaSkin, seat, layoutForward, pressTogether, tuckUnder, partCentre } from './pelvic-detail.mjs';
 import { breastSurface, breastFat } from './breast-surface.mjs';
 
 const [root, reproductive] = process.argv.slice(2);
@@ -150,9 +150,9 @@ const detail = readDetail(toHer);
     const a = points[after - 1], b = points[after];
     return a.y + (b.y - a.y) * (z - a.z) / (b.z - a.z || 1);
   };
-  /* the clitoris lies under her pubic symphysis, and the vulva runs back from it toward her anus */
+  /* the clitoris lies under the back of her pubic symphysis, and the vulva runs back from it toward her anus */
   const INSIDE = 1.3;   // cm the clitoris lies above the floor: the outer lips' crests, which hang that far below it, then lie level with her skin
-  const glansZ = centreOf(hers('Pubic symphysis'))[2] + Number(process.env.FORWARD || 0);
+  const glansZ = Math.min(...hers('Pubic symphysis').map(mesh => bounds(mesh.positions).min[2]));
   const LENGTH = 4.5;   // cm from the clitoris back to the fourchette: the stretch of floor the vulva lies along
   const glans = partCentre(detail, 'glans'), forward = layoutForward(detail), behind = glans.map((value, c) => value - LENGTH * forward[c]);
   const seated = seat(detail, [[glans, [0, floor(glansZ) + INSIDE, glansZ]], [behind, [0, floor(glansZ - LENGTH) + INSIDE, glansZ - LENGTH]]]);
@@ -253,7 +253,9 @@ console.log(`  her scanned parts kept under the skin: ${keepUnder(skin, added.fi
 
 /* ---------- Her vulva, clitoris and urethra, modelled ---------- */
 const vulva = vulvaSkin(skin, detail, detail.outward);
-const modelled = [...detailParts(detail), ...vulva.parts];
+const inner = detailParts(detail), UNDER_HER_SKIN = 0.3;   // cm: the page draws each part with a dark outline a millimetre or two outside it, which showed through skin any nearer
+console.log(`  her vulva's inner parts tucked under her skin: ${tuckUnder(vulva.whole, inner, UNDER_HER_SKIN)}`);
+const modelled = [...inner, ...vulva.parts];
 console.log(`  urethra drawn ${joinToBladder(modelled.find(part => part.name === 'Urethra'), hers('Urinary bladder')[0]).toFixed(1)} cm up to her bladder`);
 
 /* ---------- Assembly ---------- */

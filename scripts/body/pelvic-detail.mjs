@@ -263,137 +263,92 @@ function compactWithNormals({ positions, normals, indices }) {
   return { positions: Float32Array.from(keptPositions), normals: Float32Array.from(keptNormals), indices: out };
 }
 
+/** What of the vulva's inner parts still reaches her skin there, or passes it, goes straight in under it: each such
+ *  point to gap cm under the nearest point of her skin. (The cleft is a centimetre wide, and the general test for
+ *  what lies outside the skin, made for whole limbs, calls a point inside the cleft inside her.)
+ *  Returns how many moves were made and the furthest (cm). */
+export function tuckUnder(skin, parts, gap) {
+  const surface = new Surface(skin), at = [0, 0, 0];
+  let count = 0, furthest = 0;
+  /* how far a point must go in, and which way: null if it is deep enough or nowhere near her skin */
+  const short = (x, y, z) => {
+    if (surface.nearestFacing(x, y, z, 0, 0, 0, -2, 1, at) === Infinity) return null;
+    const n = surface.normals.subarray(3 * surface.found, 3 * surface.found + 3), depth = (at[0] - x) * n[0] + (at[1] - y) * n[1] + (at[2] - z) * n[2];
+    return depth >= gap ? null : [-(gap - depth) * n[0], -(gap - depth) * n[1], -(gap - depth) * n[2]];
+  };
+  for (const part of parts) {
+    const p = part.positions;
+    for (let round = 0; round < 4; round++) {
+      const moves = new Map(), take = (v, move) => { const had = moves.get(v); if (!had || Math.hypot(...move) > Math.hypot(...had)) moves.set(v, move); };
+      for (let v = 0; v < p.length / 3; v++) { const move = short(p[3 * v], p[3 * v + 1], p[3 * v + 2]); if (move) take(v, move); }
+      /* a triangle whose corners are all under her skin can still cross the cleft between them: its middle and the
+         middles of its edges are tested too, and take its corners in with them */
+      for (let t = 0; t < part.indices.length; t += 3) {
+        const corners = [part.indices[t], part.indices[t + 1], part.indices[t + 2]], point = weights => [0, 1, 2].map(c => corners.reduce((sum, v, k) => sum + weights[k] * p[3 * v + c], 0));
+        for (const weights of [[1 / 3, 1 / 3, 1 / 3], [0.5, 0.5, 0], [0, 0.5, 0.5], [0.5, 0, 0.5]]) { const move = short(...point(weights)); if (move) for (const v of corners) take(v, move); }
+      }
+      if (!moves.size) break;
+      for (const [v, move] of moves) { for (let c = 0; c < 3; c++) p[3 * v + c] += move[c]; furthest = Math.max(furthest, Math.hypot(...move)); }
+      count += moves.size;
+    }
+  }
+  return `${count} moves, by up to ${furthest.toFixed(2)} cm`;
+}
+
 /**
- * Her skin is MakeHuman's, smooth between the legs. The close-up model's skin sheet (mons and labia majora, open at the
- * vestibule) takes its place there. The sheet is drawn as rings around the vestibule crossed by spokes. On each spoke
- * the sheet ends where it comes nearest her skin, the last stretch before that is drawn onto her skin (each point to
- * the nearest point of her skin, whichever way that lies: her thighs close in beside the vulva, and their skin is
- * beside the sheet, not under it), and her own skin inside that rim is cut away. What lies at and under the sheet
- * moves with it.
- * Returns { skin: her skin with the opening cut, parts: the sheet in named parts }; the other meshes of detail are moved in place.
+ * The outside of her vulva is her own skin. Standing, the outer lips lie closed between her thighs, and all that
+ * shows is skin with a cleft down its middle: the modelled sheet of skin, drawn open over the inner lips and the
+ * vestibule, made her crotch a display of what lies inside. So the sheet is not drawn. It marks where on her skin the
+ * vulva lies: her skin there is given the cleft, and is named in the parts an atlas names (the mons and the two outer
+ * lips); the inner lips, clitoris and openings lie under it (build-female.mjs keeps them under).
+ * Returns { skin: her skin without those parts, parts: them, whole: her skin with them, as one closed surface }.
  */
 const RINGS = 131, SPOKES = 240;                 // the sheet's grid (SKIN_GRID in site/index.html): vertex = ring * SPOKES + spoke
-const RX = 3.0, CY = 1.25, FRONT = 5.25, BACK = 4.2;   // the furthest the rim may lie, on the layout (cm): half an ellipse forward to the top of the mons, half back to just behind the fourchette
-const NEAREST_RIM = 0.72;                        // and the nearest, as a share of that ellipse: outside the crest of the labia majora
-const KEPT_AS_MODELLED = 0.55, ON_HER_SKIN = 0.8, BAND = 0.83;   // shares of the rim's distance on a spoke
-const SHALLOW = 1.5, DEEP = 5;                   // cm under the surface: what is shallower moves with the sheet's rim, what is deeper stays
-const SAME_SKIN = 3;                             // cm from the sheet within which her skin over it is the skin the sheet replaces
-const UNDER = 0.04;                              // cm the rim lies under her skin, so her skin covers it
+const RX = 3.0, CY = 1.25, FRONT = 5.25, BACK = 4.2;   // the vulva's outline on the layout (cm): half an ellipse forward to the top of the mons, half back to just behind the fourchette
+const OVER = 2;                                  // cm from the sheet within which her skin, facing as the vulva does, is the skin over it
+const CLEFT_HALF = 0.5, CLEFT_DEPTH = 0.5;       // the cleft between the outer lips: half its width and its depth (cm), a rounded groove
+const CLEFT_BACK = -2.6, CLEFT_FRONT = 4.6, CLEFT_ENDS = 1;   // where it runs on the layout, from the fourchette to the front of the lips, and over how far it shallows at each end
+const MONS_FROM = 3.9;                           // forward of this on the layout the skin is the mons
 export function vulvaSkin(skin, detail, outward, log = console.log) {
   const sheet = detail.skin, count = sheet.positions.length / 3;
   if (count !== RINGS * SPOKES) throw new Error(`the close-up model's skin sheet has ${count} vertices, not ${RINGS} rings of ${SPOKES}`);
   const reach = v => Math.hypot(sheet.detail[3 * v] / RX, (sheet.detail[3 * v + 1] - CY) / (sheet.detail[3 * v + 1] > CY ? FRONT : BACK));
-  /* Her own skin is coarse there (triangles a centimetre across): it is divided finer near the sheet, so that the cut
-     made below can follow the sheet. Then its height under each sheet vertex. */
-  const within = Float32Array.from(sheet.positions.filter((_, k) => reach(Math.floor(k / 3)) <= 1)), box = bounds(within);
-  {
-    const around = new PointGrid(within, 0.5);
-    skin = dividedWhere(skin, (x, y, z) => around.nearest(x, y, z, 2.2)[0] >= 0, 3);   // the sheet lies up to a couple of centimetres from her skin
+  const inside = []; for (let v = 0; v < count; v++) if (reach(v) <= 1) inside.push(v);
+  const around = new PointGrid(Float32Array.from(inside.flatMap(v => [sheet.positions[3 * v], sheet.positions[3 * v + 1], sheet.positions[3 * v + 2]])), 0.5);
+  /* her own skin is coarse there (triangles a centimetre across): it is divided finer, so the cleft has a shape */
+  const fine = dividedWhere(skin, (x, y, z) => around.nearest(x, y, z, OVER + 0.2)[0] >= 0, 3), vertices = fine.positions.length / 3;
+  /* each vertex of her skin over the vulva: the sheet's vertex nearest it (the skin of a thigh faces across the vulva, not as it does) */
+  const place = new Int32Array(vertices).fill(-1);
+  for (let v = 0; v < vertices; v++) {
+    if (fine.normals[3 * v] * outward[0] + fine.normals[3 * v + 1] * outward[1] + fine.normals[3 * v + 2] * outward[2] < 0.1) continue;
+    const [index] = around.nearest(fine.positions[3 * v], fine.positions[3 * v + 1], fine.positions[3 * v + 2], OVER);
+    if (index >= 0) place[v] = inside[index];
   }
-  const local = [];
-  for (let t = 0; t < skin.indices.length; t += 3) if ([0, 1, 2].some(k => [0, 1, 2].every(axis => skin.positions[3 * skin.indices[t + k] + axis] > box.min[axis] - 4 && skin.positions[3 * skin.indices[t + k] + axis] < box.max[axis] + 4))) local.push(skin.indices[t], skin.indices[t + 1], skin.indices[t + 2]);
-  /* each vertex's way to her skin: to the nearest point of it that faces as the sheet does there (the skin of a thigh
-     beside the sheet faces across it, and the sheet's front end, drawn to it, bridged her thighs), or failing that
-     the nearest of all; and a little under her skin there */
-  const surface = new Surface({ positions: skin.positions, indices: local }), gap = new Float32Array(count).fill(NaN), exact = new Float32Array(count * 3);
-  {
-    const point = [0, 0, 0], facing = vertexNormals(sheet);
-    for (let v = 0; v < count; v++) {
-      if (reach(v) > 1) continue;
-      const p = sheet.positions.subarray(3 * v, 3 * v + 3);
-      let distance = surface.nearestFacing(p[0], p[1], p[2], facing[3 * v], facing[3 * v + 1], facing[3 * v + 2], 0.2, 6, point);
-      if (distance === Infinity) distance = surface.nearestFacing(p[0], p[1], p[2], 0, 0, 0, -2, 12, point);
-      if (distance === Infinity) continue;
-      gap[v] = distance;
-      for (let c = 0; c < 3; c++) exact[3 * v + c] = point[c] - UNDER * surface.normals[3 * surface.found + c] - p[c];
-    }
+  let cleft = 0;
+  for (let v = 0; v < vertices; v++) {
+    if (place[v] < 0) continue;
+    const forward = sheet.detail[3 * place[v] + 1], x = fine.positions[3 * v], across = Math.abs(x) < CLEFT_HALF ? Math.cos(Math.PI * x / (2 * CLEFT_HALF)) ** 2 : 0, along = Math.min(1, (forward - CLEFT_BACK) / CLEFT_ENDS, (CLEFT_FRONT - forward) / CLEFT_ENDS);
+    if (across <= 0 || along <= 0) continue;
+    for (let c = 0; c < 3; c++) fine.positions[3 * v + c] -= CLEFT_DEPTH * across * along * outward[c];
+    /* its walls face the midline: the skin's own shading there, leaned over by the cleft's slope */
+    fine.normals[3 * v] -= CLEFT_DEPTH * along * Math.PI / (2 * CLEFT_HALF) * Math.sin(Math.PI * x / CLEFT_HALF);
+    const length = Math.hypot(fine.normals[3 * v], fine.normals[3 * v + 1], fine.normals[3 * v + 2]);
+    for (let c = 0; c < 3; c++) fine.normals[3 * v + c] /= length;
+    cleft++;
   }
-  /* the rim on each spoke: where the sheet comes nearest her skin, between the nearest and furthest it may lie; then evened out around */
-  let rim = new Float32Array(SPOKES);
-  for (let spoke = 0; spoke < SPOKES; spoke++) {
-    let best = -1;
-    for (let ring = 0; ring < RINGS; ring++) { const v = ring * SPOKES + spoke; if (reach(v) >= NEAREST_RIM && reach(v) <= 1 && !Number.isNaN(gap[v]) && (best < 0 || gap[v] < gap[best])) best = v; }
-    if (best < 0) throw new Error(`the vulva sheet finds none of her skin on spoke ${spoke}`);
-    rim[spoke] = reach(best);
-  }
-  for (let pass = 0; pass < 12; pass++) rim = rim.map((value, spoke) => (rim[(spoke + SPOKES - 1) % SPOKES] + 2 * value + rim[(spoke + 1) % SPOKES]) / 4);
-  const share = v => reach(v) / rim[v % SPOKES];   // 0 at the layout's middle, 1 at the rim
-  const kept = [];
-  for (let t = 0; t < sheet.indices.length; t += 3) if ([0, 1, 2].every(k => share(sheet.indices[t + k]) <= 1)) kept.push(sheet.indices[t], sheet.indices[t + 1], sheet.indices[t + 2]);
-  const used = [...new Set(kept)];
-  /* each kept vertex's way to her skin, smoothed over the sheet so the rim does not crease */
-  const neighbours = Array.from({ length: count }, () => new Set());
-  for (let t = 0; t < kept.length; t += 3) for (let k = 0; k < 3; k++) { neighbours[kept[t + k]].add(kept[t + (k + 1) % 3]); neighbours[kept[t + k]].add(kept[t + (k + 2) % 3]); }
-  for (const v of used) if (Number.isNaN(gap[v])) throw new Error('part of the vulva sheet finds none of her skin');
-  let way = exact.slice();
-  for (let pass = 0; pass < 8; pass++) {
-    const next = way.slice();
-    for (const v of used) for (let c = 0; c < 3; c++) { let sum = 0; for (const w of neighbours[v]) sum += way[3 * w + c]; next[3 * v + c] = 0.5 * way[3 * v + c] + 0.5 * sum / neighbours[v].size; }
-    way = next;
-  }
-  const positions = sheet.positions.slice(), moved = new Float32Array(count * 3), onSkin = new Float32Array(count);
-  let furthest = 0;
-  for (const v of used) {
-    const t = Math.min(1, Math.max(0, (share(v) - KEPT_AS_MODELLED) / (ON_HER_SKIN - KEPT_AS_MODELLED))), blend = t * t * (3 - 2 * t);
-    onSkin[v] = blend;
-    for (let c = 0; c < 3; c++) { moved[3 * v + c] = blend >= 1 ? exact[3 * v + c] : blend * way[3 * v + c]; positions[3 * v + c] += moved[3 * v + c]; }
-    furthest = Math.max(furthest, Math.hypot(moved[3 * v], moved[3 * v + 1], moved[3 * v + 2]));
-  }
-  /* what lies at and under the sheet moves with it: each point by the move of the sheet at its place on the layout, less
-     with depth, so the labia, the vestibule and the glands stay in the skin that was modelled around them */
-  {
-    const layout = Float32Array.from(used.flatMap(v => [sheet.detail[3 * v], sheet.detail[3 * v + 1], 0])), flat = new PointGrid(layout, 0.5);
-    for (const [id, mesh] of Object.entries(detail)) {
-      if (id === 'skin') continue;
-      for (let k = 0; k < mesh.positions.length; k += 3) {
-        const [index] = flat.nearest(mesh.detail[k], mesh.detail[k + 1], 0, 1.5);
-        if (index < 0) continue;
-        const t = Math.min(1, Math.max(0, (-mesh.detail[k + 2] - SHALLOW) / (DEEP - SHALLOW))), follow = 1 - t * t * (3 - 2 * t);
-        for (let c = 0; c < 3; c++) mesh.positions[k + c] += follow * moved[3 * used[index] + c];
-      }
-    }
-  }
-  /* Her own skin inside the rim is cut away: a vertex of it whose nearest point of the sheet, as the sheet now lies, is
-     short of the last stretch before the sheet's rim (so the sheet's rim always overlaps what is left of her skin),
-     and which faces outward as the vulva does (not the skin of a thigh, which faces across it from beside or beneath). */
-  const fine = skin, vertices = fine.positions.length / 3, state = new Uint8Array(vertices), INSIDE = 2;
-  const normals = vertexNormals({ positions, indices: Uint32Array.from(kept) });
-  {
-    const set = new PointGrid(Float32Array.from(used.flatMap(v => [positions[3 * v], positions[3 * v + 1], positions[3 * v + 2]])), 0.5);
-    for (let v = 0; v < vertices; v++) {
-      const q = fine.positions.subarray(3 * v, 3 * v + 3);
-      if ([0, 1, 2].some(axis => q[axis] < box.min[axis] - 4 || q[axis] > box.max[axis] + 4)) continue;
-      if (fine.normals[3 * v] * outward[0] + fine.normals[3 * v + 1] * outward[1] + fine.normals[3 * v + 2] * outward[2] < 0.1) continue;
-      const [index] = set.nearest(q[0], q[1], q[2], SAME_SKIN);
-      if (index >= 0 && share(used[index]) < BAND) state[v] = INSIDE;
-    }
-  }
-  const cut = [];
-  let removed = 0;
+  if (!cleft) throw new Error('none of her skin lies over the vulva\'s midline: no cleft made');
+  const groups = { 'Mons pubis': [], 'Left labium majus': [], 'Right labium majus': [] }, rest = [];
   for (let t = 0; t < fine.indices.length; t += 3) {
-    if ([0, 1, 2].every(k => state[fine.indices[t + k]] === INSIDE)) { removed++; continue; }
-    cut.push(fine.indices[t], fine.indices[t + 1], fine.indices[t + 2]);
+    const corners = [fine.indices[t], fine.indices[t + 1], fine.indices[t + 2]];
+    if (corners.some(v => place[v] < 0)) { rest.push(...corners); continue; }
+    const forward = corners.reduce((sum, v) => sum + sheet.detail[3 * place[v] + 1], 0) / 3, x = corners.reduce((sum, v) => sum + fine.positions[3 * v], 0);
+    groups[forward > MONS_FROM ? 'Mons pubis' : x > 0 ? 'Left labium majus' : 'Right labium majus'].push(...corners);
   }
-  log(`  vulva: ${kept.length / 3} triangles of modelled skin set into hers, its rim ${(Math.min(...rim) * 100).toFixed(0)}-${(Math.max(...rim) * 100).toFixed(0)}% of the way out and moved up to ${furthest.toFixed(2)} cm onto her skin; her skin cut away inside it (${removed} triangles, once divided finer there)`);
-  /* the sheet in the parts an atlas names, by where each triangle lies on the layout */
-  const groups = { 'Mons pubis': [], 'Left labium majus': [], 'Right labium majus': [] };
-  for (let t = 0; t < kept.length; t += 3) {
-    const y = (sheet.detail[3 * kept[t] + 1] + sheet.detail[3 * kept[t + 1] + 1] + sheet.detail[3 * kept[t + 2] + 1]) / 3, x = sheet.detail[3 * kept[t]] + sheet.detail[3 * kept[t + 1]] + sheet.detail[3 * kept[t + 2]];
-    groups[y > 3.9 ? 'Mons pubis' : x > 0 ? 'Left labium majus' : 'Right labium majus'].push(kept[t], kept[t + 1], kept[t + 2]);
-  }
-  /* the sheet is shaded as modelled in its middle and as her skin at its rim, so the join does not show as a line */
-  {
-    const hers = new PointGrid(fine.positions, 0.5);
-    for (const v of used) {
-      if (!onSkin[v]) continue;
-      const [index] = hers.nearest(positions[3 * v], positions[3 * v + 1], positions[3 * v + 2], 2);
-      if (index < 0) continue;
-      const n = [0, 1, 2].map(c => (1 - onSkin[v]) * normals[3 * v + c] + onSkin[v] * fine.normals[3 * index + c]), length = Math.hypot(...n) || 1;
-      for (let c = 0; c < 3; c++) normals[3 * v + c] = n[c] / length;
-    }
-  }
+  for (const [name, indices] of Object.entries(groups)) if (!indices.length) throw new Error(`none of her skin to name ${name}`);
+  log(`  vulva: her own skin over it, with a cleft ${CLEFT_DEPTH} cm deep (${cleft} vertices); ${Object.entries(groups).map(([name, indices]) => `${name} ${indices.length / 3} triangles`).join(', ')}`);
   return {
-    skin: compactWithNormals({ positions: fine.positions, normals: fine.normals, indices: Uint32Array.from(cut) }),
-    parts: Object.entries(groups).map(([name, indices]) => ({ name, layer: 'skin', group: 'skin', ...compactWithNormals({ positions, normals, indices: Uint32Array.from(indices) }) })),
+    skin: compactWithNormals({ positions: fine.positions, normals: fine.normals, indices: Uint32Array.from(rest) }),
+    parts: Object.entries(groups).map(([name, indices]) => ({ name, layer: 'skin', group: 'skin', ...compactWithNormals({ positions: fine.positions, normals: fine.normals, indices: Uint32Array.from(indices) }) })),
+    whole: { positions: fine.positions, indices: fine.indices },
   };
 }

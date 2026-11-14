@@ -21,7 +21,7 @@ import { readGarment, wear, writeClothing } from './garments.mjs';
 import { bounds, soften } from './mesh.mjs';
 import { PointGrid } from './fit.mjs';
 import { LAYERS } from './systems.mjs';
-import { readDetail, detailParts, meetOpening, joinToBladder, vulvaSkin, seat, partCentre } from './pelvic-detail.mjs';
+import { readDetail, detailParts, meetOpening, joinToBladder, vulvaSkin, seat, layoutForward, pressTogether, partCentre } from './pelvic-detail.mjs';
 import { breastSurface, breastFat } from './breast-surface.mjs';
 
 const [root, reproductive] = process.argv.slice(2);
@@ -126,9 +126,9 @@ const toHer = register({ pairs, start: startMap(1, 1, hips(bone(/(pubis|ilium|is
 const added = scanned.map(mesh => ({ ...warpMesh(mesh, toHer), name: mesh.name, layer: 'organs', group: 'reproductive' }));
 /* the close-up pelvic model, placed by the same map; her scanned vagina, cervix and uterus then meet its opening */
 const detail = readDetail(toHer);
-/* Seated in her (pelvic-detail.mjs, seat): its own anus on hers (the lowest point of her anal sphincter), and its
-   clitoris a little above the floor of her crotch, as far in front of her anus as the model has it (about 7 cm; the
-   published distance from anus to clitoris is 7.6). */
+/* Seated in her (pelvic-detail.mjs, seat): its clitoris under her pubic symphysis, a little above the floor of her
+   crotch, and the vulva lying back from there along that floor. (Seated by its anus on hers it lay a hand's breadth
+   too far back: her crotch is longer from front to back than the model's.) */
 {
   const lowest = meshes => meshes.flatMap(mesh => Array.from({ length: mesh.positions.length / 3 }, (_, k) => Array.from(mesh.positions.subarray(3 * k, 3 * k + 3)))).reduce((low, p) => (p[1] < low[1] ? p : low));
   const anus = lowest(hers('External anal sphincter'));
@@ -150,13 +150,24 @@ const detail = readDetail(toHer);
     const a = points[after - 1], b = points[after];
     return a.y + (b.y - a.y) * (z - a.z) / (b.z - a.z || 1);
   };
-  const length = Math.hypot(...partCentre(detail, 'glans').map((value, c) => value - partCentre(detail, 'anus')[c]));
-  /* the place on the floor that far from her anus: stepped forward along it until the distance is reached */
+  /* the clitoris lies under her pubic symphysis, and the vulva runs back from it toward her anus */
   const INSIDE = 1.3;   // cm the clitoris lies above the floor: the outer lips' crests, which hang that far below it, then lie level with her skin
-  let glansZ = anus[2] + 1;
-  while (Math.hypot(floor(glansZ) + INSIDE - anus[1], glansZ - anus[2]) < length) glansZ += 0.05;
-  const seated = seat(detail, [['glans', [0, floor(glansZ) + INSIDE, glansZ]], ['anus', [0, anus[1], anus[2]]]]);
-  console.log(`  the vulva seated on her crotch: turned ${seated.turn.toFixed(0)} degrees in her midplane, its clitoris moved ${seated.moved[0].toFixed(1)} cm and its anus ${seated.moved[1].toFixed(1)} cm`);
+  const glansZ = centreOf(hers('Pubic symphysis'))[2] + Number(process.env.FORWARD || 0);
+  const LENGTH = 4.5;   // cm from the clitoris back to the fourchette: the stretch of floor the vulva lies along
+  const glans = partCentre(detail, 'glans'), forward = layoutForward(detail), behind = glans.map((value, c) => value - LENGTH * forward[c]);
+  const seated = seat(detail, [[glans, [0, floor(glansZ) + INSIDE, glansZ]], [behind, [0, floor(glansZ - LENGTH) + INSIDE, glansZ - LENGTH]]]);
+  /* how wide her crotch is between her thighs, along that stretch: the nearest her skin comes to her midline a centimetre or two below the floor, where her thighs wall it */
+  const widths = [];
+  for (let z = glansZ - LENGTH; z <= glansZ; z += 0.5) {
+    let nearest = Infinity;
+    for (let v = 0; v < segment.length; v++) { const k = 3 * v; if (Math.abs(skin.positions[k + 2] - z) < 0.75 && skin.positions[k + 1] > floor(z) - 2.5 && skin.positions[k + 1] < floor(z) - 0.75) nearest = Math.min(nearest, Math.abs(skin.positions[k])); }
+    if (nearest < Infinity) widths.push(nearest);
+  }
+  if (!widths.length) throw new Error('none of her skin beside her crotch, under its floor');
+  const halfWidth = widths.sort((a, b) => a - b)[widths.length >> 1];
+  pressTogether(detail, halfWidth);
+  console.log(`  her crotch is ${(2 * halfWidth).toFixed(1)} cm wide between her thighs: the vulva's outer lips pressed together to fit`);
+  console.log(`  the vulva seated on her crotch: turned ${seated.turn.toFixed(0)} degrees in her midplane, its clitoris moved ${seated.moved[0].toFixed(1)} cm, to ${(glansZ - anus[2]).toFixed(1)} cm in front of her anus`);
 }
 {
   const correct = meetOpening(added, detail, [...hers('Left hip bone'), ...hers('Right hip bone'), ...hers('Sacrum')]);

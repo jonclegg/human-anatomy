@@ -481,7 +481,7 @@ test.describe('close-ups', () => {
         urethraToBladder: bladder.min[1] - urethra.max[1],
         vaginaToOpening: Math.hypot(vagina.centre[0] - hymen.centre[0], vagina.min[1] - hymen.centre[1]),
         midline: Math.abs(glans.centre[0]),
-        openingToAnus: hymen.centre[2] - anus.centre[2], clitorisToAnus: glans.centre[2] - anus.centre[2], meatusToOpening: meatus.centre[2] - hymen.centre[2],
+        openingToAnus: hymen.centre[2] - anus.centre[2], clitorisToSymphysis: glans.centre[2] - named('Pubic symphysis').centre[2], meatusToOpening: meatus.centre[2] - hymen.centre[2],
       };
     });
     expect(seen.modelled).toBeGreaterThanOrEqual(24);
@@ -493,10 +493,11 @@ test.describe('close-ups', () => {
     expect(seen.urethraToBladder).toBeLessThan(0.3);   // it reaches the bladder
     expect(seen.vaginaToOpening).toBeLessThan(1.5);    // the vagina comes down to the opening
     expect(seen.midline).toBeLessThan(0.3);
-    /* front to back: the clitoris, the urethra's opening, the vaginal opening, and the anus some 3 cm behind that (the
-       clitoris about 7.6 cm in front of the anus: Salazar-Martinez 2004). It once lay right under her anus. */
+    /* front to back: the clitoris under the pubic symphysis, then the urethra's opening, the vaginal opening, and the
+       anus behind that. It once lay right under her anus, and then a hand's breadth behind her pubic bone. (Her crotch
+       is longer than the model's: the opening comes out nearly 5 cm in front of her anus, where 3 to 4 is usual.) */
+    expect(Math.abs(seen.clitorisToSymphysis)).toBeLessThan(1);
     expect(seen.openingToAnus).toBeGreaterThan(2); expect(seen.openingToAnus).toBeLessThan(5);
-    expect(seen.clitorisToAnus).toBeGreaterThan(5.5); expect(seen.clitorisToAnus).toBeLessThan(9);
     expect(seen.meatusToOpening).toBeGreaterThan(0.5);
   });
 });

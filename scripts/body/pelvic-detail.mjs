@@ -128,23 +128,50 @@ export const partCentre = (detail, id) => { if (!detail[id]) throw new Error(`th
  * The model comes into her by the map that fits the scan's pelvis to hers, and lies as her pelvic bones lie: they are
  * a man's, scanned on his back, and rocked back some thirty degrees, so the vulva came out tilted, its clitoris at
  * the bottom of her crotch and its opening right under her anus. The model is seated on her skin: turned and moved
- * as one rigid piece in the body's midplane (front to back and up and down), so that two of its parts come to two
- * places as nearly as their distance apart allows. anchors: [[id, [x, y, z]], [id, [x, y, z]]]. All of it moves
+ * as one rigid piece in the body's midplane (front to back and up and down), so that the first of two of its points comes to its
+ * place and the second lies toward its own, as near as their distance apart allows. anchors: [[from, to], [from, to]],
+ * each a point [x, y, z]. All of it moves
  * together, so its parts keep their fit to one another (moved less with depth, the bulbs and crura stood out behind
  * the vulva); her scanned organs are then brought to it (meetOpening). The outward axis turns with it. Returns the
  * turn (degrees) and how far each anchor moved (cm), for the log.
  */
+/** The way the model's own layout runs forward in the body, as it lies now: from the back of its skin sheet to the front. */
+export function layoutForward(detail) {
+  const sheet = detail.skin, count = sheet.positions.length / 3, mean = [0, 0, 0, 0], along = [0, 0, 0];
+  for (let v = 0; v < count; v++) { mean[3] += sheet.detail[3 * v + 1] / count; for (let c = 0; c < 3; c++) mean[c] += sheet.positions[3 * v + c] / count; }
+  for (let v = 0; v < count; v++) for (let c = 0; c < 3; c++) along[c] += (sheet.detail[3 * v + 1] - mean[3]) * (sheet.positions[3 * v + c] - mean[c]);
+  const length = Math.hypot(...along);
+  return along.map(value => value / length);
+}
+
 export function seat(detail, anchors) {
-  const from = anchors.map(([id]) => partCentre(detail, id)), to = anchors.map(([, place]) => place);
+  const from = anchors.map(([place]) => place), to = anchors.map(([, place]) => place);
   /* in the midplane: (front, up) = (z, y) */
   const angle = v => Math.atan2(v[1], v[2]), along = (a, b) => [0, b[1] - a[1], b[2] - a[2]];
   const turn = angle(along(to[0], to[1])) - angle(along(from[0], from[1])), cos = Math.cos(turn), sin = Math.sin(turn);
-  const centreFrom = [0, 1, 2].map(c => (from[0][c] + from[1][c]) / 2), centreTo = [0, 1, 2].map(c => (to[0][c] + to[1][c]) / 2);
+  const centreFrom = from[0], centreTo = to[0];
   const rotate = (y, z) => [y * cos + z * sin, -y * sin + z * cos];   // (z, y) turned by `turn`
   const move = ([x, y, z]) => { const [ry, rz] = rotate(y - centreFrom[1], z - centreFrom[2]); return [x, centreTo[1] + ry, centreTo[2] + rz]; };
   for (const mesh of Object.values(detail)) for (let k = 0; k < mesh.positions.length; k += 3) mesh.positions.set(move([mesh.positions[k], mesh.positions[k + 1], mesh.positions[k + 2]]), k);
   [detail.outward[1], detail.outward[2]] = rotate(detail.outward[1], detail.outward[2]);
   return { turn: ((turn * 180 / Math.PI + 540) % 360) - 180, moved: from.map(point => Math.hypot(...move(point).map((value, c) => value - point[c]))) };
+}
+
+/** The vulva was modelled lying open, six centimetres across; she stands with her thighs together, and the cleft of
+ *  her crotch between them is half that. Its outer lips are pressed together as her thighs press them: what lies
+ *  beside the midline is drawn toward it, so that what was WIDE from the midline comes to halfWidth; the middle
+ *  (clitoris, inner lips, openings) keeps its width, and so does what lies deep (crura, bulbs, vagina). */
+export function pressTogether(detail, halfWidth) {
+  const MIDDLE = 0.4, WIDE = 2.4, FULLY = 1, NOT_AT_ALL = 3;   // cm from the midline; cm under the surface
+  if (halfWidth <= MIDDLE) throw new Error(`her crotch is ${(2 * halfWidth).toFixed(1)} cm wide: no room for a vulva`);
+  if (halfWidth >= WIDE) return;
+  const rate = (halfWidth - MIDDLE) / (WIDE - MIDDLE);
+  for (const mesh of Object.values(detail)) for (let k = 0; k < mesh.positions.length; k += 3) {
+    const x = mesh.positions[k], from = Math.abs(x);
+    if (from <= MIDDLE) continue;
+    const t = Math.min(1, Math.max(0, (-mesh.detail[k + 2] - FULLY) / (NOT_AT_ALL - FULLY))), share = 1 - t * t * (3 - 2 * t);
+    mesh.positions[k] = Math.sign(x) * (from + share * (MIDDLE + (from - MIDDLE) * rate - from));
+  }
 }
 
 /* the urethra's upper end is drawn up to the bladder it drains: each point moves by its share of the way up the tube.

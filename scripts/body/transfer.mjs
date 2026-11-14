@@ -6,7 +6,7 @@
 // him follows. The pose does not change and the skin points correspond exactly, so nothing is torn or folded and what
 // lay under his skin lies under the new one.
 import { readMakeHuman, poseMakeHuman, landmarksOf } from './makehuman.mjs';
-import { PointGrid, thinPlateSpline, spread } from './fit.mjs';
+import { PointGrid, thinPlateSpline, spread, fitSimilarity, applyAffine } from './fit.mjs';
 import { vertexNormals, InsideTest, InsideAllWays, pushOutOver } from './clearance.mjs';
 import { landmarks, handAndFootPairs, fitHandsAndFeet, withDepth } from './landmarks.mjs';
 import { refine } from './mesh.mjs';
@@ -509,6 +509,14 @@ export function transfer(structures, folder, sourceTargets, targets, { height = 
   log(`${skinPairs} skin points move by ${(move / skinPairs).toFixed(1)} cm on average; ${joints.length} hand and foot joints`);
 
   const spline = thinPlateSpline(Float64Array.from(from), Float64Array.from(to), 0.3);
+  /* A bone does not stretch. The deformation follows the new skin, and where that skin is narrow or long for the body
+     under it, it took the bones with it: under her waist his lumbar vertebrae came out seven tenths as wide and
+     sheared, their spines hanging a vertebra low; his breastbone a quarter longer; his thigh bones a fifth thicker.
+     These bones keep their shape: each goes where the deformation takes it, turned and sized as it is there on the
+     whole, as one rigid piece. (Not the pelvis and skull, whose bones meet edge to edge all round, nor the ribs, which
+     bend; the hands and feet are fitted joint by joint below.) */
+  const RIGID = /vertebra$|^Atlas$|^Axis$|^Manubrium$|^Body of sternum$|^Xiphoid process$|^(Left|Right) (femur|tibia|fibula|patella|humerus|radius|ulna|clavicle|scapula)$/;
+  const rigid = structures.filter(structure => structure.layer === 'skeleton' && RIGID.test(structure.name)).map(structure => ({ structure, was: structure.positions.slice() }));
   let most = 0;
   for (const structure of structures) {
     if (structure === skin) continue;
@@ -520,6 +528,16 @@ export function transfer(structures, folder, sourceTargets, targets, { height = 
     }
   }
   log(`everything inside moved by up to ${most.toFixed(1)} cm`);
+  {
+    const sizes = [];
+    let furthest = 0;
+    for (const { structure, was } of rigid) {
+      const fit = fitSimilarity(was, structure.positions), p = structure.positions;
+      sizes.push(Math.cbrt(fit[0] * (fit[4] * fit[8] - fit[5] * fit[7]) - fit[3] * (fit[1] * fit[8] - fit[2] * fit[7]) + fit[6] * (fit[1] * fit[5] - fit[2] * fit[4])));
+      for (let k = 0; k < p.length; k += 3) { const q = applyAffine(fit, was[k], was[k + 1], was[k + 2]); furthest = Math.max(furthest, Math.hypot(q[0] - p[k], q[1] - p[k + 1], q[2] - p[k + 2])); p[k] = q[0]; p[k + 1] = q[1]; p[k + 2] = q[2]; }
+    }
+    log(`${rigid.length} bones kept their shape: sized x${Math.min(...sizes).toFixed(2)} to x${Math.max(...sizes).toFixed(2)}, their points up to ${furthest.toFixed(1)} cm from where the deformation alone put them`);
+  }
   skin.positions = fresh; skin.indices = body.indices;
   log(`hands and feet fitted joint by joint: ${fitHandsAndFeet(structures.filter(structure => structure !== skin), named, landmarks(named), body.bones, landmarksOf(body), there.place)}`);
   /* each eyeball goes exactly into MakeHuman's eye: centred where its eye sits and sized to lie just under its lids */

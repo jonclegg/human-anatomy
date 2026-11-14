@@ -144,12 +144,79 @@ const lungs = (await nihMale([['Respiratory', 'HRA_lung_male_vh.glb']])).filter(
 const chestBones = obstacleOf(his.filter(structure => /rib$|costal cartilage|vertebra$|sternum|xiphoid|manubrium|clavicle|scapula/i.test(structure.name)).map(structure => structure.mesh));
 const lungCentre = { left: centreOf(lungs.filter(mesh => /left/.test(mesh.name)).map(mesh => warpMesh(mesh, warp))), right: centreOf(lungs.filter(mesh => /right/.test(mesh.name)).map(mesh => warpMesh(mesh, warp))) };
 let pushed = 0;
-for (const mesh of lungs) {
-  const placed = warpMesh(mesh, warp);
-  pushed += clear(placed, chestBones, towardCentre(lungCentre[/left/.test(mesh.name) ? 'left' : 'right']), { reach: 1.8, depth: 1.6 });
-  everything.push({ info: { name: mesh.name, layer: 'organs', group: 'respiratory', source: 'NIH male' }, mesh: simplify(weld(placed), ERROR.organs, MINIMUM_SHARE.organs) });
-}
+const placedLungs = lungs.map(mesh => { const placed = warpMesh(mesh, warp); pushed += clear(placed, chestBones, towardCentre(lungCentre[/left/.test(mesh.name) ? 'left' : 'right']), { reach: 1.8, depth: 1.6 }); return { name: mesh.name, placed }; });
 console.log(`  lungs kept clear of the ribs: ${pushed} points moved`);
+/* And their bases do not sit on this man's diaphragm: the left lung hung two to four centimetres above it, with his
+   own bronchi running on below the lung, and the right dipped a centimetre through it into the liver. Each lung's
+   base is fitted to the dome under it: over each square centimetre of the dome, the lung's underside comes to GAP cm
+   above the diaphragm, and the lung above it follows by less and less, to nothing at the lung's middle height. */
+{
+  const GAP = 0.2, CELL = 1, key = (x, z) => `${Math.round(x / CELL)},${Math.round(z / CELL)}`;
+  const dome = new Map(), top = surfaceSamples(him(/^Diaphragm$/)[0], 0.4).points;
+  for (let k = 0; k < top.length; k += 3) { const at = key(top[k], top[k + 2]); if (!dome.has(at) || top[k + 1] > dome.get(at)) dome.set(at, top[k + 1]); }
+  for (const side of ['left', 'right']) {
+    const segments = placedLungs.filter(({ name }) => new RegExp(side, 'i').test(name)), middle = lungCentre[side][1], base = new Map();
+    for (const { placed } of segments) for (let k = 0; k < placed.positions.length; k += 3) { const at = key(placed.positions[k], placed.positions[k + 2]); if (!base.has(at) || placed.positions[k + 1] < base.get(at)) base.set(at, placed.positions[k + 1]); }
+    /* how far the underside over each square must move (down is negative), evened over the squares around it */
+    const raw = new Map();
+    for (const [at, low] of base) if (dome.has(at) && low < middle) raw.set(at, dome.get(at) + GAP - low);
+    const move = new Map();
+    for (const at of base.keys()) { const [i, j] = at.split(',').map(Number); let sum = 0, n = 0; for (let di = -1; di <= 1; di++) for (let dj = -1; dj <= 1; dj++) { const value = raw.get(`${i + di},${j + dj}`); if (value !== undefined) { sum += value; n++; } } if (n) move.set(at, sum / n); }
+    /* read between the squares' middles, so the base comes out smooth and not in steps */
+    const between = (x, z) => {
+      const i = Math.floor(x / CELL), j = Math.floor(z / CELL), u = x / CELL - i, v = z / CELL - j;
+      let sum = 0, total = 0;
+      for (const [di, dj, weight] of [[0, 0, (1 - u) * (1 - v)], [1, 0, u * (1 - v)], [0, 1, (1 - u) * v], [1, 1, u * v]]) { const value = move.get(`${i + di},${j + dj}`); if (value !== undefined) { sum += weight * value; total += weight; } }
+      return total > 0 ? sum / total : undefined;
+    };
+    let most = 0;
+    for (const { placed } of segments) for (let k = 0; k < placed.positions.length; k += 3) {
+      const at = key(placed.positions[k], placed.positions[k + 2]), by = between(placed.positions[k], placed.positions[k + 2]);
+      if (by === undefined || placed.positions[k + 1] >= middle) continue;
+      const t = (middle - placed.positions[k + 1]) / (middle - base.get(at)), share = t * t * (3 - 2 * t);
+      placed.positions[k + 1] += share * by; most = Math.max(most, Math.abs(share * by));
+    }
+    console.log(`  the ${side} lung's base fitted onto his diaphragm: moved up to ${most.toFixed(1)} cm`);
+  }
+}
+for (const { name, placed } of placedLungs) everything.push({ info: { name, layer: 'organs', group: 'respiratory', source: 'NIH male' }, mesh: simplify(weld(placed), ERROR.organs, MINIMUM_SHARE.organs) });
+/* Z-Anatomy's thyroid stands a centimetre and more in front of this man's windpipe, and a little to his right, with a
+   parathyroid inside the windpipe: the gland and its parathyroids go back until the isthmus lies on the front of the
+   trachea, and across so the gland is centred on it; the lower parathyroids then stand clear of the windpipe's side. */
+{
+  const gland = everything.filter(({ info }) => info.name === 'Thyroid gland'), small = everything.filter(({ info }) => /parathyroid gland$/.test(info.name)), trachea = him(/^Trachea$/)[0].positions;
+  if (gland.length !== 1 || small.length !== 4) throw new Error(`expected a thyroid and four parathyroids, found ${gland.length} and ${small.length}`);
+  const p = gland[0].mesh.positions, low = Math.min(...Array.from({ length: p.length / 3 }, (_, v) => p[3 * v + 1])), high = Math.max(...Array.from({ length: p.length / 3 }, (_, v) => p[3 * v + 1]));
+  let isthmusBack = Infinity, tracheaFront = -Infinity, left = -Infinity, right = Infinity, wall = 0;
+  for (let k = 0; k < p.length; k += 3) { if (Math.abs(p[k]) < 0.4) isthmusBack = Math.min(isthmusBack, p[k + 2]); left = Math.max(left, p[k]); right = Math.min(right, p[k]); }
+  for (let k = 0; k < trachea.length; k += 3) if (trachea[k + 1] > low && trachea[k + 1] < high) { tracheaFront = Math.max(tracheaFront, trachea[k + 2]); wall = Math.max(wall, Math.abs(trachea[k])); }
+  if (isthmusBack === Infinity || tracheaFront === -Infinity) throw new Error('no isthmus of the thyroid, or no trachea beside it');
+  const shift = [-(left + right) / 2, 0, tracheaFront + 0.1 - isthmusBack];
+  for (const { mesh } of [...gland, ...small]) for (let k = 0; k < mesh.positions.length; k += 3) { mesh.positions[k] += shift[0]; mesh.positions[k + 2] += shift[2]; }
+  for (const { mesh } of small) { const q = mesh.positions; let nearest = Infinity, sign = 1; for (let k = 0; k < q.length; k += 3) if (Math.abs(q[k]) < nearest) { nearest = Math.abs(q[k]); sign = Math.sign(q[k]) || 1; } const out = wall + 0.2 - nearest; if (out > 0) for (let k = 0; k < q.length; k += 3) q[k] += sign * out; }
+  console.log(`  thyroid moved ${shift[2].toFixed(1)} cm back onto his trachea and ${shift[0].toFixed(1)} cm across`);
+}
+/* Neither spinal cord lies in this man's spinal canal all the way: in the neck Z-Anatomy's dura and horns run through
+   the bodies of his vertebrae and the Visible Human's cord through their arches. Each is moved front to back, height
+   by height, so its middle runs down the middle of the canal: the canal, at each half centimetre of height, is the
+   gap in the bone on his midline between the back of a vertebral body and its arch. */
+{
+  const STEP = 0.5, bins = new Map();
+  for (const { info, mesh } of everything) if (info.layer === 'skeleton' && /vertebra$|^Atlas$|^Axis$/.test(info.name)) { const q = surfaceSamples(mesh, 0.2).points; for (let k = 0; k < q.length; k += 3) if (Math.abs(q[k]) < 0.5) { const bin = Math.round(q[k + 1] / STEP); (bins.get(bin) || bins.set(bin, []).get(bin)).push(q[k + 2]); } }
+  const canal = new Map();
+  for (const [bin, depths] of bins) { depths.sort((a, b) => a - b); let best = 0, middle = null; for (let i = 1; i < depths.length; i++) { const gap = depths[i] - depths[i - 1]; if (gap > best && gap > 0.8 && gap < 2.4) { best = gap; middle = (depths[i] + depths[i - 1]) / 2; } } if (middle !== null) canal.set(bin, middle); }
+  for (const [label, pattern] of [['Z-Anatomy\'s dura and horns', /^Spinal dura$|^(Anterior|Posterior) horn of spinal cord$/], ['the Visible Human\'s cord', /spinal cord segment$|segment of cervical spinal cord$/]]) {
+    const cords = everything.filter(({ info }) => info.layer === 'nerves' && pattern.test(info.name)), sums = new Map();
+    if (!cords.length) throw new Error(`no spinal cord parts match ${pattern}`);
+    for (const { mesh } of cords) for (let k = 0; k < mesh.positions.length; k += 3) { const bin = Math.round(mesh.positions[k + 1] / STEP), had = sums.get(bin) || [0, 0]; had[0] += mesh.positions[k + 2]; had[1]++; sums.set(bin, had); }
+    const order = [...sums.keys()].filter(bin => canal.has(bin)).sort((a, b) => a - b);
+    if (order.length < 2) throw new Error(`${label}: no height shared with the canal`);
+    const raw = order.map(bin => canal.get(bin) - sums.get(bin)[0] / sums.get(bin)[1]), back = raw.map((_, i) => { let sum = 0, n = 0; for (let j = Math.max(0, i - 3); j <= Math.min(raw.length - 1, i + 3); j++) { sum += raw[j]; n++; } return sum / n; });
+    const at = y => { const place = y / STEP; let i = 0; while (i + 2 < order.length && order[i + 1] <= place) i++; const t = Math.min(1, Math.max(0, (place - order[i]) / (order[i + 1] - order[i]))); return back[i] + (back[i + 1] - back[i]) * t; };
+    for (const { mesh } of cords) for (let k = 0; k < mesh.positions.length; k += 3) mesh.positions[k + 2] += at(mesh.positions[k + 1]);
+    console.log(`  ${label} moved into his spinal canal: ${Math.min(...back).toFixed(1)} to ${Math.max(...back).toFixed(1)} cm front to back`);
+  }
+}
 console.log(`  check left femur: ${meanGap(warpMesh(vh(/M_femur_L$/)[0], warp), him(/^Left femur$/)[0]).toFixed(2)} cm from the BodyParts3D femur after the warp; ${lungs.length} lung segments carried across`);
 /* Z-Anatomy's occipitalis is a thin sheet modelled on another skull: where it dips into this man's, it is lifted
    to lie on it. Each point's height over the skull is raised by a rule that keeps heights in order (what was higher

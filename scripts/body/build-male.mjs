@@ -146,6 +146,15 @@ const lungCentre = { left: centreOf(lungs.filter(mesh => /left/.test(mesh.name))
 let pushed = 0;
 const placedLungs = lungs.map(mesh => { const placed = warpMesh(mesh, warp); pushed += clear(placed, chestBones, towardCentre(lungCentre[/left/.test(mesh.name) ? 'left' : 'right']), { reach: 1.8, depth: 1.6 }); return { name: mesh.name, placed }; });
 console.log(`  lungs kept clear of the ribs: ${pushed} points moved`);
+/* nor do they fit round this man's heart: a basal segment of the right lung lay two and a half centimetres inside
+   his right atrium, and the lingula in the wall of his ventricles. Where a lung comes within reach of his heart it
+   gives way toward its own middle, as a lung carries the impression of the heart. */
+{
+  const heart = obstacleOf(him(/^(Wall|Cavity) of (left |right )?(atrium|ventricle)$/));
+  let gave = 0;
+  for (const { name, placed } of placedLungs) gave += clear(placed, heart, towardCentre(lungCentre[/left/.test(name) ? 'left' : 'right']), { reach: 2, depth: 2.2 });
+  console.log(`  lungs kept clear of his heart: ${gave} points moved`);
+}
 /* And their bases do not sit on this man's diaphragm: the left lung hung two to four centimetres above it, with his
    own bronchi running on below the lung, and the right dipped a centimetre through it into the liver. Each lung's
    base is fitted to the dome under it: over each square centimetre of the dome, the lung's underside comes to GAP cm

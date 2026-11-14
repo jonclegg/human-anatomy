@@ -513,9 +513,16 @@ export function transfer(structures, folder, sourceTargets, targets, { height = 
     const reached = new Set([deep]), mouth = [deep];
     for (let i = 0; i < mouth.length; i++) for (const w of beside.get(mouth[i]) || []) if (!reached.has(w)) { reached.add(w); mouth.push(w); }
     const front = mouth.reduce((most, v) => Math.max(most, fresh[3 * v + 2]), -Infinity), atLips = mouth.filter(v => fresh[3 * v + 2] > front - 0.5), line = atLips.reduce((sum, v) => sum + fresh[3 * v + 1], 0) / atLips.length;
-    let deepest = Infinity;
-    for (const v of mouth) { deepest = Math.min(deepest, fresh[3 * v + 2]); fresh[3 * v + 2] = front - (front - fresh[3 * v + 2]) * SHALLOW; fresh[3 * v + 1] = line + (fresh[3 * v + 1] - line) * 0.5; }
-    log(`mouth made shallow: ${mouth.length} lining vertices, from ${(front - deepest).toFixed(1)} to ${((front - deepest) * SHALLOW).toFixed(1)} cm deep`);
+    /* Each lining vertex is drawn toward the middle of the lips by its depth: not at all at the lips, where the lining
+       meets their skin, and to SHALLOW of its distance at the back. Drawn straight forward instead, the lining at the
+       back corners of the mouth came out through the cheeks (the cheek lies further back than the lips), and squeezed
+       toward the lip line it showed between the lips. */
+    const middle = [0, line, front], deepest = mouth.reduce((least, v) => Math.min(least, fresh[3 * v + 2]), Infinity);
+    for (const v of mouth) {
+      const t = Math.min(1, (front - fresh[3 * v + 2]) / (front - deepest)), share = 1 - (1 - SHALLOW) * t * t * (3 - 2 * t);
+      for (let c = 0; c < 3; c++) fresh[3 * v + c] = middle[c] + (fresh[3 * v + c] - middle[c]) * share;
+    }
+    log(`mouth made shallow: ${mouth.length} lining vertices drawn toward the lips, from ${(front - deepest).toFixed(1)} to ${((front - deepest) * SHALLOW).toFixed(1)} cm deep`);
   }
 
   /* ---------- the pairs: each vertex's place on the source skin, to its place on the new skin ---------- */
@@ -546,16 +553,19 @@ export function transfer(structures, folder, sourceTargets, targets, { height = 
      bones a fifth thicker; the sockets of his hips four centimetres further apart under her wide hips.
      So the deformation is made twice. The first, through the skin alone, says where each bone goes. Each of these
      bones then keeps its shape: it is placed where that deformation takes it, turned and sized as it is there on the
-     whole, as one rigid piece; the pelvis (the hip bones, the sacrum and what joins them) as one piece together; and
+     whole, as one rigid piece; the breastbone, and the pelvis (the hip bones, the sacrum and what joins them), each as one piece; and
      each thigh bone is turned about the knee so its head sits in the socket of the pelvis as placed. The second
      deformation goes through the skin and through points of those bones as placed, so the muscles on a bone and the
      organs beside it go with it. (Not the skull, whose bones meet edge to edge all round and which the head's own fit
      places, nor the ribs, which bend; the hands and feet are fitted joint by joint below.) */
   const first = thinPlateSpline(Float64Array.from(from), Float64Array.from(to), 0.3);
-  const ALONE = /vertebra$|^Atlas$|^Axis$|^Manubrium$|^Body of sternum$|^Xiphoid process$|^(Left|Right) (femur|tibia|fibula|patella|humerus|radius|ulna|clavicle|scapula)$/;
+  const ALONE = /vertebra$|^Atlas$|^Axis$|^(Left|Right) (femur|tibia|fibula|patella|humerus|radius|ulna|clavicle|scapula)$/, STERNUM = /^Manubrium$|^Body of sternum$|^Xiphoid process$/;
   const PELVIS = /^(Left|Right) hip bone$|^Sacrum$|^Pubic symphysis$|^Interpubic disc$|^(Left|Right) triradiate cartilage$/;
   const bones = structures.filter(structure => structure.layer === 'skeleton');
-  const pieces = [...bones.filter(structure => ALONE.test(structure.name)).map(structure => [structure]), bones.filter(structure => PELVIS.test(structure.name))];
+  /* the three parts of the breastbone are one piece too: fitted each on its own, the stretched body of the sternum came
+     out shorter and left half a centimetre between it and the xiphoid */
+  const pieces = [...bones.filter(structure => ALONE.test(structure.name)).map(structure => [structure]), bones.filter(structure => STERNUM.test(structure.name)), bones.filter(structure => PELVIS.test(structure.name))];
+  if (pieces.at(-2).length !== 3) throw new Error('expected the three parts of the breastbone');
   if (pieces.at(-1).length < 3) throw new Error('no pelvis found among the bones');
   const then = (A, B) => { const at = point => applyAffine(B, ...applyAffine(A, ...point)), o = at([0, 0, 0]); return Float64Array.from([...[[1, 0, 0], [0, 1, 0], [0, 0, 1]].flatMap(axis => at(axis).map((value, c) => value - o[c])), ...o]); };
   const size = fit => Math.cbrt(fit[0] * (fit[4] * fit[8] - fit[5] * fit[7]) - fit[3] * (fit[1] * fit[8] - fit[2] * fit[7]) + fit[6] * (fit[1] * fit[5] - fit[2] * fit[4]));

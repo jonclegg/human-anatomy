@@ -7,9 +7,9 @@ export const REGIONS = {
   vulva: {
     name: 'Vulva', note: 'outer and inner lips, clitoral glans, the two openings', sex: 'female', uncovered: true,
     title: 'The vulva', figure: 'Close-up · The vulva, from below and in front',
-    text: { female: 'The vulva is everything that can be seen from outside: the mons, the outer and inner lips, the clitoral hood and glans, and the vestibule with its two openings. The vagina is the canal inside.' },
+    text: { female: 'The vulva is the outer part of the genitals: the mons, the outer lips, which lie closed when standing, and between them the inner lips, the clitoral hood and glans, and the vestibule with its two openings. The skin is shown faint so the parts between the outer lips can be seen. The vagina is the canal inside.' },
     parts: ['vulvaMonsPubis', 'vulvaLabiaMajora', 'vulvaLabiaMinora', 'clitorisHood', 'clitorisGlans', 'vulvaVestibule', 'vulvaUrethralOpening', 'vulvaHymen'],
-    context: [], direction: [0, -1, 0.45], body: 1,
+    context: [], direction: [0, -1, 0.45], body: 0.3,
   },
   clitoris: {
     frame: ['clitorisGlans', 'clitorisBody', 'clitorisCrura', 'clitorisBulbs'], margin: 2,

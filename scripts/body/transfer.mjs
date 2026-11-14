@@ -501,9 +501,17 @@ export function transfer(structures, folder, sourceTargets, targets, { height = 
      made shallow: the lining of the mouth (not of the eye sockets, which lie above it) comes forward to SHALLOW of its
      depth behind the lips, and half as far above and below the lip line. */
   {
-    const SHALLOW = 0.3, eyes = there.place('eye.L', body.bones['eye.L'].head)[1], mouth = [];
-    for (let v = 0; v < body.count; v++) if (lining[v] && posed.segment[v] === 'head' && fresh[3 * v + 1] < eyes - 2) mouth.push(v);
-    if (!mouth.length) throw new Error('no lining of the mouth found');
+    /* The lining of the mouth alone: the folds of the ears and the nostrils are lined too, and drawn forward with the
+       mouth they stood out of the cheek as a strip from the ear to the lips. The mouth's lining is the one piece of
+       lining, joined edge to edge, that holds the deepest lined point on the midline below the nose. */
+    const SHALLOW = 0.3, eyes = there.place('eye.L', body.bones['eye.L'].head)[1];
+    let deep = -1;
+    for (let v = 0; v < body.count; v++) if (lining[v] && posed.segment[v] === 'head' && fresh[3 * v + 1] < eyes - 4 && Math.abs(fresh[3 * v]) < 1.5 && (deep < 0 || fresh[3 * v + 2] < fresh[3 * deep + 2])) deep = v;
+    if (deep < 0) throw new Error('no lining of the mouth found');
+    const beside = new Map();
+    for (let t = 0; t < body.indices.length; t += 3) for (let k = 0; k < 3; k++) { const a = body.indices[t + k], b = body.indices[t + (k + 1) % 3]; if (!lining[a] || !lining[b]) continue; (beside.get(a) || beside.set(a, []).get(a)).push(b); (beside.get(b) || beside.set(b, []).get(b)).push(a); }
+    const reached = new Set([deep]), mouth = [deep];
+    for (let i = 0; i < mouth.length; i++) for (const w of beside.get(mouth[i]) || []) if (!reached.has(w)) { reached.add(w); mouth.push(w); }
     const front = mouth.reduce((most, v) => Math.max(most, fresh[3 * v + 2]), -Infinity), atLips = mouth.filter(v => fresh[3 * v + 2] > front - 0.5), line = atLips.reduce((sum, v) => sum + fresh[3 * v + 1], 0) / atLips.length;
     let deepest = Infinity;
     for (const v of mouth) { deepest = Math.min(deepest, fresh[3 * v + 2]); fresh[3 * v + 2] = front - (front - fresh[3 * v + 2]) * SHALLOW; fresh[3 * v + 1] = line + (fresh[3 * v + 1] - line) * 0.5; }

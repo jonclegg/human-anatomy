@@ -30,7 +30,7 @@ const ORGAN_COLOURS = [
   [/kidney|renal/i, '#8f3c35'], [/ureter|urethra/i, '#e3c07a'], [/bladder/i, '#e0b49c'], [/adrenal/i, '#e0a33e'], [/thym/i, '#e8c8b0'], [/thyroid gland|parathyroid/i, '#a5463a'],
   [/testis|epididym/i, '#e3c2b0'], [/prostate|seminal/i, '#c99a80'], [/penis|glans|cavernos|spongios/i, '#c58078'], [/deferent/i, '#e0cdb0'],
   [/uterus|cervix|vagina/i, '#c85d6a'], [/ovary/i, '#e8c8a8'], [/fallopian|uterine tube/i, '#d98a8a'], [/ligament/i, '#e2cdbb'], [/mammary|breast/i, '#efc9a8'],
-  [/sclera|eyeball|fibrous layer/i, '#f2efe8'], [/iris/i, '#5f7f91'], [/lens|cornea|chamber|vitreous/i, '#cfe0e6'], [/choroid|retina|corona ciliaris/i, '#8c3a3a'], [/lacrimal|eyelid|tarsal/i, '#e4b9a2'],
+  [/sclera|eyeball|fibrous layer/i, '#f2efe8'], [/iris/i, '#7f9fb2'], [/^(left|right) lens$/i, '#151a1f'], [/lens|cornea|chamber|vitreous/i, '#cfe0e6'], [/choroid|retina|corona ciliaris/i, '#8c3a3a'], [/lacrimal|eyelid|tarsal/i, '#e4b9a2'],
   [/ear/i, '#dba78e'], [/tonsil|lymph/i, '#c9a0b0'], [/pituitary|pineal/i, '#d98f55'],
 ];
 export function colourOf(part) {
@@ -99,8 +99,10 @@ export const TOUR = [
 ];
 
 /* Shown only when chosen (from the parts list or by search): the platysma is a paper-thin sheet in the skin of the neck
-   that would cover the sternocleidomastoid and the muscles of the throat, as atlases draw the neck with it lifted away */
-export const SHOWN_WHEN_CHOSEN = /platysma$/i;
+   that would cover the sternocleidomastoid and the muscles of the throat, as atlases draw the neck with it lifted away.
+   The cornea and the fluid behind it are clear: drawn solid they hid the iris and the pupil. The lens is drawn dark, as
+   the eye's story draws it, so that it shows as the pupil through the hole in the iris. */
+export const SHOWN_WHEN_CHOSEN = /platysma$|cornea$|^anterior chamber of/i;
 /* Never drawn: the eyelid lifter's tendon, which BodyParts3D has twice, once as part of the muscle and once on its own
    in the same place. Drawn together the two fight for the same surface and show as a patchwork. */
 export const NEVER_DRAWN = /^tendon of (left|right) levator palpebrae superioris/i;

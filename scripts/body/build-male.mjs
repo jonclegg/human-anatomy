@@ -5,7 +5,7 @@
 // Usage: node scripts/body/build-male.mjs <"Human Anatomy 3D Models" folder>
 import { listStructures, readMesh } from './bodyparts3d.mjs';
 import { classify } from './systems.mjs';
-import { weld, simplify } from './mesh.mjs';
+import { weld, simplify, compact } from './mesh.mjs';
 import { skinWithLips } from './lips.mjs';
 import { readOrgan, FRAMES } from './hra.mjs';
 import { register, warpMesh, meanGap, startMap } from './register.mjs';
@@ -187,7 +187,7 @@ console.log(`  check left femur: ${meanGap(warpMesh(vh(/M_femur_L$/)[0], warp), 
   for (const { info, mesh } of everything) if (info.layer === 'skeleton') for (let k = 0; k < mesh.positions.length; k += 3) { points.push(mesh.positions[k], mesh.positions[k + 1], mesh.positions[k + 2]); thinBone.push(extremity.test(info.name)); }
   const grid = new PointGrid(Float32Array.from(points), 2);
   const thin = Uint8Array.from({ length: skin.positions.length / 3 }, (_, v) => { const [index] = grid.nearest(skin.positions[3 * v], skin.positions[3 * v + 1], skin.positions[3 * v + 2], 30); return index >= 0 && thinBone[index] ? 1 : 0; });
-  const inside = everything.filter(({ info }) => info.layer !== 'skin').map(({ info, mesh }) => ({ name: info.name, layer: info.layer, positions: mesh.positions, ownSkin: info.source === 'BodyParts3D' })).filter(structure => !isGlobe(structure));
+  const inside = everything.filter(({ info }) => info.layer !== 'skin').map(({ info, mesh }) => ({ name: info.name, layer: info.layer, positions: mesh.positions, indices: mesh.indices, mesh, ownSkin: info.source === 'BodyParts3D' })).filter(structure => !isGlobe(structure));
   /* not on the vault of his head: under the hair his skin has no scalp, and nothing there needs it. It fades out
      over the brow, from a centimetre under the eyes' level to a centimetre and a half over it. */
   const eyes = everything.filter(({ info }) => /^(Left|Right) sclera$/.test(info.name)).map(({ mesh }) => centreOf([mesh])[1]);
@@ -195,6 +195,32 @@ console.log(`  check left femur: ${meanGap(warpMesh(vh(/M_femur_L$/)[0], warp), 
   const eyeLevel = (eyes[0] + eyes[1]) / 2;
   const share = (x, y) => { const t = Math.min(1, Math.max(0, (y - (eyeLevel - 1)) / 2.5)); return 1 - t * t * (3 - 2 * t); };
   console.log(`  kept under his skin: ${keepUnder(skin, inside, { thin, share, openings: true })}`);
+  /* a vessel or nerve near the skin comes back split finer */
+  for (const structure of inside) { structure.mesh.positions = structure.positions; structure.mesh.indices = structure.indices; }
+}
+/* The scan's hair hangs down beside his ears in loose flaps that stand off his skin, so that each ear seems sunk in
+   a hollow of hair. Beside each ear, from a little above its top down, the hair is cut away: his skin is there
+   under it, and the hairline runs above the ears. This comes after the rest is kept under his skin, which tells
+   inside from outside by lines through skin and hair, whole: a line through a hole cut in the hair, running on down
+   the body, called parts of a heel outside, and the parts beside the ears were left poking through his skin. */
+{
+  const hairEntry = everything.filter(({ info }) => info.layer === 'skin' && info.name === 'Hair of head'), ears = everything.filter(({ info }) => info.name === 'External ear');
+  if (hairEntry.length !== 1 || ears.length !== 1) throw new Error(`expected his hair and his ears, found ${hairEntry.length} and ${ears.length}`);
+  const hair = hairEntry[0].mesh, ear = ears[0].mesh.positions;
+  const sides = [1, -1].map(sign => {
+    let inner = Infinity, top = -Infinity, front = -Infinity, back = Infinity;
+    for (let k = 0; k < ear.length; k += 3) if (ear[k] * sign > 0) { inner = Math.min(inner, ear[k] * sign); top = Math.max(top, ear[k + 1]); front = Math.max(front, ear[k + 2]); back = Math.min(back, ear[k + 2]); }
+    if (inner === Infinity) throw new Error(`no ${sign > 0 ? 'left' : 'right'} ear`);
+    return { sign, inner, top, front, back };
+  });
+  const kept = [];
+  for (let t = 0; t < hair.indices.length; t += 3) {
+    const c = [0, 1, 2].map(axis => (hair.positions[3 * hair.indices[t] + axis] + hair.positions[3 * hair.indices[t + 1] + axis] + hair.positions[3 * hair.indices[t + 2] + axis]) / 3);
+    if (sides.some(({ sign, inner, top, front, back }) => c[0] * sign > inner - 1.5 && c[1] < top + 0.5 && c[2] < front + 2 && c[2] > back - 2.5)) continue;
+    kept.push(hair.indices[t], hair.indices[t + 1], hair.indices[t + 2]);
+  }
+  console.log(`  his hair cut away beside his ears: ${(hair.indices.length - kept.length) / 3} of its ${hair.indices.length / 3} triangles`);
+  hairEntry[0].mesh = compact({ positions: hair.positions, indices: Uint32Array.from(kept) });
 }
 /* His lips: BodyParts3D's are a scrap of the scan over a skin left blank at the mouth. His skin is shaped there to
    MakeHuman's lips (lips.mjs), and the lips are the part of it so shaped. Last of all, so nothing above is fitted to

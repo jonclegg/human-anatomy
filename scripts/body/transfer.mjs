@@ -9,6 +9,7 @@ import { readMakeHuman, poseMakeHuman, landmarksOf } from './makehuman.mjs';
 import { PointGrid, thinPlateSpline, spread } from './fit.mjs';
 import { vertexNormals, InsideTest, InsideAllWays, pushOutOver } from './clearance.mjs';
 import { landmarks, handAndFootPairs, fitHandsAndFeet, withDepth } from './landmarks.mjs';
+import { refine } from './mesh.mjs';
 
 /* points spread over a mesh's surface no further apart than spacing (cm), each with its triangle's normal */
 export function surfaceSamples({ positions, indices }, spacing, skip = () => false) {
@@ -217,6 +218,24 @@ export function keepUnder(skin, structures, { gap = 0.2, reach = 5, lining = nul
     if (openings && !inside && depth > 0) return null;
     return { index, distance, depth: inside ? depth : -distance, inside };
   };
+  /* A built vessel or nerve is simplified to straight runs of a few centimetres. Where the skin curves inward over one
+     (where a thigh meets the buttock), a run between two points that lie under the skin cuts out through it. Such a
+     run, one whose middle comes out of the skin (or to within half a millimetre of it), is split, so its points can
+     each be brought under; any other run is left as it is, and the files stay the size they were. */
+  {
+    const LONGEST = 0.6;
+    const cuts = points => (u, v) => {
+      if (Math.hypot(points[3 * u] - points[3 * v], points[3 * u + 1] - points[3 * v + 1], points[3 * u + 2] - points[3 * v + 2]) <= LONGEST) return false;
+      const at = locate(...[0, 1, 2].map(c => (points[3 * u + c] + points[3 * v + c]) / 2), gap);
+      return !!at && at.index >= 0 && at.depth < 0.05;
+    };
+    for (const structure of structures) {
+      if (structure.layer !== 'vessels' && structure.layer !== 'nerves') continue;
+      const finer = refine(structure, (a, b, c, points) => { const cut = cuts(points); return cut(a, b) || cut(b, c) || cut(c, a); }, 4);
+      if (finer.indices.length === structure.indices.length) continue;
+      structure.positions = finer.positions; structure.indices = finer.indices;
+    }
+  }
   /* how far short of its place the worst point under each skin vertex is, capped (more than that is a stray part, not a
      layer to make room for) and spread over the neighbouring skin */
   const MOST = 0.8;

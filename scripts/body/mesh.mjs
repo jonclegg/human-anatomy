@@ -48,6 +48,42 @@ export function soften({ positions, indices }, rounds = 8, held = () => false) {
   for (let v = 0; v < of.length; v++) for (let c = 0; c < 3; c++) positions[3 * v + c] = at[3 * of[v] + c];
 }
 
+/* Each triangle for which inside(a, b, c) holds, split in four at the middles of its sides, `times` over. A triangle
+   beside one, sharing a split side, is split along with it (in two, three or four), so the surface stays one, with no
+   point of one triangle lying on the side of another. Every vertex there was stays where it is. */
+export function refine({ positions, indices }, inside, times) {
+  const points = Array.from(positions);
+  let all = Array.from(indices);
+  for (let round = 0; round < times; round++) {
+    const middles = new Map(), next = [], key = (a, b) => (a < b ? `${a},${b}` : `${b},${a}`);
+    const middle = (a, b) => {
+      if (!middles.has(key(a, b))) { middles.set(key(a, b), points.length / 3); for (let c = 0; c < 3; c++) points.push((points[3 * a + c] + points[3 * b + c]) / 2); }
+      return middles.get(key(a, b));
+    };
+    const whole = [];
+    for (let t = 0; t < all.length; t += 3) {
+      const [a, b, c] = [all[t], all[t + 1], all[t + 2]];
+      if (!inside(a, b, c, points)) { whole.push(t); continue; }
+      const ab = middle(a, b), bc = middle(b, c), ca = middle(c, a);
+      next.push(a, ab, ca, ab, b, bc, ca, bc, c, ab, bc, ca);
+    }
+    for (const t of whole) {
+      /* turned so that its split sides come first */
+      let corners = [all[t], all[t + 1], all[t + 2]];
+      const split = () => [0, 1, 2].map(side => middles.get(key(corners[side], corners[(side + 1) % 3])));
+      const count = split().filter(value => value !== undefined).length;
+      if (count === 0) { next.push(...corners); continue; }
+      while (split()[0] === undefined || (count === 2 && split()[2] !== undefined)) corners = [corners[1], corners[2], corners[0]];
+      const [a, b, c] = corners, [ab, bc, ca] = split();
+      if (count === 1) next.push(a, ab, c, ab, b, c);
+      else if (count === 2) next.push(a, ab, c, ab, bc, c, ab, b, bc);
+      else next.push(a, ab, ca, ab, b, bc, ca, bc, c, ab, bc, ca);
+    }
+    all = next;
+  }
+  return { positions: Float32Array.from(points), indices: Uint32Array.from(all) };
+}
+
 /* simplify to a surface error in cm, never below a share of the triangles, then drop the vertices no triangle uses */
 export function simplify(mesh, error, minimumShare = 0.04) {
   const target = Math.min(mesh.indices.length, Math.max(3 * 12, Math.floor(mesh.indices.length * minimumShare / 3) * 3));

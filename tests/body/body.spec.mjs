@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { ENTRIES } from '../../site/body/parts.mjs';
+import { ENTRIES, SHOWN_WHEN_CHOSEN } from '../../site/body/parts.mjs';
 import { REGIONS, DETAILS } from '../../site/body/closeups.mjs';
 import { STORIES } from '../../site/body/stories.mjs';
 import { MOTIONS } from '../../site/body/motions.mjs';
@@ -372,15 +372,16 @@ test.describe('close-ups', () => {
       expect(ids).toContain(sex === 'female' ? 'vulva' : 'malePelvis');
       expect(ids).not.toContain(sex === 'female' ? 'malePelvis' : 'vulva');
       for (const id of ids) {
-        const seen = await model(page, async id => {
+        /* a part drawn only when chosen (the clear cornea, which would hide the iris and pupil) may be unseen until it is */
+        const seen = await model(page, async ({ id, chosenOnly }) => {
           const m = window.bodyModel; m.setRegion(id); await m.ready();
           const body = m.body(), around = m.around(), order = m.entries();
           return { parts: order.length, order, listed: [...document.querySelectorAll('#sheet .parts button')].map(button => button.dataset.entry), eyebrow: document.querySelector('#sheet .eyebrow').textContent, moving: m.motion().moving, strip: !document.querySelector('#layerStrip').hidden,
-            own: [...around.own].filter(index => body.parts[index].layer !== 'skin' && m.opacityOf(index) < 1).length,
+            own: [...around.own].filter(index => body.parts[index].layer !== 'skin' && !new RegExp(chosenOnly, 'i').test(body.parts[index].name) && m.opacityOf(index) < 1).length,
             context: [...around.context].filter(index => m.opacityOf(index) === 0 || m.opacityOf(index) > 0.5).length,
             others: body.parts.filter((part, index) => part.layer !== 'skin' && !around.own.has(index) && !around.context.has(index) && m.opacityOf(index) > 0).length,
             clothing: m.clothing().opacity, coverage: m.coverage() };
-        }, id);
+        }, { id, chosenOnly: SHOWN_WHEN_CHOSEN.source });
         expect(seen.parts, id).toBe(REGIONS[id].parts.filter(key => !(DETAILS[key] || ENTRIES[key]).sex || (DETAILS[key] || ENTRIES[key]).sex === sex).length);   // every listed part is in this body
         expect(seen.listed, id).toEqual(seen.order);   // the sheet lists its numbered parts, in order
         expect({ own: seen.own, context: seen.context, others: seen.others, clothing: seen.clothing, eyebrow: seen.eyebrow, moving: seen.moving, strip: seen.strip }, id).toEqual({ own: 0, context: 0, others: 0, clothing: 0, eyebrow: 'Region', moving: false, strip: false });   // and the strip of layers is the whole body's

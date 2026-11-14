@@ -178,11 +178,9 @@ for (const [side, word, sign] of [['left', 'Left', 1], ['right', 'Right', -1]]) 
   /* her breast: the skin MakeHuman gives to it on this side; its tip is its most forward point */
   const low = [Infinity, Infinity], high = [-Infinity, -Infinity];
   let tip = null;
-  const ofBreast = [];
   for (let v = 0; v < breast.length; v++) {
     const p = skin.positions.subarray(3 * v, 3 * v + 3);
     if (breast[v] < 0.3 || p[0] * sign < 0) continue;
-    ofBreast.push(v);
     for (let c = 0; c < 2; c++) { low[c] = Math.min(low[c], p[c]); high[c] = Math.max(high[c], p[c]); }
     if (!tip || p[2] > tip[2]) tip = Array.from(p);
   }
@@ -201,12 +199,14 @@ for (const [side, word, sign] of [['left', 'Left', 1], ['right', 'Right', -1]]) 
   const base = [(low[0] + high[0]) / 2, (low[1] + high[1]) / 2, wall + 0.15];
   /* the mound of fat runs as far from the tip as the scanned gland is placed, and no further up or down than a little more than it is wide: the skin's own breast area runs on up toward the collarbone */
   const sideways = [INSET * (tip[0] - low[0]), INSET * (high[0] - tip[0])], most = 1.2 * Math.max(...sideways);
-  const made = [...breastSurface(word, skin.positions, ofBreast, tip, base), breastFat(side, skin.positions, tip, wall, [...sideways, Math.min(most, INSET * (tip[1] - low[1])), Math.min(most, INSET * (high[1] - tip[1]))])];
+  const made = [...breastSurface(word, skin, tip, base), breastFat(side, skin, tip, wall, [...sideways, Math.min(most, INSET * (tip[1] - low[1])), Math.min(most, INSET * (high[1] - tip[1]))])];
   if (gland.filter(mesh => MODELLED_ON_SKIN.test(mesh.name)).length !== made.length) throw new Error(`${side} breast: the scan's parts ${gland.filter(mesh => MODELLED_ON_SKIN.test(mesh.name)).map(mesh => mesh.name).join(', ')} are not the five that are modelled`);
   for (const part of made) onSkin.push({ ...part, layer: 'organs', group: 'breast' });
   console.log(`  ${side} breast: ${(high[0] - low[0]).toFixed(1)} cm wide, ${(high[1] - low[1]).toFixed(1)} cm high, ${depth.toFixed(1)} cm from chest wall to nipple (the scan's: ${(from.max[0] - from.min[0]).toFixed(1)}, ${(from.max[1] - from.min[1]).toFixed(1)}, ${(nipple[2] - from.min[2]).toFixed(1)})`);
 }
-console.log(`  her scanned parts kept under the skin: ${keepUnder(skin, added, { lining })}`);
+/* the scanned breast is kept deeper under her skin than the rest: round the nipple her skin dips inward, and the flat
+   faces of the scan's coarse lobes, between points that lie under it, cut out through the dip */
+console.log(`  her scanned parts kept under the skin: ${keepUnder(skin, added.filter(mesh => mesh.group !== 'breast'), { lining })}; her scanned breasts: ${keepUnder(skin, added.filter(mesh => mesh.group === 'breast'), { lining, gap: 0.4 })}`);
 
 /* ---------- Her vulva, clitoris and urethra, modelled ---------- */
 const vulva = vulvaSkin(skin, detail, detail.outward);

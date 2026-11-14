@@ -32,7 +32,7 @@ export function surfaceSamples({ positions, indices }, spacing, skip = () => fal
 }
 
 /* A surface's triangles, kept by the centimetre cells each one crosses, to find the point of the surface nearest a place. */
-class Surface {
+export class Surface {
   constructor({ positions, indices }, cell = 1) {
     this.positions = positions; this.cell = cell; this.cells = new Map();
     const corners = [], normals = [];
@@ -50,7 +50,7 @@ class Surface {
         list.push(triangle);
       }
     }
-    this.corners = Float64Array.from(corners); this.normals = Float64Array.from(normals); this.seen = new Int32Array(normals.length / 3).fill(-1); this.query = 0;
+    this.corners = Float64Array.from(corners); this.normals = Float64Array.from(normals); this.seen = new Int32Array(normals.length / 3).fill(-1); this.query = 0; this.found = -1;
   }
   key(i, j, k) { return ((i + 512) * 1024 + (j + 512)) * 1024 + (k + 512); }
   /* the point of triangle t nearest p (Ericson, Real-Time Collision Detection 5.1.5), written into out */
@@ -80,7 +80,8 @@ class Surface {
     out[0] = ax + v * abx + w * acx; out[1] = ay + v * aby + w * acy; out[2] = az + v * abz + w * acz;
   }
   /* the nearest point, within reach, of a triangle whose normal lies within `facing` (a cosine) of (nx, ny, nz):
-     written into out, and its distance returned; Infinity if there is none */
+     written into out, and its distance returned (its triangle is then this.found); Infinity if there is none. A
+     `facing` below -1 takes any triangle. */
   nearestFacing(px, py, pz, nx, ny, nz, facing, reach, out) {
     const { cell, normals, seen } = this, query = this.query++, point = [0, 0, 0];
     let best = Infinity;
@@ -93,7 +94,7 @@ class Surface {
         if (normals[3 * t] * nx + normals[3 * t + 1] * ny + normals[3 * t + 2] * nz < facing) continue;
         this.onTriangle(t, px, py, pz, point);
         const d = Math.hypot(point[0] - px, point[1] - py, point[2] - pz);
-        if (d < best) { best = d; out[0] = point[0]; out[1] = point[1]; out[2] = point[2]; }
+        if (d < best) { best = d; this.found = t; out[0] = point[0]; out[1] = point[1]; out[2] = point[2]; }
       }
     }
     return best <= reach ? best : Infinity;

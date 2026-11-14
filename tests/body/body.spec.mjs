@@ -471,7 +471,7 @@ test.describe('close-ups', () => {
       const m = window.bodyModel, parts = m.body().parts, named = name => { const part = parts.find(item => item.name === name); if (!part) throw new Error(`no ${name}`); return part; };
       const hips = [named('Left hip bone'), named('Right hip bone')], modelled = parts.filter(part => part.source === 'Wooten Labs' && part.group !== 'breast');   // the breast's small parts are modelled too, on her chest
       const box = { min: [0, 1, 2].map(c => Math.min(...hips.map(hip => hip.min[c]))), max: [0, 1, 2].map(c => Math.max(...hips.map(hip => hip.max[c]))) };
-      const crura = [named('Left crus of clitoris'), named('Right crus of clitoris')], urethra = named('Urethra'), bladder = named('Urinary bladder'), vagina = named('Vagina'), hymen = named('Hymen'), glans = named('Glans of clitoris');
+      const crura = [named('Left crus of clitoris'), named('Right crus of clitoris')], urethra = named('Urethra'), bladder = named('Urinary bladder'), vagina = named('Vagina'), hymen = named('Hymen'), glans = named('Glans of clitoris'), anus = named('External anal sphincter'), meatus = named('External urethral orifice');
       return {
         modelled: modelled.length, sources: [...new Set(modelled.map(part => part.layer))].sort(),
         outsidePelvis: modelled.filter(part => part.centre[0] < box.min[0] || part.centre[0] > box.max[0] || part.centre[1] > box.max[1] || part.centre[1] < box.min[1] - 6).map(part => part.name),
@@ -481,6 +481,7 @@ test.describe('close-ups', () => {
         urethraToBladder: bladder.min[1] - urethra.max[1],
         vaginaToOpening: Math.hypot(vagina.centre[0] - hymen.centre[0], vagina.min[1] - hymen.centre[1]),
         midline: Math.abs(glans.centre[0]),
+        openingToAnus: hymen.centre[2] - anus.centre[2], clitorisToAnus: glans.centre[2] - anus.centre[2], meatusToOpening: meatus.centre[2] - hymen.centre[2],
       };
     });
     expect(seen.modelled).toBeGreaterThanOrEqual(24);
@@ -492,6 +493,11 @@ test.describe('close-ups', () => {
     expect(seen.urethraToBladder).toBeLessThan(0.3);   // it reaches the bladder
     expect(seen.vaginaToOpening).toBeLessThan(1.5);    // the vagina comes down to the opening
     expect(seen.midline).toBeLessThan(0.3);
+    /* front to back: the clitoris, the urethra's opening, the vaginal opening, and the anus some 3 cm behind that (the
+       clitoris about 7.6 cm in front of the anus: Salazar-Martinez 2004). It once lay right under her anus. */
+    expect(seen.openingToAnus).toBeGreaterThan(2); expect(seen.openingToAnus).toBeLessThan(5);
+    expect(seen.clitorisToAnus).toBeGreaterThan(5.5); expect(seen.clitorisToAnus).toBeLessThan(9);
+    expect(seen.meatusToOpening).toBeGreaterThan(0.5);
   });
 });
 

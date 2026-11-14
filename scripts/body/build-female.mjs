@@ -21,7 +21,7 @@ import { readGarment, wear, writeClothing } from './garments.mjs';
 import { bounds, soften } from './mesh.mjs';
 import { PointGrid } from './fit.mjs';
 import { LAYERS } from './systems.mjs';
-import { readDetail, detailParts, meetOpening, joinToBladder, vulvaSkin } from './pelvic-detail.mjs';
+import { readDetail, detailParts, meetOpening, joinToBladder, vulvaSkin, seat, partCentre } from './pelvic-detail.mjs';
 import { breastSurface, breastFat } from './breast-surface.mjs';
 
 const [root, reproductive] = process.argv.slice(2);
@@ -79,7 +79,7 @@ const shared = structures.filter(structure => structure.layer === 'organs' && SH
 const teeth = structures.filter(structure => structure.layer === 'skeleton' && /\btooth$/i.test(structure.name)), hisTeeth = teeth.map(structure => structure.positions.slice());
 if (!outside.length) throw new Error('he has no penis or scrotum to tell his skin over them by');
 const genitals = new PointGrid(Float32Array.from(outside), 1);
-const { lining, breast, rest } = transfer(structures, `${root}/MakeHuman (CC0)`, HIS_SHAPE, HER_SHAPE, { height: HEIGHT, apart: (x, y, z) => genitals.nearest(x, y, z, 2)[0] >= 0 });
+const { segment, lining, breast, rest } = transfer(structures, `${root}/MakeHuman (CC0)`, HIS_SHAPE, HER_SHAPE, { height: HEIGHT, apart: (x, y, z) => genitals.nearest(x, y, z, 2)[0] >= 0 });
 {
   const place = likeness(his, shared.map(structure => structure.positions));
   shared.forEach((structure, which) => { for (let k = 0; k < his[which].length; k += 3) structure.positions.set(place(his[which][k], his[which][k + 1], his[which][k + 2]), k); });
@@ -126,6 +126,38 @@ const toHer = register({ pairs, start: startMap(1, 1, hips(bone(/(pubis|ilium|is
 const added = scanned.map(mesh => ({ ...warpMesh(mesh, toHer), name: mesh.name, layer: 'organs', group: 'reproductive' }));
 /* the close-up pelvic model, placed by the same map; her scanned vagina, cervix and uterus then meet its opening */
 const detail = readDetail(toHer);
+/* Seated in her (pelvic-detail.mjs, seat): its own anus on hers (the lowest point of her anal sphincter), and its
+   clitoris a little above the floor of her crotch, as far in front of her anus as the model has it (about 7 cm; the
+   published distance from anus to clitoris is 7.6). */
+{
+  const lowest = meshes => meshes.flatMap(mesh => Array.from({ length: mesh.positions.length / 3 }, (_, k) => Array.from(mesh.positions.subarray(3 * k, 3 * k + 3)))).reduce((low, p) => (p[1] < low[1] ? p : low));
+  const anus = lowest(hers('External anal sphincter'));
+  /* Her thighs meet under her crotch, and their skin there is no floor of it. The floor is traced along her midline
+     from her crotch's height just in front of her anus (trunk skin there): the lowest of her midline skin in each
+     centimetre forward, no more than a centimetre below that height (the thighs meet far lower) nor more than eight
+     above (her belly), and read between those points. */
+  const midline = [];
+  for (let v = 0; v < segment.length; v++) { const k = 3 * v; if (Math.abs(skin.positions[k]) < 1 && skin.positions[k + 2] > anus[2] && skin.positions[k + 2] < anus[2] + 14) midline.push({ trunk: !/^thigh/.test(segment[v]), y: skin.positions[k + 1], z: skin.positions[k + 2] }); }
+  const near = midline.filter(p => p.trunk && Math.abs(p.z - (anus[2] + 3)) < 1.5);
+  if (!near.length) throw new Error('none of her crotch\'s own skin in front of her anus');
+  const reference = Math.min(...near.map(p => p.y));
+  const line = new Map();
+  for (const p of midline) { if (p.y < reference - 1 || p.y > reference + 8) continue; const key = Math.round(p.z); if (!line.has(key) || p.y < line.get(key).y) line.set(key, p); }
+  const points = [...line.values()].sort((a, b) => a.z - b.z);
+  const floor = z => {
+    const after = points.findIndex(p => p.z >= z);
+    if (after <= 0) throw new Error(`her crotch's floor does not reach ${z.toFixed(1)} cm forward`);
+    const a = points[after - 1], b = points[after];
+    return a.y + (b.y - a.y) * (z - a.z) / (b.z - a.z || 1);
+  };
+  const length = Math.hypot(...partCentre(detail, 'glans').map((value, c) => value - partCentre(detail, 'anus')[c]));
+  /* the place on the floor that far from her anus: stepped forward along it until the distance is reached */
+  const INSIDE = 1.3;   // cm the clitoris lies above the floor: the outer lips' crests, which hang that far below it, then lie level with her skin
+  let glansZ = anus[2] + 1;
+  while (Math.hypot(floor(glansZ) + INSIDE - anus[1], glansZ - anus[2]) < length) glansZ += 0.05;
+  const seated = seat(detail, [['glans', [0, floor(glansZ) + INSIDE, glansZ]], ['anus', [0, anus[1], anus[2]]]]);
+  console.log(`  the vulva seated on her crotch: turned ${seated.turn.toFixed(0)} degrees in her midplane, its clitoris moved ${seated.moved[0].toFixed(1)} cm and its anus ${seated.moved[1].toFixed(1)} cm`);
+}
 {
   const correct = meetOpening(added, detail, [...hers('Left hip bone'), ...hers('Right hip bone'), ...hers('Sacrum')]);
   for (const mesh of added) mesh.positions = warpMesh(mesh, correct).positions;

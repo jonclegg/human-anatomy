@@ -389,6 +389,55 @@ export function layMakeHumanOnto(structures, folder, sourceTargets, log = consol
 }
 const HAND_OR_FOOT = /^(hand|foot)/;
 
+/* MakeHuman's arms are modelled held out, and brought down to a body's side the skin of the armpit folds into a slit:
+   a pocket under a centimetre wide running a hand's breadth up into the shoulder, its mouth a notch seen from behind.
+   On the source body the slit is drawn shut onto his skin, but the new body's is its own shape and keeps it. An arm
+   at the side lies against the chest: where skin of the upper arm or shoulder faces other skin
+   across a narrow gap, each comes half way to the other, in full under CLOSED cm apart and not at all over OPEN, so
+   the arm and the chest part smoothly below the armpit. Returns how many vertices moved and the furthest (cm). */
+function closeArmpits(mesh, segment) {
+  const CLOSED = 1.5, OPEN = 3, ofShoulder = v => /^(upperArm|clavicle)/.test(segment[v]);
+  const closed = new Set();
+  let count = 0, furthest = 0;
+  for (let round = 0; round < 2; round++) {
+    const normal = vertexNormals(mesh), surface = new Surface(mesh), grid = new PointGrid(mesh.positions, 1), p = mesh.positions, moves = [], across = [0, 0, 0];
+    for (let v = 0; v < p.length / 3; v++) {
+      const n = [normal[3 * v], normal[3 * v + 1], normal[3 * v + 2]];
+      const distance = surface.nearestFacing(p[3 * v] + 0.05 * n[0], p[3 * v + 1] + 0.05 * n[1], p[3 * v + 2] + 0.05 * n[2], -n[0], -n[1], -n[2], 0.3, OPEN, across);
+      if (distance === Infinity) continue;
+      const ahead = (across[0] - p[3 * v]) * n[0] + (across[1] - p[3 * v + 1]) * n[1] + (across[2] - p[3 * v + 2]) * n[2];
+      if (ahead < 0.6 * distance) continue;
+      const [other] = grid.nearest(across[0], across[1], across[2], 2);
+      if (other < 0 || !(ofShoulder(v) || ofShoulder(other))) continue;
+      const t = Math.min(1, Math.max(0, (distance - CLOSED) / (OPEN - CLOSED))), share = 1 - t * t * (3 - 2 * t);
+      moves.push([v, [0, 1, 2].map(c => share * 0.5 * (across[c] - p[3 * v + c]))]);
+    }
+    for (const [v, move] of moves) { for (let c = 0; c < 3; c++) p[3 * v + c] += move[c]; furthest = Math.max(furthest, Math.hypot(...move)); }
+    count = Math.max(count, moves.length);
+    for (const [v] of moves) closed.add(v);
+  }
+  /* Where the closed arm meets the back and the chest it leaves a sharp inward crease, which a body has as a soft
+     fold. The skin within ROUND cm of what was closed is evened out, each vertex toward the middle of its
+     neighbours, and only ever outward: a crease fills, and nothing sinks toward what lies under the skin. */
+  {
+    const ROUND = 4, p = mesh.positions, count = p.length / 3, shut = new PointGrid(Float32Array.from([...closed].flatMap(v => [p[3 * v], p[3 * v + 1], p[3 * v + 2]])), 1);
+    const near = []; for (let v = 0; v < count; v++) if (shut.nearest(p[3 * v], p[3 * v + 1], p[3 * v + 2], ROUND)[0] >= 0) near.push(v);
+    const neighbours = new Map(near.map(v => [v, new Set()]));
+    for (let t = 0; t < mesh.indices.length; t += 3) for (let k = 0; k < 3; k++) { const v = mesh.indices[t + k]; if (neighbours.has(v)) { neighbours.get(v).add(mesh.indices[t + (k + 1) % 3]); neighbours.get(v).add(mesh.indices[t + (k + 2) % 3]); } }
+    for (let pass = 0; pass < 12; pass++) {
+      const normal = vertexNormals(mesh), next = [];
+      for (const v of near) {
+        const middle = [0, 0, 0], around = neighbours.get(v);
+        for (const w of around) for (let c = 0; c < 3; c++) middle[c] += p[3 * w + c] / around.size;
+        const out = (middle[0] - p[3 * v]) * normal[3 * v] + (middle[1] - p[3 * v + 1]) * normal[3 * v + 1] + (middle[2] - p[3 * v + 2]) * normal[3 * v + 2];
+        if (out > 0) next.push([v, middle.map((value, c) => 0.5 * (value - p[3 * v + c]))]);
+      }
+      for (const [v, move] of next) for (let c = 0; c < 3; c++) p[3 * v + c] += move[c];
+    }
+  }
+  return `${count} vertices of her upper arms and chest brought together, by up to ${furthest.toFixed(2)} cm`;
+}
+
 /**
  * structures: the source body, [{ name, layer, positions, indices }], positions changed in place; its 'Skin' takes the
  *   new skin's positions and indices
@@ -420,6 +469,7 @@ export function transfer(structures, folder, sourceTargets, targets, { height = 
       fresh[3 * v + c] = there.positions[3 * v + c] + (1 - own[v]) * correction + own[v] * (end ? end[c] / end[3] : correction);
     }
   }
+  log(`armpits closed: ${closeArmpits({ positions: fresh, indices: body.indices }, posed.segment)}`);
   log(`lips closed: ${closeLips({ positions: fresh, indices: body.indices }, body.weights, lining)}`);
 
   /* ---------- the pairs: each vertex's place on the source skin, to its place on the new skin ---------- */

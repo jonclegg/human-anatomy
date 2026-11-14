@@ -306,8 +306,8 @@ export function tuckUnder(skin, parts, gap) {
 const RINGS = 131, SPOKES = 240;                 // the sheet's grid (SKIN_GRID in site/index.html): vertex = ring * SPOKES + spoke
 const RX = 3.0, CY = 1.25, FRONT = 5.25, BACK = 4.2;   // the vulva's outline on the layout (cm): half an ellipse forward to the top of the mons, half back to just behind the fourchette
 const OVER = 2;                                  // cm from the sheet within which her skin, facing as the vulva does, is the skin over it
-const CLEFT_HALF = 0.5, CLEFT_DEPTH = 0.5;       // the cleft between the outer lips: half its width and its depth (cm), a rounded groove
-const CLEFT_BACK = -2.6, CLEFT_FRONT = 4.6, CLEFT_ENDS = 1;   // where it runs on the layout, from the fourchette to the front of the lips, and over how far it shallows at each end
+const CLEFT_HALF = 0.3, CLEFT_DEPTH = 0.35;      // the cleft between the outer lips: half its width and its depth (cm), a rounded groove
+const CLEFT_BACK = -2.6, CLEFT_FRONT = 4.2, CLEFT_ENDS = 1.6;   // where it runs on the layout, from the fourchette to the front of the lips, and over how far it shallows at each end
 const MONS_FROM = 3.9;                           // forward of this on the layout the skin is the mons
 export function vulvaSkin(skin, detail, outward, log = console.log) {
   const sheet = detail.skin, count = sheet.positions.length / 3;

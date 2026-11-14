@@ -15,13 +15,13 @@ import { readParts, readLayer } from './built.mjs';
 import { transfer, keepUnder } from './transfer.mjs';
 import { readOrgan, FRAMES } from './hra.mjs';
 import { register, warpMesh, startMap } from './register.mjs';
-import { pushOutOf, obstacleOf, centreOf } from './clearance.mjs';
+import { pushOutOf, obstacleOf, centreOf, InsideTest } from './clearance.mjs';
 import { Assembly } from './assemble.mjs';
 import { readGarment, wear, writeClothing } from './garments.mjs';
 import { bounds, soften } from './mesh.mjs';
 import { PointGrid } from './fit.mjs';
 import { LAYERS } from './systems.mjs';
-import { readDetail, detailParts, meetOpening, joinToBladder, vulvaSkin, seat, layoutForward, pressTogether, tuckUnder, partCentre } from './pelvic-detail.mjs';
+import { readDetail, detailParts, meetOpening, joinToBladder, vulvaSkin, seat, layoutForward, pressTogether, tuckUnder, hangUnderArch, partCentre } from './pelvic-detail.mjs';
 import { breastSurface, breastFat } from './breast-surface.mjs';
 
 const [root, reproductive] = process.argv.slice(2);
@@ -29,6 +29,9 @@ if (!root || !reproductive) throw new Error('usage: node scripts/body/build-fema
 const HEIGHT = 163;   // cm
 /* the MakeHuman shape nearest the man, and hers: its young Caucasian female shape plus half its lowest-weight one */
 const HIS_SHAPE = { 'caucasian-male-young': 1 };
+/* MakeHuman's woman has small hands and feet, and in his pose they came out at 8.6% and 11.9% of her height (a hand of
+   14 cm and a foot of 19): a woman's are about 10.7% and 14.7% (Gordon 1989, ANSUR). Each is drawn this much larger. */
+const HANDS_AND_FEET = { hand: 1.22, foot: 1.22 };
 const HER_SHAPE = { 'caucasian-female-young': 1, 'universal-female-young-averagemuscle-minweight': 0.5 };
 
 /* ---------- His body, without what is his alone ---------- */
@@ -79,7 +82,7 @@ const shared = structures.filter(structure => structure.layer === 'organs' && SH
 const teeth = structures.filter(structure => structure.layer === 'skeleton' && /\btooth$/i.test(structure.name)), hisTeeth = teeth.map(structure => structure.positions.slice());
 if (!outside.length) throw new Error('he has no penis or scrotum to tell his skin over them by');
 const genitals = new PointGrid(Float32Array.from(outside), 1);
-const { segment, lining, breast, rest } = transfer(structures, `${root}/MakeHuman (CC0)`, HIS_SHAPE, HER_SHAPE, { height: HEIGHT, apart: (x, y, z) => genitals.nearest(x, y, z, 2)[0] >= 0 });
+const { segment, lining, breast, rest } = transfer(structures, `${root}/MakeHuman (CC0)`, HIS_SHAPE, HER_SHAPE, { height: HEIGHT, sizes: HANDS_AND_FEET, apart: (x, y, z) => genitals.nearest(x, y, z, 2)[0] >= 0 });
 {
   const place = likeness(his, shared.map(structure => structure.positions));
   shared.forEach((structure, which) => { for (let k = 0; k < his[which].length; k += 3) structure.positions.set(place(his[which][k], his[which][k + 1], his[which][k + 2]), k); });
@@ -167,11 +170,26 @@ const detail = readDetail(toHer);
   const halfWidth = widths.sort((a, b) => a - b)[widths.length >> 1];
   pressTogether(detail, halfWidth);
   console.log(`  her crotch is ${(2 * halfWidth).toFixed(1)} cm wide between her thighs: the vulva's outer lips pressed together to fit`);
+  console.log(`  the crura of her clitoris let down under her pubic arch by up to ${hangUnderArch(detail, [...hers('Left hip bone'), ...hers('Right hip bone')]).toFixed(1)} cm`);
   console.log(`  the vulva seated on her crotch: turned ${seated.turn.toFixed(0)} degrees in her midplane, its clitoris moved ${seated.moved[0].toFixed(1)} cm, to ${(glansZ - anus[2]).toFixed(1)} cm in front of her anus`);
 }
 {
   const correct = meetOpening(added, detail, [...hers('Left hip bone'), ...hers('Right hip bone'), ...hers('Sacrum')]);
   for (const mesh of added) mesh.positions = warpMesh(mesh, correct).positions;
+}
+/* The scan's right ovary, tube and ligaments lie further from her midline than its left ones, and in her pelvis that
+   put them into the bone and muscle of its wall: the wider side is drawn in to the width of the other, beyond two
+   centimetres from the midline. And the scan is of a woman of 59, whose ovaries had shrunk to a third of their volume:
+   each is brought to a young woman's size (about 3 cm long) about its own middle. */
+{
+  const KEEP = 2, YOUNG = 1.5, inPelvis = added.filter(mesh => mesh.group !== 'breast');
+  const ovary = side => { const found = added.filter(mesh => mesh.name === `${side} ovary`); if (found.length !== 1) throw new Error(`expected one ${side.toLowerCase()} ovary, found ${found.length}`); return found[0]; };
+  const out = { 1: centreOf([ovary('Left')])[0], [-1]: -centreOf([ovary('Right')])[0] }, wide = out[1] > out[-1] ? 1 : -1;
+  if (out[-wide] <= KEEP) throw new Error('an ovary lies at her midline');
+  const rate = (out[-wide] - KEEP) / (out[wide] - KEEP);
+  for (const mesh of inPelvis) for (let k = 0; k < mesh.positions.length; k += 3) { const from = wide * mesh.positions[k]; if (from > KEEP) mesh.positions[k] = wide * (KEEP + (from - KEEP) * rate); }
+  for (const side of ['Left', 'Right']) { const mesh = ovary(side), middle = centreOf([mesh]); for (let k = 0; k < mesh.positions.length; k++) mesh.positions[k] = middle[k % 3] + YOUNG * (mesh.positions[k] - middle[k % 3]); }
+  console.log(`  her ${wide > 0 ? 'left' : 'right'} ovary, tube and ligaments drawn in from ${out[wide].toFixed(1)} to ${out[-wide].toFixed(1)} cm from her midline; her ovaries sized x${YOUNG}`);
 }
 /* her bladder, rectum and bowel are his, and he had no uterus: where they would pass through hers, they give way,
    and so do the muscles of his pelvic floor, which had no opening for a vagina */
@@ -198,6 +216,54 @@ const PELVIC_FLOOR = /levator ani|pubococcygeus|puborectalis|iliococcygeus|anal 
     while (lift < 5 && inside(lift) > 0) lift += 0.25;
     for (const { positions } of shared) for (let k = 1; k < positions.length; k += 3) positions[k] += lift;
     console.log(`  her small bowel lifted ${lift} cm clear of her uterus`);
+  }
+  /* His sigmoid colon loops through the place her uterus has, and his rectum stands where her cervix and vagina come
+     back: her organs lay inside them, in the bowel's own hollow, where no point of the bowel's wall is inside hers and
+     nothing was pushed. The bowel there makes way as a whole: all of it within reach of her organs moves one way, most
+     at their middle and less with distance to nothing at twice the reach, by as little as leaves none of them inside it. */
+  {
+    const within = added.filter(mesh => /uterus|uterine segment|cervi|vagina|ovary|uterine tube/i.test(mesh.name) && !/ligament|pouch/i.test(mesh.name));
+    const points = within.flatMap(mesh => Array.from({ length: mesh.positions.length / 3 }, (_, v) => Array.from(mesh.positions.subarray(3 * v, 3 * v + 3)))), centre = centreOf(within);
+    const makeWay = (name, direction, reach, most) => {
+      const bowel = hers(name), length = Math.hypot(...direction), way = direction.map(value => value / length);
+      const share = (x, y, z) => { const t = Math.min(1, Math.max(0, Math.hypot(x - centre[0], y - centre[1], z - centre[2]) / reach - 1)); return 1 - t * t * (3 - 2 * t); };
+      const moved = (mesh, by) => { const positions = mesh.positions.slice(); for (let k = 0; k < positions.length; k += 3) { const w = by * share(positions[k], positions[k + 1], positions[k + 2]); for (let c = 0; c < 3; c++) positions[k + c] += w * way[c]; } return positions; };
+      const inside = by => bowel.reduce((count, mesh) => { const test = new InsideTest({ positions: moved(mesh, by), indices: mesh.indices }, 0.25); return count + points.filter(p => test.inside(...p) === true).length; }, 0);
+      const before = inside(0);
+      let by = 0;
+      while (by < most && inside(by) > 0) by += 0.25;
+      if (inside(by) > 0) throw new Error(`her ${name} cannot make way for her uterus within ${most} cm`);
+      if (by > 0) by += 0.5;   // and a little clear of them
+      for (const mesh of bowel) mesh.positions.set(moved(mesh, by));
+      console.log(`  her ${name.toLowerCase()} makes way for her uterus and ovaries: ${before} of their points lay inside it; moved ${by} cm`);
+    };
+    makeWay('Descending colon', [0.3, 1, 0.5], 7, 10);   // up, forward and to its own side: her spine and sacrum are behind it
+    /* The rectum has no such room: her sacrum is behind it. It is flattened, as a rectum is behind a vagina: at each
+       height its depth front to back is fitted between the front of her sacrum and coccyx and the back of her vagina
+       and cervix, and never under THIN cm. */
+    {
+      const THIN = 0.8, GAP = 0.3, STEP = 1, rectum = hers('Rectum'), spine = structures.filter(structure => structure.layer === 'skeleton' && /^Sacrum$|coccy/i.test(structure.name)), levels = new Map();
+      const level = y => { const key = Math.round(y / STEP); let had = levels.get(key); if (!had) levels.set(key, had = { back: -Infinity, front: Infinity, from: Infinity, to: -Infinity }); return had; };
+      for (const bone of spine) for (let k = 0; k < bone.positions.length; k += 3) if (Math.abs(bone.positions[k]) < 2.5) { const at = level(bone.positions[k + 1]); at.back = Math.max(at.back, bone.positions[k + 2]); }
+      for (const p of points) if (Math.abs(p[0]) < 3) { const at = level(p[1]); at.front = Math.min(at.front, p[2]); }
+      for (const mesh of rectum) for (let k = 0; k < mesh.positions.length; k += 3) { const at = level(mesh.positions[k + 1]); at.from = Math.min(at.from, mesh.positions[k + 2]); at.to = Math.max(at.to, mesh.positions[k + 2]); }
+      /* at each level: z goes from [from, to] onto [low, high] */
+      const fit = new Map();
+      for (const [key, at] of levels) {
+        if (at.from === Infinity) continue;
+        const high = Math.min(at.to, at.front - GAP), low = Math.min(Math.max(at.from, at.back + GAP), high - THIN);
+        fit.set(key, { scale: Math.min(1, (high - low) / Math.max(at.to - at.from, THIN)), low, from: at.from, to: at.to });
+      }
+      const keys = [...fit.keys()].sort((a, b) => a - b);
+      let flattened = 0;
+      for (const mesh of rectum) for (let k = 0; k < mesh.positions.length; k += 3) {
+        const place = mesh.positions[k + 1] / STEP, below = Math.max(keys[0], Math.min(keys.at(-1), Math.floor(place))), above = Math.min(keys.at(-1), below + 1), t = Math.min(1, Math.max(0, place - below));
+        const one = fit.get(below), two = fit.get(above), z = mesh.positions[k + 2], onto = level => level.low + (Math.min(level.to, Math.max(level.from, z)) - level.from) * level.scale, zOne = onto(one), zTwo = onto(two), moved = zOne + (zTwo - zOne) * t;
+        flattened = Math.max(flattened, Math.abs(moved - z));
+        mesh.positions[k + 2] = moved;
+      }
+      console.log(`  her rectum flattened between her sacrum and her vagina: its wall moved up to ${flattened.toFixed(1)} cm`);
+    }
   }
   let cleared = 0;
   for (const structure of structures) {

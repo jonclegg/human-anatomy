@@ -250,14 +250,16 @@ export function poseMakeHuman(body, target, log = console.log) {
     ['shin' + side]: ['thigh' + side, `lowerleg01.${side}`], ['lowerShin' + side]: ['thigh' + side, `lowerleg01.${side}`],
     ['foot' + side]: ['lowerShin' + side, `foot.${side}`],
   });
-  const poseOther = other => {
+  /* sizes: { hand, foot }, how many times larger than in this pose the other shape's hands and feet are drawn, each
+     about its own wrist or ankle (MakeHuman's woman has a child's hands and feet) */
+  const poseOther = (other, sizes = {}) => {
     /* the trunk's depth and curve are given height by height: the other shape's trunk is read at the matching height */
     const span = body => [trunkMap(scale(add(body.bones['upperleg01.L'].head, body.bones['upperleg01.R'].head), 0.5))[1], trunkMap(body.bones.neck01.head)[1]];
     const [myHips, myNeck] = span({ bones }), [theirHips, theirNeck] = span(other);
     const theirs = { trunk: p => { const q = trunkMap(p), [, a, b] = rowAt(myHips + (q[1] - theirHips) * (myNeck - myHips) / (theirNeck - theirHips)); return [q[0], q[1], a * q[2] + b]; } };
     for (const [name, [parent, bone]] of Object.entries(JOINT)) {
       const mine = bones[bone].head, joint = other.bones[bone].head, map = maps[name], parentMap = parent === 'trunk' ? bent : maps[parent];
-      const origin = map([0, 0, 0]), columns = [[1, 0, 0], [0, 1, 0], [0, 0, 1]].map(axis => sub(map(axis), origin));
+      const size = sizes[name.slice(0, -1)] ?? 1, origin = map([0, 0, 0]), columns = [[1, 0, 0], [0, 1, 0], [0, 0, 1]].map(axis => scale(sub(map(axis), origin), size));
       const base = add(theirs[parent](joint), sub(map(mine), parentMap(mine)));
       theirs[name] = p => { const d = sub(p, joint); return [0, 1, 2].map(c => base[c] + columns[0][c] * d[0] + columns[1][c] * d[1] + columns[2][c] * d[2]); };
     }

@@ -443,17 +443,18 @@ function closeArmpits(mesh, segment) {
  *   new skin's positions and indices
  * folder: the MakeHuman files; sourceTargets: the morph targets nearest the source body; targets: the new body's
  * apart(x, y, z): true where the source skin covers something the new body has not (see drawOnto)
+ * sizes: { hand, foot }, how many times larger the new body's hands and feet are drawn than the pose alone gives (poseOther)
  * Returns { segment: each new skin vertex's body segment, lining: 1 where it lines the mouth or an eye socket, breast: its
  *   share of the breast (0 to 1), rest: the new body's MakeHuman shape before it was posed (readMakeHuman) }
  */
-export function transfer(structures, folder, sourceTargets, targets, { height = null, apart = () => false, log = console.log } = {}) {
+export function transfer(structures, folder, sourceTargets, targets, { height = null, apart = () => false, sizes = {}, log = console.log } = {}) {
   const { named, skin, target, like, posed, lining, onSkin } = layMakeHumanOnto(structures, folder, sourceTargets, log, { apart });
   const body = readMakeHuman(folder, targets);
   /* The new skin: his own skin, changed by what separates the two MakeHuman shapes in this pose, so the pose's own
      flaws (a twisted forearm, a trunk a little too narrow), which both shapes share, cancel. The head, hands and feet
      are MakeHuman's own: his face would stay his under the change, and his fingers were not drawn onto. There, only
      the average of that correction around the neck, wrist or ankle is kept, so they sit right on the body. */
-  const there = posed.poseOther(body), fresh = new Float32Array(there.positions.length);
+  const there = posed.poseOther(body, sizes), fresh = new Float32Array(there.positions.length);
   const own = ownShare(body, posed.segment);
   const ends = {};
   for (let v = 0; v < body.count; v++) {
@@ -471,6 +472,19 @@ export function transfer(structures, folder, sourceTargets, targets, { height = 
   }
   log(`armpits closed: ${closeArmpits({ positions: fresh, indices: body.indices }, posed.segment)}`);
   log(`lips closed: ${closeLips({ positions: fresh, indices: body.indices }, body.weights, lining)}`);
+  /* MakeHuman's mouth is a pocket nine centimetres deep, drawn for a mouth that opens wide: posed on this head it ran
+     back through the first neck vertebrae, up through the palate and down through the chin. Behind closed lips it is
+     made shallow: the lining of the mouth (not of the eye sockets, which lie above it) comes forward to SHALLOW of its
+     depth behind the lips, and half as far above and below the lip line. */
+  {
+    const SHALLOW = 0.3, eyes = there.place('eye.L', body.bones['eye.L'].head)[1], mouth = [];
+    for (let v = 0; v < body.count; v++) if (lining[v] && posed.segment[v] === 'head' && fresh[3 * v + 1] < eyes - 2) mouth.push(v);
+    if (!mouth.length) throw new Error('no lining of the mouth found');
+    const front = mouth.reduce((most, v) => Math.max(most, fresh[3 * v + 2]), -Infinity), atLips = mouth.filter(v => fresh[3 * v + 2] > front - 0.5), line = atLips.reduce((sum, v) => sum + fresh[3 * v + 1], 0) / atLips.length;
+    let deepest = Infinity;
+    for (const v of mouth) { deepest = Math.min(deepest, fresh[3 * v + 2]); fresh[3 * v + 2] = front - (front - fresh[3 * v + 2]) * SHALLOW; fresh[3 * v + 1] = line + (fresh[3 * v + 1] - line) * 0.5; }
+    log(`mouth made shallow: ${mouth.length} lining vertices, from ${(front - deepest).toFixed(1)} to ${((front - deepest) * SHALLOW).toFixed(1)} cm deep`);
+  }
 
   /* ---------- the pairs: each vertex's place on the source skin, to its place on the new skin ---------- */
   const from = [], to = [];
@@ -565,9 +579,11 @@ export function transfer(structures, folder, sourceTargets, targets, { height = 
   }
   log(`kept under the skin: ${keepUnder(skin, structures.filter(structure => structure !== skin && !isGlobe(structure)), { lining, thin: digits })}`);
   if (height) {
-    const factor = height / fresh.reduce((top, value, k) => (k % 3 === 1 ? Math.max(top, value) : top), 0);
-    for (const structure of structures) for (let k = 0; k < structure.positions.length; k++) structure.positions[k] *= factor;
-    log(`scaled by ${factor.toFixed(3)} to stand ${height} cm tall`);
+    /* standing on the floor: the new skin's soles came out a few millimetres under it */
+    const top = fresh.reduce((most, value, k) => (k % 3 === 1 ? Math.max(most, value) : most), -Infinity), sole = fresh.reduce((least, value, k) => (k % 3 === 1 ? Math.min(least, value) : least), Infinity);
+    const factor = height / (top - sole);
+    for (const structure of structures) for (let k = 0; k < structure.positions.length; k++) structure.positions[k] = (k % 3 === 1 ? structure.positions[k] - sole : structure.positions[k]) * factor;
+    log(`raised ${(-sole).toFixed(2)} cm onto the floor and scaled by ${factor.toFixed(3)} to stand ${height} cm tall`);
   }
   return { segment: posed.segment, lining, breast, rest: body };
 }

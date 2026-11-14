@@ -174,6 +174,31 @@ export function pressTogether(detail, halfWidth) {
   }
 }
 
+/** The crura of the clitoris run back along the pubic arch, each fixed under the edge of its ischiopubic ramus, with
+ *  the ischiocavernosus over it. Seated with the vulva they ran straight out to the side and rose, across the arch:
+ *  2 cm above the bone's edge by its outer end, and into the bone. Each is let down to hang under the edge of her own
+ *  ramus: at each distance from her midline, by what its top stands above GAP cm under the lowest of her hip bone
+ *  beside it; never raised, and not at all at its inner end, where it joins the body of the clitoris. bones: her hip
+ *  bones. Returns the most any part was let down (cm). */
+export function hangUnderArch(detail, bones) {
+  const GAP = 0.3, STEP = 0.5, BESIDE = 1, parts = [detail.crura, detail.ischiocavernosus];
+  const crura = detail.crura.positions, bins = new Map();
+  for (let k = 0; k < crura.length; k += 3) { const bin = Math.round(Math.abs(crura[k]) / STEP), had = bins.get(bin) || { top: -Infinity, back: Infinity, front: -Infinity }; had.top = Math.max(had.top, crura[k + 1]); had.back = Math.min(had.back, crura[k + 2]); had.front = Math.max(had.front, crura[k + 2]); bins.set(bin, had); }
+  for (const [bin, crus] of bins) {
+    let edge = Infinity;
+    for (const bone of bones) for (let k = 0; k < bone.positions.length; k += 3) if (Math.abs(Math.abs(bone.positions[k]) - bin * STEP) <= STEP && bone.positions[k + 2] > crus.back - BESIDE && bone.positions[k + 2] < crus.front + BESIDE) edge = Math.min(edge, bone.positions[k + 1]);
+    crus.down = edge === Infinity ? 0 : Math.max(0, crus.top - (edge - GAP));
+  }
+  /* evened along the crus, and never more at one place than further out, so it runs down and back without a kink */
+  const order = [...bins.keys()].sort((a, b) => a - b), down = order.map(bin => bins.get(bin).down);
+  down[0] = 0;
+  for (let i = 1; i < down.length; i++) down[i] = Math.max(down[i], down[i - 1]);
+  for (let pass = 0; pass < 3; pass++) for (let i = 1; i + 1 < down.length; i++) down[i] = (down[i - 1] + 2 * down[i] + down[i + 1]) / 4;
+  const at = x => { const place = Math.abs(x) / STEP - order[0], i = Math.min(down.length - 2, Math.max(0, Math.floor(place))), t = Math.min(1, Math.max(0, place - i)); return down.length < 2 ? down[0] : down[i] + (down[i + 1] - down[i]) * t; };
+  for (const mesh of parts) for (let k = 0; k < mesh.positions.length; k += 3) mesh.positions[k + 1] -= at(mesh.positions[k]);
+  return Math.max(...down);
+}
+
 /* the urethra's upper end is drawn up to the bladder it drains: each point moves by its share of the way up the tube.
    The bladder's neck is the middle of its lowest part, and the urethra's end the middle of its highest: each point
    counts the more the nearer it is to the very bottom (or top), so neither middle jumps when one point of a coarse

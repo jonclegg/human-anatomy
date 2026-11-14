@@ -29,7 +29,15 @@ const assembly = new Assembly('male', HEIGHT);
 const NOT_HIS = new RegExp(['Superficial perineal muscle', '(Superior oblique|Vertical intermediate|Inferior oblique) part of left longus colli', 'Celiac artery',
   'Trunk of superior mesenteric artery', 'Trunk of (left|right) renal artery', 'Marginal colic artery', 'Ileal artery', 'Parenchyma of pancreas',
   'Caudate lobe tributary of left hepatic biliary tree'].map(name => `^${name}$`).join('|'));
-const his = listStructures(root).map(structure => ({ ...structure, ...classify(structure) })).filter(structure => !NOT_HIS.test(structure.name));
+/* And some of its files are not what their names say (found by measuring where each part lies, 2026-11): "Hepatovenous segment IX", the same mesh as one
+   piece of segment VIII; a "Left fibular vein" in the front of the thigh; the "calcaneal branches of posterior tibial
+   artery" at the hip (Z-Anatomy has them at the heel); the "superior epigastric veins" in the place of the superficial
+   ones, a hand's breadth below the arteries they run with. And the left middle pharyngeal constrictor is named Right.
+   (The whole "Descending aorta" is also drawn again over its thoracic and abdominal parts; the circulation story traces
+   blood along it by that name, so it stays.) */
+const NOT_HIS_FILE = new Set(['FJ1858', 'FJ2190', 'FJ2091', 'FJ2195', 'FJ3530', 'FJ3615']);
+const his = listStructures(root).map(structure => ({ ...structure, ...classify(structure) })).filter(structure => !NOT_HIS.test(structure.name) && !NOT_HIS_FILE.has(structure.id));
+for (const structure of his) if (structure.id === 'FJ2742') { if (structure.name !== 'Right middle pharyngeal constrictor') throw new Error(`FJ2742 is ${structure.name}`); structure.name = 'Left middle pharyngeal constrictor'; }
 const everything = [];   // { info, mesh }, in the order they are added
 for (const structure of his) {
   if (structure.name === 'Intervertebral disk') structure.name = 'Intervertebral disk of twelfth thoracic vertebra';   // unnamed in the source: the one between T12 and L1
@@ -40,7 +48,10 @@ for (const structure of his) {
    name (he has the plantar interossei one by one, and the rotators by region), and its segmental bronchi are thick
    tubes over the bronchial trees he has in detail. */
 const REPEATS_HIS = /^Left plantar interossei muscles$|^Left rotatores$|segmental bronchus of (left|right) lung( B[IVX+]+)?$/;
-const additions = (await zanatomyAdditions(`${root}/Whole Body - Z-Anatomy (Blender)/export`, his)).filter(structure => !REPEATS_HIS.test(structure.name));
+/* and three of its nerves do not lie where they run on these bones: the saphenous nerve inside the shaft of the tibia,
+   its branches to the skin of the leg up at the hip, and the meningeal branch of the maxillary nerve outside the skull */
+const MISPLACED = /^(Left|Right) (saphenous nerve|medial crural cutaneous branches of saphenous nerve|meningeal branch of maxillary nerve)$/;
+const additions = (await zanatomyAdditions(`${root}/Whole Body - Z-Anatomy (Blender)/export`, his)).filter(structure => !REPEATS_HIS.test(structure.name) && !MISPLACED.test(structure.name));
 /* Z-Anatomy's left side is its right side mirrored, and the test for what he already has sometimes keeps one side
    only (a chin muscle, a bursa): the missing twin is the kept one, mirrored */
 {

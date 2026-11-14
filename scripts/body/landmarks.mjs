@@ -102,13 +102,15 @@ export function handAndFootPairs(named, target, bones, marks, place) {
     const start = pairs.length;
     pairs.push([wrist, mh('wrist')]);
     const thumb = [`${word} first metacarpal bone`, `Proximal phalanx of ${lower} thumb`, `Distal phalanx of ${lower} thumb`];
-    thumb.forEach((name, k) => pairs.push([ends(name, wrist)[0], mh(`finger1-${k + 1}`)]));
-    pairs.push([ends(thumb[2], wrist)[1], mh('finger1-3', 'tail')]);
+    /* A finger's base and tip go onto MakeHuman's; the two joints between fall along its finger as far along as they
+       are along the bones' (as for the toes, below). MakeHuman's own joints cut a finger in three near-equal lengths,
+       and matched joint to joint the last bone of each of her fingers came out as long as the first, which is over
+       twice its length. */
+    const along = (chain, rig) => { const joints = [...chain.map(name => ends(name, wrist)[0]), ends(chain[2], wrist)[1]], finger = rig.map(name => mh(name)).concat([mh(rig[2], 'tail')]); joints.forEach((joint, k) => pairs.push([joint, asFarAlong(joints, k, finger)])); };
+    along(thumb, [1, 2, 3].map(k => `finger1-${k}`));
     for (let n = 2; n <= 5; n++) {
       pairs.push([ends(`${word} ${ORDINAL[n - 1]} metacarpal bone`, wrist)[0], mh(`metacarpal${n - 1}`)]);
-      const chain = ['Proximal', 'Middle', 'Distal'].map(level => `${level} phalanx of ${lower} ${FINGER[n - 1]}`);
-      chain.forEach((name, k) => pairs.push([ends(name, wrist)[0], mh(`finger${n}-${k + 1}`)]));
-      pairs.push([ends(chain[2], wrist)[1], mh(`finger${n}-3`, 'tail')]);
+      along(['Proximal', 'Middle', 'Distal'].map(level => `${level} phalanx of ${lower} ${FINGER[n - 1]}`), [1, 2, 3].map(k => `finger${n}-${k}`));
     }
     for (let k = start; k < pairs.length; k++) pairs[k].push('hand' + side);
     const footStart = pairs.length;

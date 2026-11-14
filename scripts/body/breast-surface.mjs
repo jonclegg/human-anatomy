@@ -3,7 +3,7 @@
 // caught their shape in the first place. These are built on her own skin, under the tip of her breast, to textbook
 // sizes for a young adult (areola about 3.5 cm across, nipple about 1 cm across and 0.6 cm high, ten or so tubercles,
 // a dozen sinuses under the nipple).
-const AREOLA_RADIUS = 1.75, NIPPLE_RADIUS = 0.5, NIPPLE_HEIGHT = 0.6, UNDER_SKIN = 0.2, AROUND = 32;
+const AREOLA_RADIUS = 1.75, NIPPLE_RADIUS = 0.5, NIPPLE_HEIGHT = 0.6, UNDER_SKIN = 0.3, AROUND = 32;   // under her skin by more than the page's outline of a part stands outside it
 const sub = (a, b) => [a[0] - b[0], a[1] - b[1], a[2] - b[2]], dot = (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
 const cross = (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
 const unit = a => { const length = Math.hypot(...a); return a.map(value => value / length); };

@@ -389,6 +389,29 @@ export function layMakeHumanOnto(structures, folder, sourceTargets, log = consol
 }
 const HAND_OR_FOOT = /^(hand|foot)/;
 
+/* The forearm is turned about its length toward the hand, the upper arm is not, and where MakeHuman's skin passes
+   from one to the other at the elbow the two do not quite meet: a step of half a centimetre ran round each of her
+   arms there, the forearm starting thicker than the arm above it. The skin that belongs to both (by MakeHuman's own
+   skin weights), and two rings of vertices either side, is evened: each vertex toward the middle of its neighbours.
+   Returns how many vertices and the furthest any moved (cm). */
+function evenElbows(mesh, weights) {
+  const count = mesh.positions.length / 3, upper = new Float32Array(count), lower = new Float32Array(count);
+  for (const [bone, list] of Object.entries(weights)) { const into = /^upperarm/.test(bone) ? upper : /^lowerarm/.test(bone) ? lower : null; if (into) for (const [vertex, weight] of list) into[vertex] += weight; }
+  const neighbours = Array.from({ length: count }, () => new Set());
+  for (let t = 0; t < mesh.indices.length; t += 3) for (let k = 0; k < 3; k++) { neighbours[mesh.indices[t + k]].add(mesh.indices[t + (k + 1) % 3]); neighbours[mesh.indices[t + k]].add(mesh.indices[t + (k + 2) % 3]); }
+  let chosen = new Set(); for (let v = 0; v < count; v++) if (upper[v] > 0.05 && lower[v] > 0.05) chosen.add(v);
+  if (!chosen.size) throw new Error('no skin shared by the upper arm and the forearm');
+  for (let ring = 0; ring < 2; ring++) { const wider = new Set(chosen); for (const v of chosen) for (const w of neighbours[v]) wider.add(w); chosen = wider; }
+  const p = mesh.positions, was = p.slice();
+  for (let pass = 0; pass < 8; pass++) {
+    const next = [];
+    for (const v of chosen) { const middle = [0, 0, 0]; for (const w of neighbours[v]) for (let c = 0; c < 3; c++) middle[c] += p[3 * w + c] / neighbours[v].size; next.push([v, middle]); }
+    for (const [v, middle] of next) for (let c = 0; c < 3; c++) p[3 * v + c] += 0.5 * (middle[c] - p[3 * v + c]);
+  }
+  let furthest = 0; for (const v of chosen) furthest = Math.max(furthest, Math.hypot(p[3 * v] - was[3 * v], p[3 * v + 1] - was[3 * v + 1], p[3 * v + 2] - was[3 * v + 2]));
+  return `${chosen.size} vertices, by up to ${furthest.toFixed(2)} cm`;
+}
+
 /* MakeHuman's arms are modelled held out, and brought down to a body's side the skin of the armpit folds into a slit:
    a pocket under a centimetre wide running a hand's breadth up into the shoulder, its mouth a notch seen from behind.
    On the source body the slit is drawn shut onto his skin, but the new body's is its own shape and keeps it. An arm
@@ -471,6 +494,7 @@ export function transfer(structures, folder, sourceTargets, targets, { height = 
     }
   }
   log(`armpits closed: ${closeArmpits({ positions: fresh, indices: body.indices }, posed.segment)}`);
+  log(`elbows evened: ${evenElbows({ positions: fresh, indices: body.indices }, body.weights)}`);
   log(`lips closed: ${closeLips({ positions: fresh, indices: body.indices }, body.weights, lining)}`);
   /* MakeHuman's mouth is a pocket nine centimetres deep, drawn for a mouth that opens wide: posed on this head it ran
      back through the first neck vertebrae, up through the palate and down through the chin. Behind closed lips it is

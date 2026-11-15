@@ -1,4 +1,5 @@
-// Takes the README's pictures (docs/*.png) and its walkthrough (docs/demo.gif) from the site as it is served.
+// Takes the README's pictures (docs/*.png), its walkthrough (docs/demo.gif) and the picture a shared link shows
+// (site/body/img/share.png, 1200 x 630) from the site as it is served.
 // Usage: node scripts/body/readme-shots.mjs [stills|demo]     (needs the site served: npm run serve:body; the demo needs ffmpeg)
 import { chromium, devices } from '@playwright/test';
 import { execFileSync } from 'node:child_process';
@@ -37,6 +38,12 @@ if (only !== 'demo') {
     await page.screenshot({ path: `${docs}${name}.png` });
     await page.close();
   }
+  const shareContext = await browser.newContext({ viewport: { width: 1200, height: 630 } });
+  const share = await shareContext.newPage();
+  await open(share, 'sex=female&closeup=heart');
+  await share.waitForTimeout(1200);
+  await share.screenshot({ path: fileURLToPath(new URL('../../site/body/img/share.png', import.meta.url)) });
+  await shareContext.close();
   const phone = await browser.newContext({ ...devices['Pixel 7'], viewport: { width: 390, height: 664 }, deviceScaleFactor: 2 });
   const page = await phone.newPage();
   await open(page, 'sex=female&closeup=heart');

@@ -2,6 +2,11 @@
 
 Newest first. Each entry: date, PR, what changed for people using the site, and what an operator must do and what it costs.
 
+## 2026-11-14 · Link previews
+
+- **For users:** a link to the site shared in Slack, iMessage, X or LinkedIn now shows a title, a line about it and a picture of the heart close-up, instead of a bare address.
+- **For operators:** deploy `site/body/index.html` and the new `site/body/img/share.png` (as `image/png`); no cost change. `node scripts/body/readme-shots.mjs stills` retakes the picture.
+
 ## 2026-11-14 · A GitHub button in the bar, in place of the line under it ([#2](https://github.com/jonclegg/human-anatomy/pull/2))
 
 - **For users:** the line of small print under the title is gone, so the model gets that height. The bar has a GitHub button, and a gold star beside it opens a note saying the models are a first draft, built with AI, and not perfect. On a phone both sit at the end of the title's line.

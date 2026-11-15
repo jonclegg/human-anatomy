@@ -180,6 +180,22 @@ test.describe('the two bodies', () => {
   });
 });
 
+test.describe('a shared link', () => {
+  test('shows a title, a description and a 1200 x 630 picture of the site', async ({ page, request }) => {
+    await page.goto('/');
+    const meta = async name => page.locator(`head meta[property="${name}"], head meta[name="${name}"]`).getAttribute('content');
+    expect(await meta('og:title')).toContain('Human Anatomy');
+    expect((await meta('og:description')).length).toBeGreaterThan(60);
+    expect(await meta('twitter:card')).toBe('summary_large_image');
+    const image = new URL(await meta('og:image'));
+    expect(image.origin).toBe('https://anatomy.wooten-labs.com');   // absolute: a link preview is fetched from elsewhere
+    const picture = await request.get(image.pathname);
+    expect(picture.headers()['content-type']).toBe('image/png');
+    const bytes = await picture.body();
+    expect([bytes.readUInt32BE(16), bytes.readUInt32BE(20)], 'the PNG is 1200 x 630').toEqual([Number(await meta('og:image:width')), Number(await meta('og:image:height'))]);
+  });
+});
+
 test.describe('a first draft, open to fixes', () => {
   test('the bar links to GitHub and a star beside it says so, without a line of its own, and a part has a link that opens an issue about it', async ({ page }) => {
     const errors = await open(page, 'sex=female&closeup=heart');

@@ -44,6 +44,18 @@ npm run serve:body   # http://127.0.0.1:4174
 npm run test:body
 ```
 
+## What's where
+
+| Path | What it holds |
+|---|---|
+| `site/body/` | The app: `index.html`, `app.mjs`, the part notes, close-ups, stories and motions, plus the built data (`data/`), narration (`audio/`) and close-up pictures (`img/`). |
+| `site/index.html` | The earlier single-page pelvis model. The female build still opens it to generate her vulva and clitoris (`scripts/body/export-pelvic-detail.mjs`). |
+| `scripts/body/` | The build that turns the source models into `site/body/data/`, and its checks: `build-male.mjs`, then `build-female.mjs` ([how to rebuild](docs/how-it-is-made.md)). |
+| `scripts/` (top level) | Builds for the pelvis page (`build-pelvis.mjs`, `build-body-outline.mjs`, `export-standalone.mjs`, with `hra-frame.mjs` for alignment) and the design-review tools. |
+| `tests/body/` | Playwright tests for the app (`npm run test:body`). `tests/body-server.mjs` serves the app (`npm run serve:body`); the other files in `tests/` serve and check the pelvis page. |
+| `design-review/` | The scores and notes from each round of model design review (`scripts/ui-review.mjs`). Screenshots stay local. |
+| `docs/` | How it is made, and the pictures in this README. |
+
 ## Licence
 
 Code and text are [MIT](LICENSE). The 3D data in `site/body/data/` is [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/), because it includes Z-Anatomy. It is derived from:
@@ -52,5 +64,7 @@ Code and text are [MIT](LICENSE). The 3D data in `site/body/data/` is [CC BY-SA 
 - **Human Reference Atlas 3D reference organs** (HuBMAP, NIH; Visible Human Project, U.S. National Library of Medicine; brain from the Allen Institute), CC BY 4.0. Simplified, renamed and aligned.
 - **MakeHuman** base mesh, skeleton, skin weights, shape targets and three garments, CC0.
 - **Z-Anatomy**, CC BY-SA 4.0 (built on BodyParts3D); cranial nerves after Cranial Nerves and Foramina, University of Dundee CAHID, CC BY 4.0. Aligned, simplified and, for the female body, reshaped.
+
+The narration in `site/body/audio/` is spoken by Google's Gemini speech model and the music is made with ElevenLabs (`scripts/body/make-audio.mjs`).
 
 <div align="center"><sub>A <a href="https://wooten-labs.com">Wooten Labs</a> project.</sub></div>

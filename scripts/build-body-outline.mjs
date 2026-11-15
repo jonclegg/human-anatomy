@@ -1,6 +1,6 @@
 // Embeds into site/index.html (the bodyData block) a whole-body outline, so the pelvis can be seen in the body around it:
 // a slim young adult woman built from the MakeHuman base mesh and morph targets (CC0).
-// Usage: node scripts/build-body.mjs <folder with base.obj and the .target files below>
+// Usage: node scripts/build-body-outline.mjs <folder with base.obj and the .target files below>
 //   from https://github.com/makehumancommunity/makehuman/tree/master/makehuman/data (3dobjs/base.obj, targets/macrodetails/)
 //
 // Shape: MakeHuman's default even mix of its three young-female targets, plus half of its minimum-weight target.

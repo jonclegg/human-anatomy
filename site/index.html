@@ -1314,7 +1314,7 @@ async function embeddedGeometry(blockId) {
 addMesh('pelvis', await embeddedGeometry('pelvisData'));
 
 /* The body around it: a slim young woman built from MakeHuman (CC0), fitted around the pelvis, drawn as a fading outline for context.
-   It is not a part (no label, not pickable); scripts/build-body.mjs builds it and cuts away the area the model draws itself. */
+   It is not a part (no label, not pickable); scripts/build-body-outline.mjs builds it and cuts away the area the model draws itself. */
 const bodyMaterial = new THREE.MeshStandardMaterial({ color: '#d8b9a8', roughness: 0.7, metalness: 0, transparent: true, depthWrite: false, clippingPlanes: [cutPlane] });
 bodyMaterial.envMapIntensity = 0.55;
 bodyMaterial.customProgramCacheKey = () => 'wl-body';

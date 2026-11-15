@@ -1,6 +1,6 @@
 // Motions of the chest and abdomen: breathing, the blood's two loops, a meal's journey, the liver's blood and bile, the
 // kidney's blood and urine, the drift of lymph, milk in the breast, and the hormone glands taking their turns. See ../motions.mjs for the format.
-import { smooth, during, chain, light, SPENT, FRESH, AIR, FOOD, URINE, BILE, LYMPH, JUICE } from './shared.mjs';
+import { smooth, during, light, SPENT, FRESH, AIR, FOOD, URINE, BILE, LYMPH, JUICE } from './shared.mjs';
 
 /* ---------- The lungs: one breath ----------
    0.00-0.42 in: the diaphragm flattens, the ribs lift, the lungs fill; 0.42-0.95 out: it all springs back; then a pause */
@@ -51,8 +51,9 @@ export const digestive = {
     const gullet = kit.line(part('esophagus'), { from: kit.end(part('esophagus'), V(0, 1, 0), 1) });
     const stomach = kit.line(part('stomach'), { from: gullet.at(-1), radius: 3 });
     const duodenum = kit.line(part('duodenum'), { from: stomach.at(-1), radius: 1.8 });
-    const coils = chain([...part('digestiveJejunum'), ...part('digestiveIleum')].map(piece => kit.centre(piece)), duodenum.at(-1));
-    const rising = kit.line(part('digestiveAscendingColon'), { from: kit.end(part('digestiveAscendingColon'), down, 2), radius: 3 });
+    const valve = kit.centre(part('digestiveIleocecalJunction'));   // where the small intestine opens into the colon
+    const coils = kit.line([...part('digestiveJejunum'), ...part('digestiveIleum')], { from: duodenum.at(-1), to: valve, radius: 1.5 });
+    const rising = kit.line(part('digestiveAscendingColon'), { from: valve, radius: 3 });
     const across = kit.line(part('digestiveTransverseColon'), { from: rising.at(-1), radius: 3 });
     const falling = kit.line(part('digestiveDescendingColon'), { from: across.at(-1), radius: 3 });
     const rectum = kit.line(part('rectum'), { from: kit.end(part('rectum'), V(0, 1, 0), 1.5), radius: 2.5 });
@@ -85,10 +86,12 @@ export const liver = {
     const right = kit.centre(kit.entry('liverRightLiver')), left = kit.centre(kit.entry('liverLeftLiver'));
     const gallbladder = named(/^Gallbladder$/), store = kit.centre(gallbladder), gut = kit.centre(named(/^Duodenum$/));
     const portal = kit.line(kit.find(/^(Pre-hepatic|Hepatic) portal vein$/), { from: kit.end(kit.find(/^(Pre-hepatic|Hepatic) portal vein$/), V(0, -1, 0), 1), radius: 1.2 });
-    const duct = kit.line(named(/^Common hepatic duct$/), { from: kit.end(named(/^Common hepatic duct$/), up, 0.6) }), cystic = kit.centre(named(/^Cystic duct$/));
+    /* the duct down from the liver, which the cystic duct joins part of the way down: above the join, and below it */
+    const duct = kit.line(named(/^Common hepatic duct$/), { from: kit.end(named(/^Common hepatic duct$/), up, 0.6), radius: 0.5 });
+    const cystic = kit.line(named(/^Cystic duct$/), { to: store, radius: 0.4 }), join = duct.reduce((best, point, k) => (point.distanceTo(cystic[0]) < duct[best].distanceTo(cystic[0]) ? k : best), 0);
     const drain = kit.centre(kit.find(/^(Right|Middle|Left) hepatic vein$/)), out = kit.end(kit.find(/^(Right|Middle|Left) hepatic vein$/), up, 1);
     const curve = points => kit.curve(points).curve;
-    const juice = kit.line(named(/^Pancreatic duct$/), { to: gut, radius: 0.8 });   // from the tail of the pancreas to its head, where the duct meets the bile duct
+    const juice = kit.line(named(/^Pancreatic duct$/), { to: duct.at(-1), radius: 0.5 });   // from the tail of the pancreas to its head, where the duct meets the bile duct
     const opening = kit.points(named(/^Duodenum$/)).reduce((best, point) => (point.distanceTo(juice.at(-1)) < best.distanceTo(juice.at(-1)) ? point : best));   // where both enter the duodenum: its wall nearest the duct's end
     return {
       V, gallbladder, store, liver: kit.find(/^Hepatovenous segment/), ducts: kit.entry('liverHepaticDucts'),
@@ -96,8 +99,8 @@ export const liver = {
         { curve: curve([...portal, kit.centre(named(/^Right portal vein$/)), right]), colour: '#8a63d2', count: 360, size: 0.54, spread: 0.3, speed: () => 0.16 },   // from the gut: rich in food, poor in oxygen
         { curve: curve([kit.centre(named(/^Celiac trunk$/)), kit.centre(named(/^Common hepatic artery$/)), kit.centre(named(/^Hepatic artery proper$/)), left.clone().lerp(right, 0.4)]), colour: FRESH, count: 168, size: 0.42, spread: 0.15, speed: (where, phase, time) => 0.2 + 0.25 * Math.max(0, Math.sin(time * 5)) },   // from the heart, in pulses
         { curve: curve([right, drain, out, out.clone().add(V(0, 3.5, 0))]), colour: SPENT, count: 312, size: 0.54, spread: 0.3, speed: () => 0.18 },
-        { curve: curve([right.clone().lerp(left, 0.3), ...duct, cystic, store]), colour: BILE, count: 144, size: 0.42, spread: 0.12, speed: () => 0.14, shown: phase => 1 - during(phase, 0.58, 1) },
-        { curve: curve([store, cystic, duct.at(-1).clone().lerp(opening, 0.5), opening]), colour: BILE, count: 216, size: 0.48, spread: 0.15, speed: () => 0.45, shown: phase => during(phase, 0.62, 0.98) },
+        { curve: curve([right.clone().lerp(left, 0.3), ...duct.slice(0, join + 1), ...cystic, store]), colour: BILE, count: 144, size: 0.42, spread: 0.12, speed: () => 0.14, shown: phase => 1 - during(phase, 0.58, 1) },
+        { curve: curve([store, ...[...cystic].reverse(), ...duct.slice(join), opening]), colour: BILE, count: 216, size: 0.48, spread: 0.15, speed: () => 0.45, shown: phase => during(phase, 0.62, 0.98) },
         { curve: curve([...juice, opening]), colour: JUICE, count: 192, size: 0.42, spread: 0.1, speed: () => 0.3, shown: phase => during(phase, 0.62, 0.98) },
       ],
     };
@@ -140,22 +143,24 @@ export const kidney = {
   },
 };
 
-/* ---------- The lymph: seeping up from the limbs, node to node, back to the blood ---------- */
+/* ---------- The lymph: up from the limbs and down from the head, beside the veins, back to the blood ----------
+   The model has lymph nodes but no lymph vessels. The deep lymph vessels run beside the veins, so the drops follow the
+   veins, which stand faint in the close-up. The thoracic duct has no vein to follow: its way is set up the front of the spine. */
 export const lymphatic = {
   cycle: 9000, watch: 'how lymph drains',
   build(kit) {
-    const { V } = kit, side = (key, sign) => kit.entry(key).filter(part => Math.sign(part.centre[0]) === sign), middle = (key, sign) => kit.centre(side(key, sign));
-    /* where the lymph rejoins the blood: the meeting of the great veins under each collarbone */
-    const angle = sign => { const neck = side('lymphaticCervicalNodes', sign); return kit.centre(neck.filter(part => /inferior deep lateral cervical/i.test(part.name)).length ? neck.filter(part => /inferior deep lateral cervical/i.test(part.name)) : neck).add(V(-0.5 * sign, -1.5, 0)); };
+    const { V } = kit, down = V(0, -1, 0), side = (name, sign) => kit.find(new RegExp(`^(Left|Right) ${name} vein$`), kit.shown).filter(part => Math.sign(part.centre[0]) === sign);
+    /* where the lymph rejoins the blood: where the vein of the neck meets the vein of the arm, under each collarbone */
+    const angle = sign => kit.end(side('internal jugular', sign), down, 1);
     const lumbar = kit.centre(kit.entry('lymphaticLumbarNodes')), chest = kit.centre(kit.entry('lymphaticThoracicNodes'));
     const duct = [lumbar, V(0.4, (lumbar.y + chest.y) / 2, lumbar.z), V(0.8, chest.y + 4, lumbar.z + 1), angle(1)];   // the thoracic duct, up the front of the spine to the left
-    const curve = points => kit.curve(points).curve, stream = (points, count) => ({ curve: curve(points), colour: LYMPH, count, size: 1.4, spread: 0.5, speed: () => 0.07 });
+    const curve = points => kit.curve(points).curve, stream = (points, count) => ({ curve: curve(points), colour: LYMPH, count, size: 0.5, spread: 0.2, speed: () => 0.07 });
     return {
       nodes: kit.own.filter(part => /node/i.test(part.name)), height: kit.height,
       streams: [
-        ...[1, -1].map(sign => stream([middle('lymphaticPoplitealNodes', sign), middle('lymphaticInguinalNodes', sign), middle('lymphaticPelvicNodes', sign), ...duct], 150)),
-        ...[1, -1].map(sign => stream([middle('lymphaticCubitalNodes', sign), middle('lymphaticAxillaryNodes', sign), angle(sign)], 70)),
-        ...[1, -1].map(sign => stream([middle('lymphaticHeadNodes', sign), middle('lymphaticCervicalNodes', sign), angle(sign)], 40)),
+        ...[1, -1].map(sign => { const veins = ['popliteal', 'femoral', 'external iliac', 'common iliac'].flatMap(name => side(name, sign)); return stream([...kit.line(veins, { from: kit.end(side('popliteal', sign), down, 1), to: lumbar, radius: 0.8 }), ...duct.slice(1)], 420); }),
+        ...[1, -1].map(sign => { const veins = ['basilic', 'axillary', 'subclavian'].flatMap(name => side(name, sign)); return stream([...kit.line(veins, { from: kit.end(side('basilic', sign), down, 1), to: angle(sign), radius: 0.8 }), angle(sign)], 200); }),
+        ...[1, -1].map(sign => stream([...kit.line(side('external jugular', sign), { from: kit.end(side('external jugular', sign), V(0, 1, 0), 1), to: angle(sign), radius: 0.6 }), angle(sign)], 100)),
       ],
     };
   },
@@ -197,15 +202,14 @@ export const circulation = {
     const { V } = kit, up = V(0, 1, 0), down = V(0, -1, 0), named = pattern => kit.one(pattern), middle = pattern => kit.centre(named(pattern)), curve = points => kit.curve(points).curve;
     const rightAtrium = middle(/^Cavity of right atrium$/), rightVentricle = middle(/^Cavity of right ventricle$/), leftAtrium = middle(/^Cavity of left atrium$/), leftVentricle = middle(/^Cavity of left ventricle$/);
     const upper = kit.line(named(/^Superior vena cava$/), { from: kit.end(named(/^Superior vena cava$/), up, 1) });
-    const lower = kit.line(kit.find(/^Inferior vena cava/), { from: kit.end(kit.find(/^Inferior vena cava/), down, 1), radius: 1.5 });
+    const lower = kit.line(kit.find(/^Inferior vena cava$/), { from: kit.end(kit.find(/^Inferior vena cava$/), down, 1), radius: 1.5 });   // its two lengths (the source has the upper one a second time, as its thoracic part)
     const trunk = kit.line(named(/^Pulmonary trunk$/), { from: rightVentricle });
     const lungs = ['Left', 'Right'].map(side => ({
       artery: kit.line(named(new RegExp(`^${side} pulmonary artery$`)), { from: trunk.at(-1) }),
       lung: kit.centre(kit.find(new RegExp(`segment of ${side} lung$`, 'i'))),   // +x is the body's left
       veins: ['superior', 'inferior'].map(which => { const vein = kit.find(new RegExp(`^${side} ${which} pulmonary vein$`)); return kit.line(vein, { to: leftAtrium, radius: 0.7 }); }),
     }));
-    /* the aorta, piece after piece, each from where the last one ended */
-    const aorta = [/^Ascending aorta$/, /^Arch of aorta$/, /^Descending thoracic aorta$/, /^Descending aorta$/, /^Abdominal aorta$/].reduce((way, pattern) => [...way, ...kit.line(named(pattern), { from: way.at(-1) })], [leftVentricle]);
+    const aorta = [leftVentricle, ...kit.line(kit.find(/^(Ascending aorta|Arch of aorta|Descending thoracic aorta|Abdominal aorta)$/, kit.shown), { from: leftVentricle, radius: 1.2 })];   // from the heart to where it forks, low in the abdomen (the source also has the whole descending aorta as one part, over these)
     const beat = (where, phase, time) => 0.1 + 0.16 * Math.max(0, Math.sin(time * 5));   // blood leaves the heart in pulses
     return {
       streams: [

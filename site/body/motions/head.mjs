@@ -21,7 +21,7 @@ export const brain = {
     const reached = stops.map(stop => way.whereOf(stop));
     return {
       reached, stages: THOUGHT.map(([key]) => kit.entry(key)), stem: ['brainMidbrain', 'brainPons', 'brainMedulla'].flatMap(key => kit.entry(key)),
-      streams: [{ curve: way.curve, colour: SIGNAL, count: 90, size: 1.0, spread: 0.12, packed: 0.1, place: phase => phase * 1.07 }],
+      streams: [{ curve: way.curve, colour: SIGNAL, count: 40, size: 0.5, spread: 0.1, packed: 0.06, place: phase => phase * 1.07 }],
       sounds: reached.map((at, k) => [at / 1.07, play => play.chime([523, 587, 659, 784][k], 0.05)]),
     };
   },
@@ -181,11 +181,13 @@ export const mouth = {
   build(kit) {
     const { V } = kit, tongue = kit.one(/^Tongue$/), lid = kit.one(/^Epiglottis$/), palate = [...kit.entry('mouthSoftPalate'), ...kit.entry('mouthUvula')];
     const squeezers = [/superior pharyngeal constrictor$/i, /middle pharyngeal constrictor$/i, /inferior pharyngeal constrictor$/i].map(pattern => { const parts = kit.find(pattern); return { parts, middle: kit.centre(parts) }; });
-    const top = kit.end(tongue, V(0, 1, 0), 0.8), throat = kit.centre(kit.one(/^Oropharynx$/)), lower = kit.centre(kit.one(/^Laryngopharynx$/));
-    const way = kit.curve([top.clone().add(V(0, 0.4, 1.2)), top.clone().add(V(0, 0.5, -1)), throat, lower, lower.clone().add(V(0, -1.2, -0.2))]);   // it ends at the top of the oesophagus, where the close-up's own parts end
+    const top = kit.end(tongue, V(0, 1, 0), 0.8), throat = kit.centre(kit.one(/^Oropharynx$/));
+    /* below the back of the tongue the food goes down behind the larynx, just in front of the back wall of the throat: the wall is the squeezing muscles */
+    const behind = k => { const wall = kit.box(squeezers[k].parts); return V(0, (wall.min.y + wall.max.y) / 2, wall.min.z + 0.7); }, low = kit.box(squeezers[2].parts);
+    const way = kit.curve([top.clone().add(V(0, 0.4, 1.2)), top.clone().add(V(0, 0.5, -1)), throat, behind(1), behind(2), V(0, low.min.y, low.min.z + 0.7)]);   // it ends at the top of the oesophagus, where the close-up's own parts end
     return {
       V, turn: kit.turn, tongue, lid, hingeOfLid: kit.end(lid, V(0, -1, 0), 0.5), palate, squeezers,
-      streams: [{ curve: way.curve, colour: FOOD, count: 50, size: 1.3, spread: 0.3, packed: 0.08, place: phase => 0.1 + 0.98 * smooth(0.18, 0.86, phase), shown: phase => during(phase, 0.02, 0.92) }],
+      streams: [{ curve: way.curve, colour: FOOD, count: 30, size: 0.6, spread: 0.3, packed: 0.08, place: phase => 0.1 + 0.98 * smooth(0.18, 0.86, phase), shown: phase => during(phase, 0.02, 0.92) }],
     };
   },
   step(rig, phase, act) {

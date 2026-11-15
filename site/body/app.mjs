@@ -722,6 +722,28 @@ function partPoints(indices) {
   }
   return wanted;
 }
+/* Every corner of some parts' triangles (cm), which corners each is joined to by an edge, and which part each is of.
+   Corners the source repeats at one place are one corner, so parts that meet are joined where they meet. */
+function partMesh(indices) {
+  const wanted = new Set(indices), spots = [], next = [], of = [], seen = new Map();
+  for (const layer of new Set(indices.map(index => body.parts[index].layer))) {
+    const record = body.layers[layer];
+    if (!record?.group) continue;
+    const position = record.pick.geometry.attributes.position, ids = record.pick.geometry.attributes._part, corners = record.pick.geometry.index.array;
+    const corner = vertex => {
+      const x = position.getX(vertex), y = position.getY(vertex), z = position.getZ(vertex), key = `${Math.round(x * 500)},${Math.round(y * 500)},${Math.round(z * 500)}`;
+      let k = seen.get(key);
+      if (k === undefined) { k = spots.length; seen.set(key, k); spots.push(V(x, y, z)); next.push(new Set()); of.push(ids.getX(vertex)); }
+      return k;
+    };
+    for (let t = 0; t < corners.length; t += 3) {
+      if (!wanted.has(ids.getX(corners[t]))) continue;
+      const a = corner(corners[t]), b = corner(corners[t + 1]), c = corner(corners[t + 2]);
+      if (a !== b) { next[a].add(b); next[b].add(a); } if (b !== c) { next[b].add(c); next[c].add(b); } if (a !== c) { next[a].add(c); next[c].add(a); }
+    }
+  }
+  return { spots, next, of };
+}
 /* what a motion is built from: the close-up's parts, and ways to measure them */
 function motionKit() {
   const own = [...body.around.own].map(index => body.parts[index]), context = [...body.around.context].map(index => body.parts[index]), shown = [...own, ...context];
@@ -751,22 +773,60 @@ function motionKit() {
       const far = Math.max(...all.map(point => point.dot(direction)));
       return mean(all.filter(point => point.dot(direction) > far - depth).map(point => point.clone()));
     },
-    /* the line down the middle of a tube (a vessel, a duct, a nerve), from the end nearest a point: a ball is walked
-       along it, each step to the middle of what it has not yet covered */
+    /* The line down the middle of a tube (a vessel, a duct, a nerve, a length of gut), as points about `radius` cm apart.
+       It starts at the end nearest `from` (or, given only `to`, at the end farthest from it) and ends nearest `to` (or
+       at the far end). The way is found over the tube's own surface, from corner to corner of its triangles, so it
+       never crosses from one stretch to another that lies against it; each point is the middle of the ring of surface
+       at that distance along. Where the tube is drawn in pieces, the way goes on from the end of one into the next. */
     line(parts, { from, radius, to } = {}) {
-      const all = points(parts); if (!all.length) fail(`no points for ${several(parts)[0].name}`);
+      const list = several(parts), { spots, next, of } = partMesh(list.map(part => part.index)); if (!spots.length) fail(`no points for ${list[0].name}`);
+      if (!from && !to) fail(`a line along ${list[0].name} with neither end given`);
       const size = kit.box(parts).getSize(V(0, 0, 0)), reach = radius || Math.max(0.5, Math.min(size.x, size.y, size.z) * 0.6);
-      if (!from) { const axis = size.x >= size.y && size.x >= size.z ? V(1, 0, 0) : size.y >= size.z ? V(0, 1, 0) : V(0, 0, 1); from = kit.end(parts, to ? to.clone().sub(kit.centre(parts)).negate().normalize() : axis, reach); }
-      let left = all, at = all.reduce((best, point) => (point.distanceToSquared(from) < best.distanceToSquared(from) ? point : best));
-      const path = [];
-      while (left.length) {
-        const near = left.filter(point => point.distanceTo(at) < reach);
-        if (!near.length) break;
-        const middle = mean(near.map(point => point.clone())); path.push(middle);
-        left = left.filter(point => point.distanceTo(at) >= reach);
-        const ahead = left.filter(point => point.distanceTo(middle) < reach * 2.2);
-        if (!ahead.length) break;
-        at = mean(ahead.map(point => point.clone()));
+      const nearest = place => spots.reduce((best, spot, k) => (spot.distanceToSquared(place) < spots[best].distanceToSquared(place) ? k : best), 0);
+      const start = nearest(from || kit.end(parts, to.clone().sub(kit.centre(parts)).negate().normalize(), reach)), goal = to ? nearest(to) : -1;
+      /* how far each corner is from the start, over the surface */
+      const far = new Float64Array(spots.length).fill(Infinity), back = new Int32Array(spots.length).fill(-1), done = new Uint8Array(spots.length), heap = [];
+      const push = (k, distance, by) => { if (distance >= far[k]) return; far[k] = distance; back[k] = by; let at = heap.push([distance, k]) - 1; while (at > 0) { const up = (at - 1) >> 1; if (heap[up][0] <= heap[at][0]) break; [heap[up], heap[at]] = [heap[at], heap[up]]; at = up; } };
+      const pop = () => { const top = heap[0], last = heap.pop(); if (heap.length) { heap[0] = last; let at = 0; for (;;) { let least = at; for (const child of [2 * at + 1, 2 * at + 2]) if (child < heap.length && heap[child][0] < heap[least][0]) least = child; if (least === at) break; [heap[least], heap[at]] = [heap[at], heap[least]]; at = least; } } return top; };
+      let reached = 0, end = start;
+      push(start, 0, -1);
+      for (;;) {
+        while (heap.length) {
+          const [distance, at] = pop(); if (done[at]) continue;
+          done[at] = 1; reached++; if (distance > far[end]) end = at;
+          for (const k of next[at]) if (!done[k]) push(k, distance + spots[at].distanceTo(spots[k]), at);
+        }
+        if (reached === spots.length || (goal >= 0 && done[goal])) break;
+        /* the surface has run out. A part drawn as two skins (an inner wall and an outer) is one tube: its other skin is joined on wherever it lies against what has been reached */
+        const cell = 0.6, key = spot => `${Math.floor(spot.x / cell)},${Math.floor(spot.y / cell)},${Math.floor(spot.z / cell)}`, grid = new Map(), partsReached = new Set();
+        for (let k = 0; k < spots.length; k++) if (done[k]) { partsReached.add(of[k]); const at = key(spots[k]); if (!grid.has(at)) grid.set(at, []); grid.get(at).push(k); }
+        let joined = false;
+        for (let k = 0; k < spots.length; k++) {
+          if (done[k] || !partsReached.has(of[k])) continue;
+          const spot = spots[k], x = Math.floor(spot.x / cell), y = Math.floor(spot.y / cell), z = Math.floor(spot.z / cell);
+          for (let i = -1; i <= 1; i++) for (let j = -1; j <= 1; j++) for (let h = -1; h <= 1; h++) for (const other of grid.get(`${x + i},${y + j},${z + h}`) || []) {
+            const gap = spot.distanceTo(spots[other]); if (of[other] === of[k] && gap < cell && far[other] + gap < far[k]) { push(k, far[other] + gap, other); joined = true; }
+          }
+        }
+        if (joined) continue;
+        /* otherwise the tube goes on in another piece, or after a break: from where this one ends, to the nearest of what is left */
+        const tail = []; for (let k = 0; k < spots.length; k++) if (done[k] && far[k] > far[end] - 1.5) tail.push(k);
+        const some = tail.filter((_, k) => k % Math.ceil(tail.length / 200) === 0);
+        let least = Infinity, across = null;
+        for (let k = 0; k < spots.length; k++) if (!done[k]) for (const other of some) { const gap = spots[k].distanceToSquared(spots[other]); if (gap < least) { least = gap; across = [k, other]; } }
+        push(across[0], far[across[1]] + Math.sqrt(least), across[1]);
+      }
+      if (goal >= 0) end = goal;
+      /* back along the shortest way from the end, and at each stride the middle of the surface that is as far along and close by */
+      const order = [...spots.keys()].filter(k => done[k]).sort((a, b) => far[a] - far[b]), path = [];
+      const way = []; for (let at = end; at >= 0; at = back[at]) way.push(at); way.reverse();
+      let low = 0, high = 0, w = 0;
+      for (let along = 0; along <= far[end] + reach / 2; along += reach) {
+        while (w < way.length - 1 && far[way[w + 1]] <= along) w++;
+        while (low < order.length && far[order[low]] < along - reach / 2) low++;
+        while (high < order.length && far[order[high]] < along + reach / 2) high++;
+        const ring = []; for (let k = low; k < high; k++) if (spots[order[k]].distanceTo(spots[way[w]]) < reach * 2.5) ring.push(spots[order[k]].clone());
+        if (ring.length) path.push(mean(ring));
       }
       return path;
     },
@@ -2085,6 +2145,8 @@ window.bodyModel = {
     for (let k = 0; k < position.count; k++) if (alpha.getX(k) > 0.2) out.push([which, position.getX(k), position.getY(k), position.getZ(k)]);
     return out;
   }) : []),
+  /* the line each stream runs along, as points (cm), whether or not it shows now */
+  ways: () => (motion.rig ? motion.rig.streams.map(stream => stream.way.map(point => point.toArray())) : []),
   models: () => (motion.rig && moving() ? motion.rig.models.map(model => ({ name: model.name, shown: model.mesh.visible, solid: model.mesh.material.opacity, ...model.state })) : []),
   motions: () => Object.keys(MOTIONS),
   sound: () => ({ on: sound.on, key: sound.key, clip: sound.clip, speaking: sound.speaking, voicePaused: sound.voice.paused, music: sound.music.src.split('/').pop(), musicPlaying: !sound.music.paused, musicLevel: sound.music.volume }),

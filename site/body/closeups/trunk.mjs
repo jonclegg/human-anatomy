@@ -71,7 +71,7 @@ export const REGIONS = {
     text: { any: 'Fluid that leaks from the blood into the tissues returns as lymph, filtered on the way by about 600 to 800 lymph nodes gathered where the limbs and head join the trunk and along the great vessels. The tonsils, thymus and spleen are lymphoid organs too.' },
     parts: ['tonsils', 'lymphaticHeadNodes', 'lymphaticCervicalNodes', 'thymus', 'lymphaticAxillaryNodes', 'lymphaticCubitalNodes', 'lymphaticThoracicNodes', 'spleen', 'lymphaticVisceralNodes',
       'lymphaticLumbarNodes', 'lymphaticPelvicNodes', 'lymphaticInguinalNodes', 'lymphaticPoplitealNodes'],
-    context: [{ layer: 'skeleton' }], direction: [0.15, 0.05, 1], body: 0.1,
+    context: [{ layer: 'skeleton' }, { layer: 'vessels', pattern: /^(left|right) (popliteal|femoral|external iliac|common iliac|basilic|axillary|subclavian|internal jugular|external jugular) vein$/i }],   // the veins the lymph vessels run beside direction: [0.15, 0.05, 1], body: 0.1,
   },
   hormones: {
     name: 'Hormone glands', note: 'pituitary, pineal, thyroid, adrenals, pancreas, ovaries or testes',

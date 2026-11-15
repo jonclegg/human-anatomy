@@ -1,7 +1,7 @@
 // Motions of the pelvis: an egg's journey to the uterus, the clitoris filling with blood, the two things that leave by
 // the male urethra, and sperm and blood in the penis and testes.
 // See ../motions.mjs for the format.
-import { smooth, during, light, thread, FRESH, URINE, SEED } from './shared.mjs';
+import { smooth, during, light, FRESH, URINE, SEED } from './shared.mjs';
 
 /* ---------- The female pelvis: an egg, from the ovary to the uterus ---------- */
 export const femalePelvis = {
@@ -11,12 +11,14 @@ export const femalePelvis = {
     const sides = ['Left', 'Right'].map(side => {
       const named = pattern => kit.one(new RegExp(pattern.replace('SIDE', side), 'i')), middle = pattern => kit.centre(named(pattern));
       const ovary = named('^SIDE ovary$'), tube = ['^SIDE fimbriae of uterine tube$', '^SIDE uterine tube infundibulum$', '^SIDE ampulla of uterine tube$', '^SIDE isthmus of (fallopian|uterine) tube$'];
-      return { ovary, tube: tube.map(named), way: kit.curve([kit.centre(ovary), ...tube.map(middle), womb.clone().lerp(middle(tube[3]), 0.35), womb]) };
+      const along = kit.line(tube.map(named), { from: kit.centre(ovary), to: womb, radius: 0.5 }), way = kit.curve([kit.centre(ovary), ...along, womb]);
+      return { ovary, tube: tube.map(named), way, into: way.whereOf(along.at(-1)) };   // into: how far along the way the tube ends and the uterus begins
     });
     const turnOf = time => Math.floor(time / 13) % 2;   // the ovaries do not strictly take turns, but here they do, so both tubes are seen
     return {
       sides, turnOf, womb: kit.entry('uterus'),
-      streams: sides.map(({ way }, k) => ({ curve: way.curve, colour: '#ffe9a8', count: 18, size: 1.5, spread: 0.06, packed: 0.012, place: phase => 0.012 + 0.985 * smooth(0.16, 0.9, phase), shown: (phase, time) => (turnOf(time) === k ? during(phase, 0.1, 0.99, 0.03) : 0) })),
+      /* one egg, drawn far larger than life (it is a tenth of a millimetre across) so that it can be seen; it is in the tube until 0.82, and then in the uterus */
+      streams: sides.map(({ way, into }, k) => ({ curve: way.curve, colour: '#ffe9a8', count: 1, size: 0.7, spread: 0, packed: 0.012, place: phase => 0.012 + (into - 0.012) * smooth(0.16, 0.82, phase) + (0.997 - into) * smooth(0.82, 0.97, phase), shown: (phase, time) => (turnOf(time) === k ? during(phase, 0.1, 0.99, 0.03) : 0) })),
     };
   },
   step(rig, phase, act, time) {
@@ -64,7 +66,7 @@ export const malePelvis = {
   build(kit) {
     const { pool, pipe } = outflow(kit), gland = kit.centre(kit.one(/^Prostate$/)), curve = points => kit.curve(points).curve;
     const after = pipe.filter(point => point.y < gland.y - 0.5);
-    const ducts = kit.entry('deferentDuct').map(duct => thread(kit.points(duct), kit.end(duct, kit.V(0, -1, 0), 0.8)));   // each from its low end, at the testis
+    const ducts = kit.entry('deferentDuct').map(duct => kit.line(duct, { from: kit.end(duct, kit.V(0, -1, 0), 0.8), radius: 0.8 }));   // each from its low end, at the testis
     return {
       bladder: kit.one(/^Urinary bladder$/), pool, adders: [...kit.entry('seminalVesicle'), ...kit.entry('prostate')],
       streams: [

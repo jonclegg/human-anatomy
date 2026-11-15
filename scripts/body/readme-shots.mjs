@@ -56,7 +56,7 @@ if (only !== 'stills') {
   for (const view of ['muscles', 'organs', 'vessels', 'nerves', 'skeleton']) { await layer(page, view); await pause(1.2); }
   await layer(page, 'body');
   await pause(0.8);
-  await page.locator('.spot', { hasText: 'Heart' }).click();
+  await page.locator('.spot', { hasText: /^Heart$/ }).click();
   await settle(page);
   await pause(2.5);
   await page.locator('#sheet [data-watch="heart"]').click();
@@ -67,13 +67,13 @@ if (only !== 'stills') {
   await settle(page);
   await pause(1);
   await page.locator('#sexSwitch [data-sex="male"]').click();
-  await page.waitForSelector('html[data-model-ready="true"]', { timeout: 60_000 });
   await settle(page);
   await pause(2.5);
   await context.close();
   const film = `${folder}/${readdirSync(folder).find(name => name.endsWith('.webm'))}`;
-  execFileSync('ffmpeg', ['-y', '-loglevel', 'error', '-ss', String(loaded + 0.3), '-i', film,
+  try {
+    execFileSync('ffmpeg', ['-y', '-loglevel', 'error', '-ss', String(loaded + 0.3), '-i', film,
     '-vf', 'fps=10,scale=800:-1:flags=lanczos,split[a][b];[a]palettegen=max_colors=160:stats_mode=diff[p];[b][p]paletteuse=dither=bayer:bayer_scale=4:diff_mode=rectangle', `${docs}demo.gif`]);
-  rmSync(folder, { recursive: true });
+  } finally { rmSync(folder, { recursive: true }); }
 }
 await browser.close();

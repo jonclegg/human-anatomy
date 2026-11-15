@@ -51,8 +51,8 @@ npm run test:body
 | `site/body/` | The app: `index.html`, `app.mjs`, the part notes, close-ups, stories and motions, plus the built data (`data/`), narration (`audio/`) and close-up pictures (`img/`). |
 | `site/index.html` | The earlier single-page pelvis model. The female build still opens it to generate her vulva and clitoris (`scripts/body/export-pelvic-detail.mjs`). |
 | `scripts/body/` | The build that turns the source models into `site/body/data/`, and its checks: `build-male.mjs`, then `build-female.mjs` ([how to rebuild](docs/how-it-is-made.md)). |
-| `scripts/` (top level) | Builds for the pelvis page (`build-pelvis.mjs`, `build-body-outline.mjs`, `export-standalone.mjs`) and the design-review tools. |
-| `tests/body/` | Playwright tests for the app (`npm run test:body`). The other files in `tests/` serve and check the pelvis page. |
+| `scripts/` (top level) | Builds for the pelvis page (`build-pelvis.mjs`, `build-body-outline.mjs`, `export-standalone.mjs`, with `hra-frame.mjs` for alignment) and the design-review tools. |
+| `tests/body/` | Playwright tests for the app (`npm run test:body`). `tests/body-server.mjs` serves the app (`npm run serve:body`); the other files in `tests/` serve and check the pelvis page. |
 | `design-review/` | The scores and notes from each round of model design review (`scripts/ui-review.mjs`). Screenshots stay local. |
 | `docs/` | How it is made, and the pictures in this README. |
 

@@ -529,7 +529,7 @@ test.describe('Contents', () => {
     }
     /* View */
     await contents();
-    for (const key of ['clothed', 'cut']) {
+    for (const key of ['cut']) {
       const was = await model(page, key => window.bodyModel.state[key], key);
       await page.locator(`#contents [data-toggle="${key}"]`).click();
       expect(await model(page, key => window.bodyModel.state[key], key), key).toBe(!was);

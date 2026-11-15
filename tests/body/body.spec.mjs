@@ -137,7 +137,7 @@ test.describe('moving', () => {
 test.describe('clothing', () => {
   test.use({ reducedMotion: 'reduce' });
   for (const sex of ['male', 'female']) {
-    test(`${sex}: the body opens clothed, solid, and the Clothing switch takes it off`, async ({ page }) => {
+    test(`${sex}: the body opens clothed and solid, and has no switch to take the clothes off`, async ({ page }) => {
       await open(page, { sex });
       const skin = await model(page, () => window.bodyModel.findPart('Skin'));
       expect(await model(page, index => window.bodyModel.opacityOf(index), skin)).toBe(1);
@@ -145,17 +145,7 @@ test.describe('clothing', () => {
       expect((await model(page, () => window.bodyModel.clothing())).triangles).toBeGreaterThan(500);   // modelled garments: his cut-off jeans are about 700 triangles
       if (sex === 'male') expect(await model(page, index => window.bodyModel.opacityOf(index), await model(page, () => window.bodyModel.findPart('Pubic hair')))).toBe(0);
       await page.locator('#contentsBtn').click();
-      await page.locator('#contents [data-toggle="clothed"]').click();
-      await expect(page.locator('#contents [data-toggle="clothed"]')).toHaveText('ClothingOff');
-      expect((await model(page, () => window.bodyModel.clothing())).shown).toBe(false);
-      /* the bar has its own Clothes button, always in view, and it follows the one in Contents */
-      await page.keyboard.press('Escape');
-      const bar = page.locator('header [data-toggle="clothed"]');
-      await expect(bar).toBeVisible();
-      await expect(bar).toHaveAttribute('aria-pressed', 'false');
-      await bar.click();
-      expect((await model(page, () => window.bodyModel.clothing())).shown).toBe(true);
-      await expect(page.locator('#contents [data-toggle="clothed"]')).toHaveAttribute('aria-pressed', 'true');
+      await expect(page.locator('[data-toggle="clothed"]')).toHaveCount(0);
     });
   }
 

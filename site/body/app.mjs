@@ -1340,6 +1340,8 @@ function setContents(open) {
   if (open) { renderContents(); $('contents').scrollTop = 0; }
   syncUI();
 }
+/* the note beside the GitHub button closes on a click anywhere else, when the focus moves on, and on Escape */
+for (const kind of ['click', 'focusin']) document.addEventListener(kind, event => { if (!event.target.closest('#draft')) $('draft').open = false; });
 $('contentsBtn').addEventListener('click', () => { setContents(!state.contents); if (state.contents) $('contents').focus(); });
 
 function syncUI() {
@@ -1579,6 +1581,7 @@ $('body').addEventListener('input', event => { state.body = event.target.value /
    from step to step of a story, and move the view up and down the body, unless a control or Contents has the keys. */
 document.addEventListener('keydown', event => {
   if (event.altKey || event.ctrlKey || event.metaKey) return;
+  if (event.key === 'Escape' && $('draft').open) { $('draft').open = false; if (event.target.closest('#draft')) $('draft').querySelector('summary').focus(); return; }
   if (event.key === 'Escape' && event.target.id !== 'find') { goUp(); return; }
   if (state.contents || event.target.closest('input, textarea, select')) return;
   if (event.key === 'ArrowRight' || event.key === 'ArrowLeft') {

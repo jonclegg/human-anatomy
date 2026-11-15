@@ -38,10 +38,12 @@ if (only !== 'demo') {
     await page.screenshot({ path: `${docs}${name}.png` });
     await page.close();
   }
-  const share = await (await browser.newContext({ viewport: { width: 1200, height: 630 } })).newPage();
+  const shareContext = await browser.newContext({ viewport: { width: 1200, height: 630 } });
+  const share = await shareContext.newPage();
   await open(share, 'sex=female&closeup=heart');
   await share.waitForTimeout(1200);
   await share.screenshot({ path: fileURLToPath(new URL('../../site/body/img/share.png', import.meta.url)) });
+  await shareContext.close();
   const phone = await browser.newContext({ ...devices['Pixel 7'], viewport: { width: 390, height: 664 }, deviceScaleFactor: 2 });
   const page = await phone.newPage();
   await open(page, 'sex=female&closeup=heart');

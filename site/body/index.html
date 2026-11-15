@@ -50,9 +50,19 @@ button:focus-visible, input:focus-visible, a:focus-visible, .contents:focus-visi
 .trail .home { font: 600 17px var(--display); letter-spacing: -0.01em; color: var(--ink); text-decoration: none; white-space: nowrap; }
 .trail b { color: var(--ink); font-weight: 600; padding: 0 2px; }
 .trail i { font-style: normal; }
-.draft { flex: 1 0 100%; margin: 0; font-size: 12px; line-height: 16px; color: var(--faint); }
-.draft a { color: var(--muted); text-underline-offset: 3px; }
-.draft a:hover { color: var(--ink); }
+/* the project on GitHub, and beside it a star that opens a note: this is a draft, and it has mistakes */
+.about { display: flex; align-items: center; gap: 2px; }
+.github { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 16px 0 13px; border: 1px solid var(--line-strong); border-radius: 22px; color: var(--muted); font-size: 13px; font-weight: 500; text-decoration: none; white-space: nowrap; }
+.github:hover { color: var(--ink); }
+.github svg { width: 18px; height: 18px; fill: currentColor; }
+.draft { position: relative; }
+.draft summary { display: grid; place-items: center; width: 28px; height: 28px; border-radius: 50%; list-style: none; cursor: pointer; font-size: 20px; font-weight: 700; line-height: 1; color: var(--mark); }
+.draft summary::-webkit-details-marker { display: none; }
+.draft summary:hover, .draft[open] summary { background: var(--line); }
+.draft summary:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+.draft p { position: absolute; right: 0; top: calc(100% + 10px); z-index: 9; width: min(300px, calc(100vw - 2 * var(--gutter))); padding: 10px 12px; border: 1px solid var(--line-strong); border-radius: 8px; background: var(--panel); font-size: 13px; line-height: 1.45; color: var(--muted); }
+.draft p a { color: var(--ink); text-underline-offset: 3px; }
+@media (max-width: 1240px) { .github { padding: 0 12px; } .github span { display: none; } }
 /* find any part, region or story by name, from anywhere */
 .finder { position: relative; display: flex; align-items: center; }
 .finder svg { position: absolute; left: 13px; width: 16px; height: 16px; fill: none; stroke: var(--muted); stroke-width: 1.8; stroke-linecap: round; pointer-events: none; }
@@ -235,10 +245,11 @@ input[type="range"]::-moz-range-thumb { width: 14px; height: 14px; border-radius
 @media (max-width: 820px) {
   :root { --gutter: 12px; }
   .bar { flex-wrap: wrap; gap: 4px 6px; padding: 2px var(--gutter) 6px; }
-  .trail { flex: 1 0 100%; font-size: 13px; }
+  .trail { order: -2; flex: 1 0 calc(100% - 78px); font-size: 13px; }   /* the GitHub button and its star (68px and the gap) take the rest of the line, to the pixel: the search must not fit after them */
   .trail button { min-height: 34px; }
   .trail .home { font-size: 16px; }
-  .draft span { display: none; }
+  .about { order: -1; }   /* at the end of the trail's line: the controls' line has no room */
+  .github { min-height: 34px; padding: 0 9px; }
   .finder { flex: 1; min-width: 0; }
   .finder input { width: 100%; min-height: 36px; padding-left: 32px; }
   .finder svg { left: 10px; }
@@ -299,7 +310,10 @@ input[type="range"]::-moz-range-thumb { width: 14px; height: 14px; border-radius
     <button type="button" class="sound-btn" id="soundBtn" aria-pressed="false" aria-label="Sound: music, and a voice during a story"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9.5v5h3.5l4.5 4v-13l-4.5 4z"/><path class="waves" d="M15.5 9a4 4 0 0 1 0 6M18 6.5a7.5 7.5 0 0 1 0 11"/><path class="mute" d="M16 9.5l5 5M21 9.5l-5 5"/></svg><span>Sound</span></button>
     <button type="button" class="sound-btn labels-btn" id="labelsBtn" aria-pressed="true" aria-label="Labels on the model">Labels</button>
     <button type="button" class="contents-btn" id="contentsBtn" aria-expanded="false" aria-controls="contents">Contents</button>
-    <p class="draft">A first open-source draft<span>, built with AI models</span>. It <span>surely </span>has mistakes. <a href="https://github.com/jonclegg/human-anatomy" target="_blank" rel="noopener">Fixes<span> and reuse are</span> welcome</a>.</p>
+    <div class="about">
+      <a class="github" href="https://github.com/jonclegg/human-anatomy" target="_blank" rel="noopener" aria-label="This project on GitHub"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg><span>GitHub</span></a>
+      <details class="draft" id="draft"><summary aria-label="About these models: a draft with mistakes">*</summary><p>These models are a first open-source draft, built with AI, and they are not perfect: shapes, positions and names can be wrong. <a href="https://github.com/jonclegg/human-anatomy" target="_blank" rel="noopener">Report a mistake or reuse the work on GitHub</a>.</p></details>
+    </div>
   </header>
 
   <div class="work">

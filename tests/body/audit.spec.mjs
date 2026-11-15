@@ -181,16 +181,22 @@ test.describe('the two bodies', () => {
 });
 
 test.describe('a first draft, open to fixes', () => {
-  test('the bar says so on every screen, on one line clear of the controls, and a part has a link that opens an issue about it', async ({ page }) => {
+  test('the bar links to GitHub and a star beside it says so, without a line of its own, and a part has a link that opens an issue about it', async ({ page }) => {
     const errors = await open(page, 'sex=female&closeup=heart');
-    const note = page.locator('.bar .draft');
-    await expect(note).toBeInViewport();
-    await expect(note).toContainText('first open-source draft');
-    await expect(note.locator('a')).toHaveAttribute('href', 'https://github.com/jonclegg/human-anatomy');
-    const box = await note.boundingBox(), bar = await page.locator('.bar').boundingBox();
-    expect(box.height).toBeLessThan(20);   // one line, on a phone too
-    expect(box.y + box.height).toBeLessThanOrEqual(bar.y + bar.height);
-    for (const other of ['#find', '#sexSwitch', '#homeBtn']) { const b = await page.locator(other).boundingBox(); expect(b.y + b.height, `${other} is above the note`).toBeLessThanOrEqual(box.y + 1); }
+    const github = page.locator('.bar .github'), note = page.locator('.bar .draft');
+    await expect(github).toBeInViewport();
+    await expect(github).toHaveAttribute('href', 'https://github.com/jonclegg/human-anatomy');
+    await expect(note.locator('p')).toBeHidden();
+    await note.locator('summary').click();
+    await expect(note.locator('p')).toBeInViewport({ ratio: 1 });
+    await expect(note.locator('p')).toContainText('first open-source draft');
+    await expect(note.locator('p')).toContainText('not perfect');
+    await expect(note.locator('p a')).toHaveAttribute('href', 'https://github.com/jonclegg/human-anatomy');
+    await page.keyboard.press('Escape');
+    await expect(note.locator('p')).toBeHidden();
+    await expect(page.locator('#sheetTitle'), 'Escape closed the note, not the close-up').toHaveText('The heart');
+    const box = await page.locator('.bar .about').boundingBox(), home = await page.locator('#homeBtn').boundingBox();
+    expect(Math.abs((box.y + box.height / 2) - (home.y + home.height / 2)), 'the button is on the title\'s line').toBeLessThan(8);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     await page.locator('#sheet .parts button').first().click();
     await settle(page);

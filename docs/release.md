@@ -5,7 +5,8 @@ Newest first. Each entry: date, PR, what changed for people using the site, and 
 ## 2026-11-16 · The page fits an iPhone's width
 
 - **For users on iPhones:** the page can no longer be laid out wider than the screen, which made the bar run off the right edge and the page scroll sideways (seen on a real iPhone, not in the simulators). The search box's prompt is no longer cut short by Safari's own inset.
-- **For operators:** deploy `site/body/index.html`; no cost change. `index.html` and `app.mjs` are now served with `Cache-Control: no-cache`, so a phone checks for a new version on every load.
+- **On phones:** tapping a part's label on the model opens it again. A finger that landed on a label never reached the model, so the tap did nothing (most visible after closing the panel), and the model then behaved as if a finger were still down. On the layers at home, a label no longer covers a region's glowing point.
+- **For operators:** deploy `site/body/index.html` and `site/body/app.mjs`; no cost change. New `tests/body/workflows.spec.mjs` walks the main paths on phone and desktop. `index.html` and `app.mjs` are now served with `Cache-Control: no-cache`, so a phone checks for a new version on every load.
 
 ## 2026-11-15 · A calmer phone layout
 

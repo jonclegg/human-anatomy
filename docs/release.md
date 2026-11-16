@@ -2,6 +2,11 @@
 
 Newest first. Each entry: date, PR, what changed for people using the site, and what an operator must do and what it costs.
 
+## 2026-11-16 · The page fits an iPhone's width
+
+- **For users on iPhones:** the page can no longer be laid out wider than the screen, which made the bar run off the right edge and the page scroll sideways (seen on a real iPhone, not in the simulators). The search box's prompt is no longer cut short by Safari's own inset.
+- **For operators:** deploy `site/body/index.html`; no cost change. `index.html` and `app.mjs` are now served with `Cache-Control: no-cache`, so a phone checks for a new version on every load.
+
 ## 2026-11-15 · A calmer phone layout
 
 - **For users on phones:** the panel along the bottom is gone from the opening screen, so the body has the whole screen. It comes up when you open a region or a part, has an X that puts it away, and stays at whatever height you drag it to; dragging it right down closes it. Tapping the search box no longer zooms the page in on an iPhone (which left the panel off-centre and its text cut off), and the box shows its prompt only when the whole word fits. The gesture hint over the model sits centred inside the screen's margins.

@@ -2,6 +2,12 @@
 
 Newest first. Each entry: date, PR, what changed for people using the site, and what an operator must do and what it costs.
 
+## 2026-11-15 · A calmer phone layout
+
+- **For users on phones:** the panel along the bottom is gone from the opening screen, so the body has the whole screen. It comes up when you open a region or a part, has an X that puts it away, and stays at whatever height you drag it to; dragging it right down closes it. Tapping the search box no longer zooms the page in on an iPhone (which left the panel off-centre and its text cut off), and the box shows its prompt only when the whole word fits. The gesture hint over the model sits centred inside the screen's margins.
+- **For everyone with sound on:** the music is quieter under the voice, and on an iPhone it now actually drops: Safari ignored the old volume setting, so the music played as loud as the narration.
+- **For operators:** deploy `site/body/` as usual; no data or cost change.
+
 ## 2026-11-14 · Link previews
 
 - **For users:** a link to the site shared in Slack, iMessage, X or LinkedIn now shows a title, a line about it and a picture of the heart close-up, instead of a bare address.

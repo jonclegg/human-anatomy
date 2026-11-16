@@ -27,6 +27,12 @@ async function open(page, { sex = 'male', view } = {}) {
 }
 const model = (page, script, arg) => page.evaluate(script, arg);
 const isPhone = page => page.viewportSize().width <= 820;
+/* the stories listed on the home sheet; a phone has no sheet at home, so there they are in Contents */
+const watchFromHome = async (page, id) => {
+  if (!isPhone(page)) return page.locator(`#sheet [data-watch="${id}"]`).click();
+  await page.locator('#contentsBtn').click();
+  await page.locator(`#contents [data-watch="${id}"]`).click();
+};
 const desktopOnly = testInfo => test.skip(testInfo.project.name === 'iphone', 'desktop interaction');
 /* straight to a region, which opens still */
 async function openRegion(page, id, sex = 'male') {
@@ -750,13 +756,14 @@ test.describe('navigation', () => {
     expect(await place(page)).toEqual({ region: null, view: 'body', entry: null, story: null, contents: false });
     await expect(page.locator('#crumbs')).toHaveText('');
     await expect(page.locator('#layerStrip')).toBeVisible();
-    await expect(page.locator('#sheetTitle')).toHaveText('The body');
+    if (isPhone(page)) await expect(page.locator('#sheet')).toBeHidden();   // a phone gives the model the screen at home
+    else await expect(page.locator('#sheetTitle')).toHaveText('The body');
     const home = await model(page, () => ({ position: window.bodyModel.camera.position.toArray(), target: window.bodyModel.controls.target.toArray() }));
     for (const key of ['position', 'target']) home[key].forEach((value, axis) => expect(value, `${key} ${axis}`).toBeCloseTo(start[key][axis], 1));
     /* from another layer, and from a story */
     await page.locator('#views [data-view="skeleton"]').click();
     await settle(page);
-    await page.locator('#sheet [data-watch=""]').click();   // Tour the body
+    await watchFromHome(page, '');   // Tour the body
     expect(await place(page)).toMatchObject({ story: 'tour' });
     await expect(page.locator('#crumbs')).toHaveText('›Tour of the body');
     await page.locator('#homeBtn').click();
@@ -800,7 +807,7 @@ test.describe('navigation', () => {
   });
   test('Contents starts a story, and Exit returns to where it was started', async ({ page }) => {
     await open(page, { sex: 'female' });
-    await page.locator('#sheet [data-contents]').click();   // Everything on this site
+    await page.locator(isPhone(page) ? '#contentsBtn' : '#sheet [data-contents]').click();   // Everything on this site
     await expect(page.locator('#contents')).toBeVisible();
     const watch = await page.locator('#contentsWatch button').allTextContents();
     const moving = await model(page, () => window.bodyModel.regions().filter(id => window.bodyModel.motions().includes(id)));
@@ -892,7 +899,7 @@ test.describe('layout', () => {
     await model(page, () => window.bodyModel.selectEntry('heart'));
     expect(await box('#layerStrip')).toBeNull();
     await page.locator('#sheet [data-up]').click();
-    await page.locator('#sheet [data-watch="heart"]').click();
+    await watchFromHome(page, 'heart');
     await settle(page);
     if (isPhone(page)) await expect(page.locator('#sheet')).toBeHidden();   // on a phone a story has the whole stage
     await check('#transport');

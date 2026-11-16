@@ -19,6 +19,14 @@ test.beforeEach(async ({ page }) => {
 const settle = page => page.waitForFunction(() => !window.bodyModel.busy(), null, { timeout: 30_000 });
 const model = (page, script, arg) => page.evaluate(script, arg);
 const isPhone = page => page.viewportSize().width <= 820;
+/* the stories listed on the home sheet; a phone has no sheet at home, so there they are in Contents */
+const watchFromHome = async (page, id) => {
+  if (!isPhone(page)) return page.locator(`#sheet [data-watch="${id}"]`).click();
+  await page.locator('#contentsBtn').click();
+  await page.locator(`#contents [data-watch="${id}"]`).click();
+};
+/* the home page: its sheet at the side, or on a phone no sheet at all, so the model has the screen */
+const expectHomeSheet = async page => (isPhone(page) ? expect(page.locator('#sheet')).toBeHidden() : expect(page.locator('#sheetTitle')).toBeVisible());
 const chromiumOnly = testInfo => test.skip(testInfo.project.name !== 'chromium', 'one desktop browser is enough for this sweep');
 const desktopOnly = testInfo => test.skip(testInfo.project.name === 'iphone', 'desktop interaction');
 function watch(page) {
@@ -666,9 +674,10 @@ test.describe('the model', () => {
       await settle(page);
       expect((await place(page)).view).toBe(view);
       await expect(page.locator(`#views [data-view="${view}"]`)).toHaveAttribute('aria-pressed', 'true');
-      await expect(page.locator('#sheet .eyebrow')).toHaveText(/^Layer \d of 6$/);
+      if (!isPhone(page)) await expect(page.locator('#sheet .eyebrow')).toHaveText(/^Layer \d of 6$/);
     }
-    await page.locator('#sheet [data-watch="knee"]').click();
+    await expectHomeSheet(page);
+    await watchFromHome(page, 'knee');
     await expect(page.locator('#layerStrip')).toBeHidden();
     await page.locator('#transport [data-story="exit"]').click();
     await expect(page.locator('#layerStrip')).toBeVisible();
@@ -684,11 +693,11 @@ test.describe('links into the site', () => {
     expect(await place(page)).toMatchObject({ region: null, view: 'body' });
     await open(page, 'sex=female&closeup=nosuchplace');
     expect(await place(page)).toMatchObject({ region: null, view: 'body' });
-    await expect(page.locator('#sheetTitle')).toBeVisible();
+    await expectHomeSheet(page);
     await open(page, 'sex=nobody');
-    await expect(page.locator('#sheetTitle')).toBeVisible();
+    await expectHomeSheet(page);
     await open(page, 'kiosk');
-    await expect(page.locator('#sheetTitle')).toBeVisible();
+    await expectHomeSheet(page);
     expect(errors).toEqual([]);
   });
 });
@@ -725,7 +734,7 @@ test.describe('on a phone', () => {
     expect(await tall()).toBeGreaterThan(short + 60);
     await page.locator('#sheet .sheet-handle').click();
     expect(await tall()).toBeLessThan(short + 5);
-    /* and by dragging it: it follows the finger, and settles taller or shorter, whichever it was left nearer */
+    /* and by dragging it: it follows the finger and stays where it is left; pulled down to almost nothing, it closes */
     const pull = async by => {
       const handle = await page.locator('#sheet .sheet-handle').boundingBox(), x = handle.x + handle.width / 2, y = handle.y + handle.height / 2;
       await page.mouse.move(x, y); await page.mouse.down(); await page.mouse.move(x, y + by / 2, { steps: 4 }); await page.mouse.move(x, y + by, { steps: 4 });
@@ -735,9 +744,8 @@ test.describe('on a phone', () => {
     };
     expect(await pull(-260)).toBeGreaterThan(short + 150);
     await expect(page.locator('#sheet')).toHaveClass(/full/);
-    expect(await pull(300)).toBeLessThan(short + 40);
-    await expect(page.locator('#sheet')).not.toHaveClass(/full/);
-    expect(await tall()).toBeLessThan(short + 5);
+    const left = await pull(120);
+    expect(Math.abs(await tall() - left)).toBeLessThan(2);
     for (const selector of ['#homeBtn', '#find', '#sexSwitch', '#soundBtn', '#labelsBtn', '#contentsBtn']) {
       const box = await page.locator(selector).boundingBox();
       expect(box, selector).toBeTruthy();
@@ -745,11 +753,32 @@ test.describe('on a phone', () => {
       expect(box.x + box.width, selector).toBeLessThanOrEqual(page.viewportSize().width + 0.5);
       expect(box.height, `${selector} is big enough to touch`).toBeGreaterThanOrEqual(32);
     }
-    await expect(page.locator('#sheet .back')).toBeVisible();
-    await page.locator('#sheet .back').click();
+    expect(await page.locator('#find').evaluate(el => parseFloat(getComputedStyle(el).fontSize))).toBeGreaterThanOrEqual(16);   // smaller, and the iPhone zooms the page in when it is tapped
+    await pull(800);
+    await expect(page.locator('#sheet')).toBeHidden();
+    await page.locator('#homeBtn').click();
     await settle(page);
     expect(await place(page)).toMatchObject({ region: null });
     await expect(page.locator('#hint')).toBeVisible();   // the hint over the model is the phone's, on the whole body, until the model is touched
+    expect(errors).toEqual([]);
+  });
+  test('the sheet is away at home, comes for a region or a part, and its X puts it away until something else is opened', async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name !== 'iphone', 'the phone layout');
+    const errors = await open(page, 'sex=female');
+    await expect(page.locator('#sheet')).toBeHidden();
+    await page.locator('#contentsBtn').click();
+    await page.locator('#contents [data-region="knee"]').click();
+    await settle(page);
+    await expect(page.locator('#sheet')).toBeVisible();
+    const handle = await page.locator('#sheet .sheet-handle').boundingBox();
+    expect(Math.abs(handle.x + handle.width / 2 - page.viewportSize().width / 2)).toBeLessThan(1);   // the handle is in the middle
+    await page.locator('#sheet .sheet-close').click();
+    await expect(page.locator('#sheet')).toBeHidden();
+    await page.locator('#find').fill('patella');
+    await page.locator('#found li').first().click();
+    await settle(page);
+    await expect(page.locator('#sheet')).toBeVisible();
+    await expect(page.locator('#sheetTitle')).toContainText(/patella|kneecap/i);
     expect(errors).toEqual([]);
   });
 });

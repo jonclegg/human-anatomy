@@ -446,7 +446,7 @@ function measureAnchors(body, geometry) {
 const REST = 0.02, MOST_REST = 0.25;   // how solid the rest of the body is beside a part picked out of it: faint, since hundreds of parts lie over one another; the sheet has a slider for it
 const state = {
   sex: 'male', view: 'body', peel: 0, blend: null, region: null, layers: {}, xray: 0, body: 0.25, rest: REST, labels: true, clothed: true, cut: false, tone: 0,
-  selection: null, hovered: -1, sheet: 'peek', story: null, contents: false, touched: false,
+  selection: null, hovered: -1, sheet: 'peek', sheetHeight: 0, sheetClosed: false, story: null, contents: false, touched: false,
 };
 try { const saved = JSON.parse(localStorage.getItem('wl-body') || '{}'); if (saved.tonePicked && Number.isInteger(saved.tone)) state.tone = saved.tone; if (saved.sex === 'female' || saved.sex === 'male') state.sex = saved.sex; } catch (error) { /* storage unavailable */ }
 const params = new URLSearchParams(location.search);
@@ -1131,10 +1131,13 @@ const play = {
 /* ---------- Sound: music under everything, and a voice for what is on show ----------
    Off until asked for (a browser plays nothing before a click). audio/manifest.json lists the music and the voice clips
    (scripts/body/make-audio.mjs); a clip belongs to a part, a close-up's opening, or a whole-body view. */
-const MUSIC_LEVEL = 0.2, UNDER_VOICE = 0.07, AFTER_VOICE_MS = 900;
+const MUSIC_LEVEL = 0.2, UNDER_VOICE = 0.045, AFTER_VOICE_MS = 900;
 const sound = { on: false, manifest: null, music: new Audio(), voice: new Audio(), key: null, clip: null, speaking: false, endedAt: 0 };
-sound.music.loop = true; sound.music.volume = MUSIC_LEVEL;
-sound.voice.addEventListener('ended', () => { sound.speaking = false; sound.endedAt = performance.now(); sound.music.volume = MUSIC_LEVEL; invalidate(); });
+sound.music.loop = true;
+/* the music's level is set by a gain, not the element's volume, which an iPhone ignores (it played the music as loud as the voice) */
+let musicGain = null;
+function musicLevel(level) { if (musicGain) musicGain.gain.value = level; }
+sound.voice.addEventListener('ended', () => { sound.speaking = false; sound.endedAt = performance.now(); musicLevel(MUSIC_LEVEL); invalidate(); });
 /* The voice speaks only inside a story: the step being told. Anywhere else the sound is the music alone. */
 const voiceKey = () => (state.story ? stepClip(state.story, state.story.index) : null);
 /* a browser may still refuse to play (no click yet): the sound goes back off. A clip cut short by the next one is not a refusal. */
@@ -1143,9 +1146,9 @@ function speak() {
   const key = sound.on ? voiceKey() : null;
   if (key === sound.key) return;
   sound.key = key; sound.clip = key && sound.manifest.narration[key] ? sound.manifest.narration[key].file : null;
-  sound.voice.pause(); sound.speaking = false; sound.music.volume = MUSIC_LEVEL;
+  sound.voice.pause(); sound.speaking = false; musicLevel(MUSIC_LEVEL);
   if (!sound.clip) return;
-  sound.voice.src = `audio/${sound.clip}`; sound.speaking = true; sound.music.volume = UNDER_VOICE;
+  sound.voice.src = `audio/${sound.clip}`; sound.speaking = true; musicLevel(UNDER_VOICE);
   if (!paused()) sound.voice.play().catch(refused);
 }
 $('soundBtn').addEventListener('click', () => setSound(!sound.on));
@@ -1155,6 +1158,10 @@ function setSound(on) {
   if (sound.on === on) return;
   sound.on = on;
   if (sound.on) outlet();
+  if (sound.on && !musicGain) {
+    musicGain = audioContext.createGain(); musicGain.gain.value = sound.speaking ? UNDER_VOICE : MUSIC_LEVEL;
+    audioContext.createMediaElementSource(sound.music).connect(musicGain).connect(audioContext.destination);
+  }
   if (sound.on && sound.manifest.music) { sound.music.src ||= `audio/${sound.manifest.music}`; if (!paused()) sound.music.play().catch(refused); }
   if (!sound.on) { sound.music.pause(); sound.voice.pause(); sound.speaking = false; }
   syncUI();
@@ -1182,21 +1189,27 @@ const SOURCE_TEXT = {
 /* The sheet shows exactly one thing: the home page (the layer on show, the tour, a few stories), a region (what it is,
    its story, its numbered parts), a part's card, or during a story its sections: the steps of a story that has them,
    the stops of the tour, or the numbered parts of a region in motion, with the one being told marked. Phones have no
-   room for it during a story. */
+   room for it during a story, and leave the model the whole screen at home: there it shows only for a region or a part,
+   and its X puts it away until something else is opened. */
 const lowerFirst = text => text.charAt(0).toLowerCase() + text.slice(1);
 let sheetAbout = null;
 function renderSheet() {
   const el = $('sheet');
+  const about = `${state.region}|${state.selection?.entry ?? state.selection?.part ?? ''}|${state.story ? state.story.name : ''}|${state.view}`;
+  const fresh = about !== sheetAbout;
+  if (fresh) state.sheetClosed = false;
   el.classList.toggle('full', state.sheet === 'full');
   el.classList.toggle('telling', !!state.story);
+  el.classList.toggle('resting', atHome());
+  el.classList.toggle('closed', state.sheetClosed);
+  el.style.maxHeight = phone.matches && state.sheetHeight ? `${state.sheetHeight}px` : '';
   /* the keyboard keeps its place when the sheet is drawn again: on the same button if it is still there, else on the heading */
   const held = el.contains(document.activeElement) ? document.activeElement : null;
   const again = held && (held.dataset.step ? `[data-step="${held.dataset.step}"]` : held.hasAttribute('data-sheet') ? '[data-sheet]' : null);
-  el.innerHTML = `<button type="button" class="sheet-handle" data-sheet aria-label="${state.sheet === 'peek' ? 'Show more' : 'Show less'}"></button>${sheetContent()}`;
+  el.innerHTML = `<div class="sheet-top"><button type="button" class="sheet-handle" data-sheet aria-label="${state.sheet === 'peek' ? 'Show more' : 'Show less'}"></button><button type="button" class="sheet-close" data-close aria-label="Close the panel"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>${sheetContent()}`;
   if (held) (again && el.querySelector(again) || $('sheetTitle')).focus();
   /* a sheet about something else starts at its top, where its way back is; the same one drawn again stays where it was read to */
-  const about = `${state.region}|${state.selection?.entry ?? state.selection?.part ?? ''}|${state.story ? state.story.name : ''}|${state.view}`;
-  if (about !== sheetAbout) { sheetAbout = about; el.scrollTop = 0; }
+  if (fresh) { sheetAbout = about; el.scrollTop = 0; }
   el.querySelector('[aria-current="true"]')?.scrollIntoView({ block: 'nearest' });
 }
 function storySections() {
@@ -1272,9 +1285,10 @@ function goUp() {
   else if (state.selection) leavePart();
   else if (state.region) setView(state.view);
 }
-/* On a phone the sheet is pulled up and down by its handle: it follows the finger, and settles taller or shorter,
-   whichever it was left nearer. A tap on the handle still does the same. */
-const sheetDrag = { from: null, height: 0, ended: 0 };
+/* On a phone the sheet is pulled up and down by its handle: it follows the finger and stays where it is left, from
+   one part to the next. Pulled down to almost nothing it closes, as its X does. A tap on the handle switches it between
+   short and tall. */
+const sheetDrag = { from: null, height: 0, ended: 0 }, CLOSES_BELOW = 90;
 $('sheet').addEventListener('pointerdown', event => {
   const handle = event.target.closest('.sheet-handle');
   if (!handle) return;
@@ -1292,14 +1306,16 @@ for (const type of ['pointerup', 'pointercancel']) $('sheet').addEventListener(t
   sheetDrag.from = null;
   if (!sheetDrag.moved) return;
   sheetDrag.ended = performance.now();
-  state.sheet = $('sheet').getBoundingClientRect().height > innerHeight * 0.45 ? 'full' : 'peek';
-  $('sheet').style.maxHeight = '';
+  const height = $('sheet').getBoundingClientRect().height;
+  if (height < CLOSES_BELOW) state.sheetClosed = true;
+  else { state.sheetHeight = Math.round(height); state.sheet = height > innerHeight * 0.45 ? 'full' : 'peek'; }
   renderSheet(); resize(); invalidate();
 });
 document.addEventListener('click', event => {
-  const target = event.target.closest('[data-entry],[data-step],[data-go],[data-up],[data-sheet],[data-region],[data-watch],[data-contents],[data-layer],[data-story]');
+  const target = event.target.closest('[data-entry],[data-step],[data-go],[data-up],[data-sheet],[data-close],[data-region],[data-watch],[data-contents],[data-layer],[data-story]');
   if (!target) return;
-  if (target.hasAttribute('data-sheet')) { if (performance.now() - sheetDrag.ended > 400) { state.sheet = state.sheet === 'peek' ? 'full' : 'peek'; renderSheet(); } }   // a tap, or the keyboard; a drag has already set it
+  if (target.hasAttribute('data-sheet')) { if (performance.now() - sheetDrag.ended > 400) { state.sheet = state.sheet === 'peek' ? 'full' : 'peek'; state.sheetHeight = 0; renderSheet(); } }   // a tap, or the keyboard; a drag has already set it
+  else if (target.hasAttribute('data-close')) { state.sheetClosed = true; renderSheet(); }
   else if (target.hasAttribute('data-contents')) { setContents(true); $('contents').focus(); }
   else if (target.hasAttribute('data-up')) goUp();
   else if (target.hasAttribute('data-watch')) { startStory(target.dataset.watch || null); $('transport').querySelector('[data-story="play"]').focus(); }
@@ -1396,7 +1412,7 @@ const shouldIsolate = parts => parts.every(index => !['skin'].includes(body.part
 function select(selection) {
   state.selection = selection;
   if (selection) {
-    state.sheet = 'peek';
+    state.sheet = 'peek'; state.sheetClosed = false;
     for (const index of selection.parts) { const layer = body.parts[index].layer; if (state.layers[layer] === 'off') state.layers[layer] = 'solid'; }
     ensureLayers();
   }
@@ -1675,6 +1691,16 @@ function takeFound(k) {
   item.go();
 }
 $('find').addEventListener('input', showFound);
+/* the box's prompt, as much of it as fits whole: the full line, or "Search", or nothing, never a word cut short */
+const PROMPTS = [$('find').placeholder, 'Search', ''], measure = document.createElement('canvas').getContext('2d');
+function fitPrompt() {
+  const box = $('find'), style = getComputedStyle(box);
+  const room = box.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight);
+  measure.font = `${style.fontWeight} ${style.fontSize} ${style.fontFamily}`;
+  box.placeholder = PROMPTS.find(prompt => measure.measureText(prompt).width <= room);
+}
+new ResizeObserver(fitPrompt).observe($('find'));
+document.fonts.ready.then(fitPrompt);   // measured again in the page's own font, once it has come
 $('find').addEventListener('focus', () => { if ($('find').value.trim()) showFound(); });
 $('find').addEventListener('keydown', event => {
   if (event.key === 'Enter') { event.preventDefault(); takeFound(finder.at); }
@@ -2090,7 +2116,7 @@ window.bodyModel = {
   }) : []),
   models: () => (motion.rig && moving() ? motion.rig.models.map(model => ({ name: model.name, shown: model.mesh.visible, solid: model.mesh.material.opacity, ...model.state })) : []),
   motions: () => Object.keys(MOTIONS),
-  sound: () => ({ on: sound.on, key: sound.key, clip: sound.clip, speaking: sound.speaking, voicePaused: sound.voice.paused, music: sound.music.src.split('/').pop(), musicPlaying: !sound.music.paused, musicLevel: sound.music.volume }),
+  sound: () => ({ on: sound.on, key: sound.key, clip: sound.clip, speaking: sound.speaking, voicePaused: sound.voice.paused, music: sound.music.src.split('/').pop(), musicPlaying: !sound.music.paused, musicLevel: musicGain?.gain.value }),
   regions: () => Object.values(REGIONS).filter(region => !region.sex || region.sex === body.sex).map(region => region.id), around: () => body.around,
   body: () => body, entries: () => body.order, entryParts: key => body.entries[key] || [],
   part: index => body.parts[index], findPart: name => body.parts.find(part => part.name === name)?.index ?? -1,

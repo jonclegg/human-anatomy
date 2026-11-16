@@ -588,7 +588,7 @@ function startStory(id, { aloud = true, loop = false } = {}) {
 function goStep(index) {
   const story = state.story, step = story.steps[index], held = paused();
   Object.assign(story, { index, playing: true, stepStart: performance.now() });   // moving on, by hand or not, plays
-  if (held && sound.on && sound.manifest.music) sound.music.play().catch(refused);
+  if (held && sound.on && sound.manifest.music) playMusic();
   /* a stop of the tour picks its part out, in the view of its layer. A region's step picks nothing out: the part it
      is about stays as it is drawn in motion (glass, with its blood showing), labelled and gently lit */
   if (story.kind === 'tour') { applyView(step.view); selectEntry(step.entry); focusSelection(viewInfo()); }
@@ -639,7 +639,7 @@ function playStory(playing) {
   story.playing = playing;
   if (playing) story.stepStart = now - story.spent; else story.spent = now - story.stepStart;
   if (!playing) { sound.voice.pause(); sound.music.pause(); }
-  else if (sound.on) { if (sound.speaking) sound.voice.play().catch(refused); if (sound.manifest.music) sound.music.play().catch(refused); }
+  else if (sound.on) { if (sound.speaking) sound.voice.play().catch(refused); if (sound.manifest.music) playMusic(); }
   syncUI();
 }
 /* the story is over, and whoever ends it goes somewhere next, which draws the page again; music it was holding plays on */
@@ -647,7 +647,7 @@ function endStory() {
   if (!state.story) return;
   const held = paused();
   state.story = null;
-  if (held && sound.on && sound.manifest.music) sound.music.play().catch(refused);
+  if (held && sound.on && sound.manifest.music) playMusic();
 }
 /* Exit, or the end of the story: back to where it was started, home or a region, with the model at rest */
 function exitStory() {
@@ -1088,7 +1088,7 @@ let audioContext = null, audioOut = null, hiss = null;   // hiss: three seconds 
 /* where they all go. It is opened by the Sound button, since a browser starts sound only at a touch. */
 function outlet() {
   if (!audioContext) { audioContext = new AudioContext(); audioOut = audioContext.createGain(); audioOut.connect(audioContext.destination); }
-  if (audioContext.state === 'suspended') audioContext.resume();
+  if (audioContext.state !== 'running') audioContext.resume();   // suspended, or on an iPhone interrupted (a call, the screen locked)
   return audioOut;
 }
 /* quieter while the voice is speaking, so it is not talked over; silent once the sound is off or nothing moves */
@@ -1137,6 +1137,8 @@ sound.music.loop = true;
 /* the music's level is set by a gain, not the element's volume, which an iPhone ignores (it played the music as loud as the voice) */
 let musicGain = null;
 function musicLevel(level) { if (musicGain) musicGain.gain.value = level; }
+/* the music plays through the audio context, so the context is woken with it */
+function playMusic() { outlet(); sound.music.play().catch(refused); }
 sound.voice.addEventListener('ended', () => { sound.speaking = false; sound.endedAt = performance.now(); musicLevel(MUSIC_LEVEL); invalidate(); });
 /* The voice speaks only inside a story: the step being told. Anywhere else the sound is the music alone. */
 const voiceKey = () => (state.story ? stepClip(state.story, state.story.index) : null);
@@ -1162,7 +1164,7 @@ function setSound(on) {
     musicGain = audioContext.createGain(); musicGain.gain.value = sound.speaking ? UNDER_VOICE : MUSIC_LEVEL;
     audioContext.createMediaElementSource(sound.music).connect(musicGain).connect(audioContext.destination);
   }
-  if (sound.on && sound.manifest.music) { sound.music.src ||= `audio/${sound.manifest.music}`; if (!paused()) sound.music.play().catch(refused); }
+  if (sound.on && sound.manifest.music) { sound.music.src ||= `audio/${sound.manifest.music}`; if (!paused()) playMusic(); }
   if (!sound.on) { sound.music.pause(); sound.voice.pause(); sound.speaking = false; }
   syncUI();
 }
@@ -1193,6 +1195,9 @@ const SOURCE_TEXT = {
    and its X puts it away until something else is opened. */
 const lowerFirst = text => text.charAt(0).toLowerCase() + text.slice(1);
 let sheetAbout = null;
+/* the height the sheet was dragged to, on a phone only and never more than the drag allows on this screen */
+function fitSheet() { $('sheet').style.maxHeight = phone.matches && state.sheetHeight ? `${Math.min(state.sheetHeight, innerHeight * 0.8)}px` : ''; }
+addEventListener('resize', fitSheet);
 function renderSheet() {
   const el = $('sheet');
   const about = `${state.region}|${state.selection?.entry ?? state.selection?.part ?? ''}|${state.story ? state.story.name : ''}|${state.view}`;
@@ -1202,7 +1207,7 @@ function renderSheet() {
   el.classList.toggle('telling', !!state.story);
   el.classList.toggle('resting', atHome());
   el.classList.toggle('closed', state.sheetClosed);
-  el.style.maxHeight = phone.matches && state.sheetHeight ? `${state.sheetHeight}px` : '';
+  fitSheet();
   /* the keyboard keeps its place when the sheet is drawn again: on the same button if it is still there, else on the heading */
   const held = el.contains(document.activeElement) ? document.activeElement : null;
   const again = held && (held.dataset.step ? `[data-step="${held.dataset.step}"]` : held.hasAttribute('data-sheet') ? '[data-sheet]' : null);
@@ -1315,7 +1320,7 @@ document.addEventListener('click', event => {
   const target = event.target.closest('[data-entry],[data-step],[data-go],[data-up],[data-sheet],[data-close],[data-region],[data-watch],[data-contents],[data-layer],[data-story]');
   if (!target) return;
   if (target.hasAttribute('data-sheet')) { if (performance.now() - sheetDrag.ended > 400) { state.sheet = state.sheet === 'peek' ? 'full' : 'peek'; state.sheetHeight = 0; renderSheet(); } }   // a tap, or the keyboard; a drag has already set it
-  else if (target.hasAttribute('data-close')) { state.sheetClosed = true; renderSheet(); }
+  else if (target.hasAttribute('data-close')) { state.sheetClosed = true; renderSheet(); $('homeBtn').focus(); }   // the sheet's heading is hidden with it: the keyboard goes to the top of the trail
   else if (target.hasAttribute('data-contents')) { setContents(true); $('contents').focus(); }
   else if (target.hasAttribute('data-up')) goUp();
   else if (target.hasAttribute('data-watch')) { startStory(target.dataset.watch || null); $('transport').querySelector('[data-story="play"]').focus(); }
@@ -1506,6 +1511,7 @@ function applyRegion(id) {
   ensureLayers(); applyVisibility(); renderSheet(); syncUI();
 }
 function setRegion(id) {
+  state.sheetClosed = false;
   applyRegion(id);
   const frame = viewFrame();
   flyTo(frame.position, frame.target, V(0, 1, 0));

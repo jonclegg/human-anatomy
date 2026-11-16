@@ -1292,6 +1292,25 @@ function goUp() {
   else if (state.selection) leavePart();
   else if (state.region) setView(state.view);
 }
+/* The browser's Back goes up one level, as goUp does. Each level opened (a region, a part, a story, Contents) is an entry
+   in the history, so Back steps up one at a time and leaves the site only from the whole body; a way up taken inside the
+   page takes its entries back off. A move across (Next, another part) adds none. A screen left alone keeps no history. */
+let returning = null;   // the depth a history.go of ours is on its way back to: its popstate is ours, not a Back
+/* a story is one level above where it was started, whatever it picks out as it plays (Exit goes back there) */
+const levels = () => (state.story ? (state.story.from.region ? 2 : 1) : (state.region ? 1 : 0) + (state.selection ? 1 : 0)) + (state.contents ? 1 : 0);
+function syncHistory() {
+  if (params.has('kiosk') || returning !== null) return;
+  const depth = levels(), at = history.state?.depth;
+  if (at === undefined) { history.replaceState({ depth }, ''); return; }   // the page as it opened, deep or not, is where Back leaves the site
+  for (let k = at + 1; k <= depth; k++) history.pushState({ depth: k }, '');
+  if (depth < at) { returning = depth; history.go(depth - at); }
+}
+addEventListener('popstate', event => {
+  const depth = event.state?.depth ?? 0;
+  if (returning !== null) { if (depth === returning) { returning = null; syncHistory(); } return; }
+  for (let guard = 8; levels() > depth && guard > 0; guard--) goUp();
+  if (levels() < depth) { returning = levels(); history.go(levels() - depth); }   // Forward cannot open again what was left: back to where the page is
+});
 /* On a phone the sheet is pulled up and down by its handle: it follows the finger and stays where it is left, from
    one part to the next. Pulled down to almost nothing it closes, as its X does. A tap on the handle switches it between
    short and tall. */
@@ -1396,6 +1415,7 @@ function syncUI() {
   }
   renderWords();
   $('hint').hidden = state.touched || !atHome();
+  syncHistory();
   const xrayOn = state.xray >= 0.02, coverName = viewInfo().xray.map(layer => LAYER_INFO[layer].name.toLowerCase()).join(' and ');
   $('xrayOut').textContent = xrayOn ? `On, ${Math.round(state.xray * 100)}%` : 'Off';
   $('xraySwitch').setAttribute('aria-checked', String(xrayOn));

@@ -241,6 +241,43 @@ test.describe('workflows', () => {
     await holds(page, errors, 'back to her');
   });
 
+  test("the browser's Back goes up one level at a time, and agrees with the page's own way up", async ({ page }) => {
+    const errors = await open(page);
+    const back = async step => { await page.goBack(); await settle(page); await holds(page, errors, step); };
+    /* home → region → part → the next part (across, not down) */
+    await press(page, page.locator('.spot', { hasText: /^Foot$/ }));
+    await press(page, await shownLabel(page));
+    await press(page, page.locator('#sheet [data-step="1"]'));
+    await back('Back from a part');
+    expect(await place(page)).toMatchObject({ region: 'foot', entry: null });
+    await back('Back from the region');
+    expect(await place(page)).toMatchObject({ region: null, entry: null });
+    /* a guide, then Contents over the region */
+    await press(page, page.locator('.spot', { hasText: /^Heart$/ }));
+    await press(page, page.locator('#sheet [data-watch="heart"]'));
+    await press(page, page.locator('#transport [data-story="next"]'));
+    await back('Back from a guide');
+    expect(await place(page)).toMatchObject({ region: 'heart', story: null });
+    await press(page, page.locator('#contentsBtn'));
+    await back('Back from Contents');
+    expect(await place(page)).toMatchObject({ region: 'heart', contents: false });
+    /* a part found by the search is two levels down: Back goes to its region, then home */
+    await press(page, page.locator('#homeBtn'));
+    await press(page, page.locator('#find'));
+    await page.locator('#find').fill('mitral valve');
+    await press(page, page.locator('#found li').first());
+    expect(await place(page)).toMatchObject({ region: 'heart', entry: 'heartMitralValve' });
+    await back('Back from a searched part');
+    expect(await place(page)).toMatchObject({ region: 'heart', entry: null });
+    /* the page's own way up takes its entries back off: Back after it does not go up a second time */
+    await press(page, await shownLabel(page));
+    await press(page, page.locator('#sheet .back'));
+    await page.waitForFunction(() => history.state?.depth === 1);
+    await back('Back after the page went up by itself');
+    expect(await place(page)).toMatchObject({ region: null, entry: null });
+    expect(await model(page, () => history.state?.depth)).toBe(0);
+  });
+
   test('the search: a part, a region and a story, each from the box, and Escape clears it', async ({ page }) => {
     const errors = await open(page);
     for (const [query, check] of [['patella', place => !!place.entry], ['heart', place => !!place.region], ['how you swallow', place => !!place.story]]) {

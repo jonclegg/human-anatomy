@@ -429,9 +429,10 @@ function loadClothing(body) {
 const UNDER_COVER = /penis|scrot|testi|epididym|vagin|vulva|clitor|labi(a|um) (majora|minora|majus|minus)|mons pubis|vestibul|hymen|urethral orifice|bulbospong|ischiocavern|uterus|ovar|perine|pubic hair/i;
 const revealed = () => selectedParts().some(index => body.parts[index].group === 'reproductive' || UNDER_COVER.test(body.parts[index].name));
 function clothingOpacity() {
-  if (!state.clothed || state.layers.skin === 'off' || revealed() || state.region) return 0;   // a close-up is of what lies under it
-  if (isolating()) return Math.min(0.12, state.rest * 3);   // beside a part picked out, as faint as the rest of the body is set to be, and gone when that is
-  return Math.min(1, state.body / 0.05) * (0.35 + 0.65 * state.body);   // solid on solid skin; fainter with it but still covering; gone only as the skin goes
+  if (!state.clothed || state.layers.skin === 'off' || revealed() || state.region || state.peel >= 1) return 0;   // a close-up is of what lies under it, and so is every layer under the skin
+  const peeled = 1 - state.peel;   // the line from the skin to the muscles takes the clothes off as it goes
+  if (isolating()) return Math.min(0.12, state.rest * 3) * peeled;   // beside a part picked out, as faint as the rest of the body is set to be, and gone when that is
+  return Math.min(1, state.body / 0.05) * (0.35 + 0.65 * state.body) * peeled;   // solid on solid skin; fainter with it but still covering; gone only as the skin goes
 }
 
 /* a label's dot sits on a vertex of its part: the one nearest the middle of the part's box */

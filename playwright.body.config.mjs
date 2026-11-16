@@ -15,5 +15,7 @@ export default defineConfig({
     // Headless Chromium otherwise draws WebGL in software (SwiftShader), far slower than the GPU a real Chrome uses.
     { name: 'chromium', use: { ...devices['Desktop Chrome'], viewport: { width: 1440, height: 900 }, launchOptions: { args: ['--use-angle=metal', '--enable-gpu', '--ignore-gpu-blocklist', '--mute-audio'] } } },
     { name: 'iphone', use: { ...devices['iPhone 13'] } },
+    // Chrome on Android: the phone layout's own tests only, since the rest is the same page the iPhone and Chromium runs cover
+    { name: 'android', use: { ...devices['Pixel 7'], launchOptions: { args: ['--use-angle=metal', '--enable-gpu', '--ignore-gpu-blocklist', '--mute-audio'] } }, grep: /on a phone/ },
   ],
 });

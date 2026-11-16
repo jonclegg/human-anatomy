@@ -6,7 +6,8 @@ Newest first. Each entry: date, PR, what changed for people using the site, and 
 
 - **For users on phones:** the panel along the bottom is gone from the opening screen, so the body has the whole screen. It comes up when you open a region or a part, has an X that puts it away, and stays at whatever height you drag it to; dragging it right down closes it. Tapping the search box no longer zooms the page in on an iPhone (which left the panel off-centre and its text cut off), and the box shows its prompt only when the whole word fits. The gesture hint over the model sits centred inside the screen's margins.
 - **For everyone with sound on:** the music is quieter under the voice, and on an iPhone it now actually drops: Safari ignored the old volume setting, so the music played as loud as the narration.
-- **For operators:** deploy `site/body/` as usual; no data or cost change.
+- **On Android:** the same phone layout, and a swipe down on the panel or the bar no longer reloads the page (Chrome's pull-to-refresh).
+- **For operators:** deploy `site/body/` as usual; no data or cost change. The test config has an `android` project (Pixel 7, Chrome) that runs the phone-layout tests.
 
 ## 2026-11-14 · Link previews
 

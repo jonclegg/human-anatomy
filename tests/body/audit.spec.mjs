@@ -704,7 +704,7 @@ test.describe('links into the site', () => {
 
 test.describe('on a phone', () => {
   test('a story fits the screen: the strip, the caption and the bar inside it, nothing to scroll sideways, and the sheet out of the way', async ({ page }, testInfo) => {
-    test.skip(testInfo.project.name !== 'iphone', 'the phone layout');
+    test.skip(!testInfo.project.use.isMobile, 'the phone layout');
     const errors = await open(page, 'sex=female&closeup=heart');
     await page.locator('#sheet [data-watch]').scrollIntoViewIfNeeded();
     await page.locator('#sheet [data-watch]').click();
@@ -726,7 +726,7 @@ test.describe('on a phone', () => {
     expect(errors).toEqual([]);
   });
   test('the sheet opens taller and closes again by its handle, and every control in the bar is on the screen', async ({ page }, testInfo) => {
-    test.skip(testInfo.project.name !== 'iphone', 'the phone layout');
+    test.skip(!testInfo.project.use.isMobile, 'the phone layout');
     const errors = await open(page, 'sex=female&closeup=knee');
     const tall = () => page.locator('#sheet').evaluate(el => el.getBoundingClientRect().height);
     const short = await tall();
@@ -763,7 +763,7 @@ test.describe('on a phone', () => {
     expect(errors).toEqual([]);
   });
   test('the sheet is away at home, comes for a region or a part, and its X puts it away until something else is opened', async ({ page }, testInfo) => {
-    test.skip(testInfo.project.name !== 'iphone', 'the phone layout');
+    test.skip(!testInfo.project.use.isMobile, 'the phone layout');
     const errors = await open(page, 'sex=female');
     await expect(page.locator('#sheet')).toBeHidden();
     await page.locator('#contentsBtn').click();

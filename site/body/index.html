@@ -37,7 +37,7 @@
 }
 [hidden] { display: none !important; }
 * { box-sizing: border-box; }
-html { background: var(--bg); }
+html { background: var(--bg); overscroll-behavior: none; }   /* a swipe down on the sheet or the bar does not reload the page (Chrome on Android pulls to refresh) */
 body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--face); font-size: 15px; line-height: 1.5; font-variant-numeric: tabular-nums; }
 h1, h2, h3 { margin: 0; text-wrap: balance; font-family: var(--display); font-weight: 500; letter-spacing: -0.025em; }
 p { margin: 0; }

@@ -159,10 +159,10 @@ test.describe('clothing', () => {
     test(`${sex}: covered on first load, uncovered only by choosing a reproductive part`, async ({ page }) => {
       await open(page, { sex });
       expect(await model(page, () => window.bodyModel.clothing())).toMatchObject({ shown: true, opacity: 1 });
-      for (const view of ['skeleton', 'organs', 'body']) {   // looking around keeps it covered
+      for (const view of ['skeleton', 'organs', 'body']) {   // the clothes are the skin view's: gone under it, back on it
         await page.locator(`#views [data-view="${view}"]`).click();
         await settle(page);
-        expect((await model(page, () => window.bodyModel.clothing())).shown, view).toBe(true);
+        expect((await model(page, () => window.bodyModel.clothing())).shown, view).toBe(view === 'body');
       }
       await model(page, key => window.bodyModel.selectEntry(key), entry);
       expect((await model(page, () => window.bodyModel.clothing())).shown, `choosing ${entry}`).toBe(false);
@@ -171,12 +171,13 @@ test.describe('clothing', () => {
     });
   }
 
-  test('inside views the clothing fades with the skin but still covers', async ({ page }) => {
-    await open(page, { view: 'skeleton' });
-    const { shown, opacity } = await model(page, () => window.bodyModel.clothing());
-    expect(shown).toBe(true);
-    expect(opacity).toBeGreaterThan(0.3);
-    expect(opacity).toBeLessThan(1);
+  test('every view under the skin has no clothes', async ({ page }) => {
+    await open(page);
+    for (const view of ['muscles', 'organs', 'vessels', 'nerves', 'skeleton']) {
+      await page.locator(`#views [data-view="${view}"]`).click();
+      await settle(page);
+      expect(await model(page, () => window.bodyModel.clothing()), view).toMatchObject({ shown: false, opacity: 0 });
+    }
   });
 });
 

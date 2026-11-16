@@ -45,7 +45,7 @@ button, input { font: inherit; color: inherit; }
 button:focus-visible, input:focus-visible, a:focus-visible, .contents:focus-visible, .sheet h2:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
 
 /* The four places */
-.viewer { height: 100svh; min-height: 560px; display: grid; grid-template-rows: auto minmax(0, 1fr); background: var(--bg); }
+.viewer { height: 100svh; min-height: 560px; display: grid; grid-template-rows: auto minmax(0, 1fr); grid-template-columns: minmax(0, 1fr); overflow-x: clip; background: var(--bg); }   /* never wider than the screen: an iPhone otherwise lays the page out wider than itself and scrolls it sideways, the bar running off its edge */
 .work { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) auto; min-height: 0; }
 .stage { position: relative; min-width: 0; min-height: 0; overflow: hidden; background: radial-gradient(52% 62% at 50% 46%, var(--stage-hi) 0%, var(--stage-mid) 58%, var(--bg) 100%); }
 #scene { position: absolute; inset: 0; width: 100%; height: 100%; display: block; cursor: grab; touch-action: none; }
@@ -79,8 +79,9 @@ button:focus-visible, input:focus-visible, a:focus-visible, .contents:focus-visi
 /* find any part, region or story by name, from anywhere */
 .finder { position: relative; display: flex; align-items: center; }
 .finder svg { position: absolute; left: 13px; width: 16px; height: 16px; fill: none; stroke: var(--muted); stroke-width: 1.8; stroke-linecap: round; pointer-events: none; }
-.finder input { width: 290px; min-height: 44px; padding: 0 14px 0 36px; border: 1px solid var(--line-strong); border-radius: 22px; background: transparent; color: var(--ink); font-size: 13.5px; }
+.finder input { -webkit-appearance: none; appearance: none; width: 290px; min-height: 44px; padding: 0 14px 0 36px; border: 1px solid var(--line-strong); border-radius: 22px; background: transparent; color: var(--ink); font-size: 13.5px; }
 .finder input::placeholder { color: var(--muted); }
+.finder input::-webkit-search-decoration { -webkit-appearance: none; }   /* Safari's own inset, which would cut the prompt short */
 .finder input:focus { outline: none; border-color: var(--mark); background: var(--field); }
 @media (max-width: 1100px) { .finder input { width: 200px; } }   /* the search gives up the room the GitHub button takes, so the bar stays on one line as far down as it did */
 .found { position: absolute; top: 50px; right: 0; width: 360px; max-width: calc(100vw - 2 * var(--gutter)); max-height: min(70vh, 520px); overflow: auto; margin: 0; padding: 6px; list-style: none; border: 1px solid var(--line-strong); border-radius: 12px; background: var(--panel); box-shadow: 0 18px 50px rgba(0, 0, 0, 0.45); z-index: 9; }

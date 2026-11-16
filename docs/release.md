@@ -2,6 +2,14 @@
 
 Newest first. Each entry: date, PR, what changed for people using the site, and what an operator must do and what it costs.
 
+## 2026-11-16 · The page fits an iPhone's width
+
+- **For users on iPhones:** the page can no longer be laid out wider than the screen, which made the bar run off the right edge and the page scroll sideways (seen on a real iPhone, not in the simulators). The search box's prompt is no longer cut short by Safari's own inset.
+- **On phones:** tapping a part's label on the model opens it again. A finger that landed on a label never reached the model, so the tap did nothing (most visible after closing the panel), and the model then behaved as if a finger were still down. On the layers at home, a label no longer covers a region's glowing point.
+- **Clothes only on the skin view:** the muscles, organs, vessels, nerves and skeleton views have no clothes; on the layer slider they fade out between the skin and the muscles. (They used to stay on, faded with the skin.)
+- **Back button:** the browser's or phone's Back now goes up one level (from a part to its region, from a region, a guide or Contents to where you were, then home) instead of leaving the site. Back leaves only from the whole body.
+- **For operators:** deploy `site/body/index.html` and `site/body/app.mjs`; no cost change. New `tests/body/workflows.spec.mjs` walks the main paths on phone and desktop. `index.html` and `app.mjs` are now served with `Cache-Control: no-cache`, so a phone checks for a new version on every load.
+
 ## 2026-11-15 · A calmer phone layout
 
 - **For users on phones:** the panel along the bottom is gone from the opening screen, so the body has the whole screen. It comes up when you open a region or a part, has an X that puts it away, and stays at whatever height you drag it to; dragging it right down closes it. Tapping the search box no longer zooms the page in on an iPhone (which left the panel off-centre and its text cut off), and the box shows its prompt only when the whole word fits. The gesture hint over the model sits centred inside the screen's margins.

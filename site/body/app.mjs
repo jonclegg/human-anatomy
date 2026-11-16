@@ -44,9 +44,11 @@ class TurntableControls extends THREE.EventDispatcher {
     this.pointers = new Map(); this.panning = false;
     this.last = { position: new THREE.Vector3(), target: new THREE.Vector3(), up: new THREE.Vector3() };
     element.addEventListener('pointerdown', event => this.pointerDown(event));
-    element.addEventListener('pointermove', event => this.pointerMove(event));
-    element.addEventListener('pointerup', event => this.pointerUp(event));
-    element.addEventListener('pointercancel', event => this.pointerUp(event));
+    /* a press's moves and lift are heard wherever they land: a finger that came down on a label stays with the label (a
+       phone does not let the canvas take it over), and the press is the canvas's all the same */
+    addEventListener('pointermove', event => this.pointerMove(event));
+    addEventListener('pointerup', event => this.pointerUp(event));
+    addEventListener('pointercancel', event => this.pointerUp(event));
     element.addEventListener('contextmenu', event => event.preventDefault());
     /* a pinch (which arrives as a wheel event with ctrl held) and a mouse wheel zoom toward the pointer; a two-finger swipe on
        a trackpad moves the view, up and down the body or across it. A trackpad's wheel events report wheelDeltaY as -3
@@ -1833,6 +1835,8 @@ function updateLabels(width, height) {
   const placed = [...document.querySelectorAll(OVERLAYS.join(','))].filter(el => !el.hidden && el.offsetParent).map(el => el.getBoundingClientRect())
     .map(r => [r.left - origin.left, r.top - origin.top, r.right - origin.left, r.bottom - origin.top]);
   const panels = placed.slice();
+  /* the glowing points that open a region, where they are drawn: a label never covers one, which would take its taps */
+  const spotBoxes = spotEls.filter(spot => !spot.el.hidden).map(spot => spot.el.getBoundingClientRect()).map(r => [r.left - origin.left, r.top - origin.top, r.right - origin.left, r.bottom - origin.top]);
   const selectedKey = telling()?.span ? telling().entry : state.story?.at || state.selection?.entry, hoveredKey = state.hovered >= 0 && body.entryOf[state.hovered] >= 0 ? body.keys[body.entryOf[state.hovered]] : null;
   const told = telling() ? telling().labels || [telling().entry] : null;
   const priority = told ? told : atHome() && spotEls.length && !state.blend && state.peel === 0 ? [] : viewInfo().labels[state.sex] || viewInfo().labels.any;   // on the opening view the glowing points invite; callouts come with the layers
@@ -1877,6 +1881,7 @@ function updateLabels(width, height) {
       let x = side === 'left' ? edge - w : edge;
       x = Math.max(bounds.left, Math.min(x, bounds.right - w));
       const y = ys[k], box = [x, y, x + w, y + h];
+      if (!c.important && spotBoxes.some(spot => overlaps(box, spot))) { tag.hidden = true; return; }
       tag.hidden = false;
       tag.classList.toggle('on', c.key === selectedKey);
       tag.style.transform = `translate(${x.toFixed(1)}px, ${y.toFixed(1)}px)`;
@@ -1956,9 +1961,11 @@ const tip = $('tip');
 let down = null, hoverEvent = null;
 /* a tap is a press that never strays more than 5 px: a drag that comes back to where it started is still a drag */
 canvas.addEventListener('pointerdown', event => { down = { x: event.clientX, y: event.clientY, strayed: false }; });
-canvas.addEventListener('pointermove', event => { if (down && Math.hypot(event.clientX - down.x, event.clientY - down.y) >= 5) down.strayed = true; });
-canvas.addEventListener('pointerup', event => {
-  if (down && !down.strayed && Math.hypot(event.clientX - down.x, event.clientY - down.y) < 5 && !state.story) {   // a story is watched: nothing is picked out of it
+/* heard wherever the press goes: one that came down on a label is lifted there, on a phone */
+addEventListener('pointermove', event => { if (down && Math.hypot(event.clientX - down.x, event.clientY - down.y) >= 5) down.strayed = true; });
+addEventListener('pointerup', event => {
+  if (!down) return;
+  if (!down.strayed && Math.hypot(event.clientX - down.x, event.clientY - down.y) < 5 && !state.story) {   // a story is watched: nothing is picked out of it
     if (pressedTag) { selectEntry(pressedTag); focusSelection(); }
     else {
       const index = pick(event.clientX, event.clientY);
